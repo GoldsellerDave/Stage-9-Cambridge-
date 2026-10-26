@@ -1,0 +1,5 @@
+# Never commit student data: rosters, logins, PINs or seed files.
+*.csv
+seed*.sql
+private/
+node_modules/
