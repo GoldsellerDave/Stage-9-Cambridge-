@@ -92,9 +92,13 @@ export function trackerHTML(history, who) {
     <div class="panel"><h3>History</h3>${historyTable(history)}</div>`;
 }
 
+// The baseline gives no support, so a wrong baseline answer is saved as support "none" with first_try false.
+function resultChip(r) {
+  return r.support === "none" && !r.first_try ? `<span class="chip explained">Wrong</span>` : `<span class="chip ${r.support}">${SUPPORT_LABEL[r.support]}</span>`;
+}
 export function resultRows(slots, results) {
   return `<div class="tbl"><table><thead><tr><th>#</th><th>Skill</th><th>Text</th><th>Result</th></tr></thead><tbody>${
-    results.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.skill)}</td><td>${LEVELS[r.level]}</td><td><span class="chip ${r.support}">${SUPPORT_LABEL[r.support]}</span></td></tr>`).join("")
+    results.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.skill)}</td><td>${LEVELS[r.level]}</td><td>${resultChip(r)}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 
