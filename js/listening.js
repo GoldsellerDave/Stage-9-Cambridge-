@@ -1,19 +1,27 @@
 // Listening tasks, modelled on the Checkpoint listening paper: short conversations, note completion,
 // an interview with opinion questions, and matching speakers to statements. Each recording plays twice.
-// lines: [speaker, text]; voices map each speaker to a Kokoro voice (tools/make_listening_audio.py).
+// lines: [speaker, text]; voices map each speaker to a Kokoro voice, or { mix: [[voice, weight]...], pitch: semitones }
+// (tools/make_listening_audio.py).
 // Questions: MCQ has opts with the correct one first (shuffled on screen); "gap" has accepted answers;
 // matching uses the task's statements, with answer = the index of the right statement.
 // cue (and cueEnd): words from the script that mark the part replayed as support after a wrong answer.
 // Don't rename ids once students have used them: saved results are keyed by id.
 
 const NARRATOR = "bm_george";
+// Teenagers: the voice library has only adult voices, so boys blend a male and a female voice and both are raised a little.
+const BOY_UK = { mix: [["bm_lewis", 0.6], ["bf_lily", 0.4]], pitch: 2 };
+const BOY_US = { mix: [["am_liam", 0.6], ["af_bella", 0.4]], pitch: 2 };
+const GIRL_UK = { mix: [["bf_lily", 1]], pitch: 2 };
+const GIRL_UK2 = { mix: [["bf_alice", 1]], pitch: 2 };
+const GIRL_UK3 = { mix: [["bf_isabella", 1]], pitch: 2 };
+const GIRL_US = { mix: [["af_bella", 1]], pitch: 2 };
 
 export const LISTENING = [
 /* ================= Unit 3: Tourism ================= */
 { id: "l3-short", unitNo: 3, part: "Part 1: Short conversations", topic: "Holiday conversations",
   blurb: "Five short conversations about holidays. Choose the right answer.",
   instructions: "You will hear five short conversations. For each one, choose the correct answer. Read the questions before you listen.",
-  voices: { NARRATOR, GIRL: "bf_lily", DAD: "bm_daniel", BOY: "bm_lewis", MUM: "bf_emma", FRIEND: "bf_isabella", SARA: "bf_alice", MAN: "am_michael", WOMAN: "bf_emma" },
+  voices: { NARRATOR, GIRL: GIRL_UK, DAD: "bm_daniel", BOY: BOY_UK, MUM: "bf_emma", FRIEND: GIRL_UK3, SARA: GIRL_UK2, MAN: "am_michael", WOMAN: "bf_emma" },
   lines: [
    ["NARRATOR", "Conversation one. A girl is talking to her dad about a day trip."],
    ["GIRL", "Dad, the day trip to the islands leaves at nine, doesn't it?"],
@@ -110,7 +118,7 @@ export const LISTENING = [
 { id: "l3-match", unitNo: 3, part: "Part 4: Matching", topic: "My best holiday activity",
   blurb: "Five teenagers talk about a holiday activity. Match each speaker to a statement.",
   instructions: "You will hear five teenagers talking about an activity they did on holiday. Choose what each speaker says. There is one extra statement you do not need.",
-  voices: { NARRATOR, MAI: "bf_lily", TOM: "bm_lewis", SOPHIE: "bf_alice", JAKE: "am_liam", EMMA: "af_bella" },
+  voices: { NARRATOR, MAI: GIRL_UK, TOM: BOY_UK, SOPHIE: GIRL_UK2, JAKE: BOY_US, EMMA: GIRL_US },
   statements: ["A. I was nervous at first, but I ended up loving it.", "B. The weather spoiled part of the experience.", "C. I learnt about the history of the place.",
                "D. It was more relaxing than I expected.", "E. I'd like to do it again with better equipment.", "F. It cost less than I expected."],
   lines: [
@@ -135,7 +143,7 @@ export const LISTENING = [
 { id: "l2-short", unitNo: 2, part: "Part 1: Short conversations", topic: "Health and food conversations",
   blurb: "Five short conversations about health and food. Choose the right answer.",
   instructions: "You will hear five short conversations. For each one, choose the correct answer. Read the questions before you listen.",
-  voices: { NARRATOR, NURSE: "bf_emma", BOY: "bm_lewis", WAITER: "am_michael", GIRL: "bf_lily", MUM: "bf_emma", COACH: "bm_daniel", PLAYER: "bf_alice", FRIEND: "bf_isabella", KHOA: "am_liam" },
+  voices: { NARRATOR, NURSE: "bf_emma", BOY: BOY_UK, WAITER: "am_michael", GIRL: GIRL_UK, MUM: "bf_emma", COACH: "bm_daniel", PLAYER: GIRL_UK2, FRIEND: GIRL_UK3, KHOA: BOY_US },
   lines: [
    ["NARRATOR", "Conversation one. A boy is talking to the school nurse."],
    ["NURSE", "So, what seems to be the problem? Is it your stomach again?"],
@@ -231,7 +239,7 @@ export const LISTENING = [
 { id: "l2-match", unitNo: 2, part: "Part 4: Matching", topic: "How I deal with anger",
   blurb: "Five teenagers explain how they calm down. Match each speaker to a statement.",
   instructions: "You will hear five teenagers talking about what they do when they feel angry or annoyed. Choose what each speaker says. There is one extra statement you do not need.",
-  voices: { NARRATOR, HUY: "bm_lewis", LAN: "bf_lily", BEN: "am_liam", CHLOE: "bf_alice", MIA: "af_bella" },
+  voices: { NARRATOR, HUY: BOY_UK, LAN: GIRL_UK, BEN: BOY_US, CHLOE: GIRL_UK2, MIA: GIRL_US },
   statements: ["A. I breathe slowly before I say anything.", "B. Talking to someone helps me see the other person's side.", "C. Exercise gets rid of my anger.",
                "D. I write down how I feel.", "E. I stay away from people who annoy me.", "F. Music calms me down."],
   lines: [
