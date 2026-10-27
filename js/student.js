@@ -56,9 +56,29 @@ async function signOut() {
   setSession(null); session = null; me = null; run = null; route();
 }
 
+/* ---------------- bottom navigation ---------------- */
+const ico = d => `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const NAV = [
+  ["home", "Home", ico('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/>')],
+  ["units", "Units", ico('<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>')],
+  ["review", "Review", ico('<path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/>')],
+  ["games", "Games", ico('<rect x="2" y="7" width="20" height="11" rx="5"/><path d="M7 10.5v4M5 12.5h4"/><circle cx="15.5" cy="11.5" r="1" fill="currentColor"/><circle cx="18" cy="14" r="1" fill="currentColor"/>')],
+  ["me", "Me", ico('<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>')]];
+// The bar shows on every page except sign-in and while an activity is running. `view` null hides it.
+function nav(view) {
+  let el = document.getElementById("nav");
+  if (!el) { el = document.createElement("nav"); el.id = "nav"; el.className = "bnav"; el.setAttribute("aria-label", "Main"); document.body.appendChild(el); }
+  document.body.classList.toggle("has-nav", view != null);
+  if (view == null) { el.hidden = true; return; }
+  const on = /^unit-/.test(view) ? "units" : ["progress", "leaderboard"].includes(view) ? "me" : NAV.some(n => n[0] === view) ? view : "home";
+  const due = P.wordsToReview(history).length;
+  el.hidden = false;
+  el.innerHTML = `<div class="bnav-in">${NAV.map(([k, label, icon]) => `<a href="#${k}" ${k === on ? 'aria-current="page"' : ""}>${icon}<span>${label}</span>${k === "review" && due ? `<b class="nbadge">${due > 99 ? "99+" : due}</b>` : ""}</a>`).join("")}</div>`;
+}
+
 /* ---------------- sign in ---------------- */
 function loginView(msg) {
-  header();
+  header(); nav(null);
   $app.innerHTML = `<div class="narrow pop">
     <div class="hero"><p class="eyebrow">Stage 9 · Checkpoint English</p><h1>Read, learn words, practise grammar and level up</h1>
     <p class="lede">Sign in with the username and PIN your teacher gave you.</p></div>
@@ -98,9 +118,14 @@ async function route() {
   if (run) return runView();
   const view = (location.hash || "#home").slice(1);
   header();
-  if (view === "progress") return progressView();
+  nav(view);
+  if (view === "progress" || view === "me") return progressView();
   if (view === "leaderboard") return leaderboardView();
-  if (/^unit-\d$/.test(view)) return unitView(+view.slice(5));
+  if (view === "units") return unitsView();
+  if (view === "review") return reviewView();
+  if (view === "games") return gamesView();
+  const m = /^unit-(\d)(?:\/(\w+))?$/.exec(view);
+  if (m) return unitView(+m[1], m[2]);
   return homeView();
 }
 window.addEventListener("hashchange", () => { if (!run) route(); });
@@ -132,14 +157,11 @@ function homeView() {
   h += `<div class="panel goal"><b>This week: ${Math.min(thisWeek, 2)} of 2 activities</b><div class="bar"><i style="width:${Math.min(thisWeek, 2) * 50}%"></i></div>
       <p class="note">Finish 2 activities a week (a reading text, a vocabulary set or a grammar set) to keep your streak and earn a ${E.XP.streakWeek} XP bonus.</p></div>`;
   const fu = P.focusUnit();
-  h += `<h2>This week in class</h2>${unitCard(fu)}`;
-  if (review.length) h += `<div class="tcard"><span class="tag gold">Review</span><h3>Words to review today</h3>
-      <p class="note">${review.length} word${review.length > 1 ? "s are" : " is"} due: ${U.esc(review.slice(0, 6).map(x => x.w).join(", "))}${review.length > 6 ? "…" : ""}.
-      A word you miss comes back straight away. A word you get right comes back after 1, then 3, 7 and 14 days, so it stays in your memory.</p>
+  h += `<h2>This week in class</h2>${focusCard(fu)}`;
+  if (review.length) h += `<div class="tcard"><span class="tag gold">Review</span><h3>${review.length} word${review.length > 1 ? "s" : ""} to review today</h3>
+      <p class="note">${U.esc(review.slice(0, 6).map(x => x.w).join(", "))}${review.length > 6 ? "…" : ""}</p>
       <div class="row"><button class="btn" data-review="1">Review ${Math.min(review.length, 10)} words</button></div></div>`;
-  h += `<h2>The school year</h2>${pathHTML(fu)}`;
-  h += `<div class="row"><a class="btn alt" href="#progress">My progress</a><a class="btn alt" href="#leaderboard">Class leaderboard</a>
-    ${canRetake ? `<button class="btn alt" id="rebase">Retake the baseline</button>` : ""}</div>
+  h += `${canRetake ? `<div class="row"><button class="btn alt" id="rebase">Retake the baseline</button></div>` : ""}
     ${LIVE ? "" : `<p class="note">Demo mode: <button class="linkbtn" style="color:var(--teal)" id="reset">reset the demo data</button></p>`}</div>`;
   $app.innerHTML = h;
   const b = document.getElementById("base"); if (b) b.onclick = startBaseline;
@@ -151,31 +173,51 @@ function homeView() {
 
 /* ---------------- units ---------------- */
 const STATUS = { done: ["Done", "none"], now: ["Now", "hint"], upcoming: ["Coming up", "rescue"] };
-function unitCard(u) {
+// A unit page has one tab per section; units without reading texts or listening leave those tabs out.
+function unitSections(u) {
   const texts = PRACTICE_TEXTS.filter(t => t.unitNo === u);
   const done = new Set(history.filter(h => h.mode === "practice" || h.mode === "listening").map(h => h.text_id));
-  const vm = P.vocabMastery(u, history), st = P.unitStatus(u);
+  const vm = P.vocabMastery(u, history);
   const lists = VOCAB[u].map((l, i) => `List ${i + 1}: ${l.length} words`).join(" · ");
-  return `<div class="tcard unit">
-    <div class="row" style="justify-content:space-between"><h3>${U.esc(P.unitTitle(u))}</h3><span class="chip ${STATUS[st][1]}">${STATUS[st][0]}</span></div>
-    ${missionHTML(u)}
-    <div class="usec"><p class="eyebrow">Reading</p>${texts.length ? texts.map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${done.has(t.id) ? "Done before: half XP this time." : U.esc(t.blurb)}</span></div>
-        ${me.baseline_done ? `<button class="btn small" data-text="${t.id}">${done.has(t.id) ? "Read again" : "Read"}</button>` : `<span class="note">Take the baseline first</span>`}</div>`).join("")
-      : `<p class="note">A reading text for this unit is coming soon.</p>`}</div>
-    ${listeningFor(u).length ? `<div class="usec"><p class="eyebrow">Listening</p>${listeningFor(u).map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${U.esc(t.part)} · ${done.has(t.id) ? "Done before" : U.esc(t.blurb)}</span></div>
-        <button class="btn small" data-listen="${t.id}">${done.has(t.id) ? "Again" : "Listen"}</button></div>`).join("")}</div>` : ""}
-    <div class="usec"><p class="eyebrow">Vocabulary</p><div class="urow"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
+  const secs = [{ key: "mission", label: "Mission", html: missionHTML(u) }];
+  if (texts.length) secs.push({ key: "read", label: "Reading", html: `<div class="usec">${texts.map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${done.has(t.id) ? "Done before: half XP this time." : U.esc(t.blurb)}</span></div>
+        ${me.baseline_done ? `<button class="btn small" data-text="${t.id}">${done.has(t.id) ? "Read again" : "Read"}</button>` : `<span class="note">Take the baseline first</span>`}</div>`).join("")}</div>` });
+  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec">${listeningFor(u).map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${U.esc(t.part)} · ${done.has(t.id) ? "Done before" : U.esc(t.blurb)}</span></div>
+        <button class="btn small" data-listen="${t.id}">${done.has(t.id) ? "Again" : "Listen"}</button></div>`).join("")}</div>` });
+  secs.push({ key: "words", label: "Words", html: `<div class="usec"><div class="urow"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
         <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
       <button class="btn small" data-vocab="${u}">Practise 10 words</button></div>
-      <div class="row"><button class="btn small alt" data-cards="${u}">Word cards</button><button class="btn small alt" data-family="${u}">Word families</button></div></div>
-    <div class="usec"><p class="eyebrow">Games</p>${Object.entries(G.GAMES).filter(([g]) => g !== "speed" || G.speedTexts(u).length).map(([g, x]) => {
-        const best = G.bestScore(history, G.gameId(g, u)), locked = g === "speed" && !readTexts(u).length;
-        return `<div class="urow"><div><b>${x.name}</b><br><span class="note">${locked ? "Finish a reading text in this unit first. Speed Read uses the texts you have read." : U.esc(x.blurb)}${best ? ` Your best: ${best} points.` : ""}</span></div>
-          <button class="btn small" data-game="${g}" data-unit="${u}" ${locked ? "disabled" : ""}>Play</button></div>`; }).join("")}</div>
-    <div class="usec"><p class="eyebrow">Grammar</p>${P.unitGrammar(u).map(g => { const m = P.grammarMastery(g.id, history);
+      <div class="row"><button class="btn small alt" data-cards="${u}">Word cards</button><button class="btn small alt" data-family="${u}">Word families</button></div></div>` });
+  secs.push({ key: "grammar", label: "Grammar", html: `<div class="usec">${P.unitGrammar(u).map(g => { const m = P.grammarMastery(g.id, history);
         return `<div class="urow"><div><b>${g.id} ${U.esc(g.title)}</b><br><span class="note">${g.code ? g.code + " · " : ""}${m == null ? "Not tried yet" : m + "% right first time"}</span></div>
           <button class="btn small alt" data-gram="${g.id}">Practise</button></div>`; }).join("")}
-      <div class="row"><button class="btn small" data-gramunit="${u}">Mixed quiz: all of Unit ${u}</button></div></div></div>`;
+      <div class="row"><button class="btn small" data-gramunit="${u}">Mixed quiz: all of Unit ${u}</button></div></div>` });
+  secs.push({ key: "games", label: "Games", html: gamesHTML(u) });
+  return secs;
+}
+function gamesHTML(u) {
+  return `<div class="usec">${Object.entries(G.GAMES).filter(([g]) => g !== "speed" || G.speedTexts(u).length).map(([g, x]) => {
+        const best = G.bestScore(history, G.gameId(g, u)), locked = g === "speed" && !readTexts(u).length;
+        return `<div class="urow"><div><b>${x.name}</b><br><span class="note">${locked ? "Finish a reading text in this unit first. Speed Read uses the texts you have read." : U.esc(x.blurb)}${best ? ` Your best: ${best} points.` : ""}</span></div>
+          <button class="btn small" data-game="${g}" data-unit="${u}" ${locked ? "disabled" : ""}>Play</button></div>`; }).join("")}</div>`;
+}
+const lastTab = {};
+function unitCard(u, tab) {
+  const secs = unitSections(u), cur = secs.find(x => x.key === tab) || secs[0], st = P.unitStatus(u);
+  lastTab[u] = cur.key;
+  return `<div class="tcard unit">
+    <div class="row" style="justify-content:space-between"><h3>${U.esc(P.unitTitle(u))}</h3><span class="chip ${STATUS[st][1]}">${STATUS[st][0]}</span></div>
+    <div class="utabs" role="tablist" aria-label="Unit ${u} sections">${secs.map(x => `<a role="tab" href="#unit-${u}/${x.key}" aria-selected="${x === cur}">${x.label}</a>`).join("")}</div>
+    <div role="tabpanel" aria-label="${cur.label}">${cur.html}</div></div>`;
+}
+// The home page shows a short card for this week's unit; the full unit is one tap away.
+function focusCard(u) {
+  const m = P.mission(u, history), n = m.steps.filter(s => s.done).length;
+  return `<div class="tcard"><div class="row" style="justify-content:space-between"><h3>${U.esc(P.unitTitle(u))}</h3><span class="chip hint">Now</span></div>
+    <div class="mbar" aria-hidden="true"><i style="width:${Math.round(100 * n / m.steps.length)}%"></i></div>
+    <p class="note">Mission: ${n} of ${m.steps.length} steps${m.complete ? ". Badge won!" : m.next ? `. Next: <b>${U.esc(m.next.label)}</b>` : ""}</p>
+    <div class="row">${m.next && !m.complete ? `<button class="btn" data-step="${m.next.key}" data-unit="${u}">${m.next.key === "boss" ? "Start the challenge" : "Next step"}</button>` : ""}
+      <a class="btn alt" href="#unit-${u}">Open Unit ${u}</a></div></div>`;
 }
 const TICK = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 function missionHTML(u) {
@@ -211,11 +253,37 @@ function pathHTML(fu) {
       <br><span class="note">${vm.mastered}/${vm.total} words · ${P.unitGrammar(e.unit).length} grammar points</span></div></a>`;
   }).join("")}</div>`;
 }
-function unitView(u) {
+function unitView(u, tab) {
   if (!UNITS[u]) return homeView();
-  $app.innerHTML = `<div class="narrow pop"><div class="row"><a href="#home">← Home</a></div>${unitCard(u)}</div>`;
+  $app.innerHTML = `<div class="narrow pop"><div class="row"><a href="#units">← All units</a></div>${unitCard(u, tab || lastTab[u])}</div>`;
   bindActivities();
 }
+function unitsView() {
+  const fu = P.focusUnit();
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Units</p><h1>The school year</h1>
+    <p class="lede">Tap a unit to see its mission, reading, listening, words, grammar and games.</p></div>${pathHTML(fu)}</div>`;
+}
+function reviewView() {
+  const review = P.wordsToReview(history), fu = P.focusUnit();
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Review</p><h1>Words to review</h1></div>
+    ${review.length ? `<div class="tcard"><h3>${review.length} word${review.length > 1 ? "s" : ""} due today</h3>
+      <p class="note">${U.esc(review.slice(0, 12).map(x => x.w).join(", "))}${review.length > 12 ? "…" : ""}</p>
+      <div class="row"><button class="btn" data-review="1">Review ${Math.min(review.length, 10)} words</button></div></div>`
+      : `<div class="panel"><p style="margin:0"><b>Nothing due today.</b> Well done! Learn some new words below.</p></div>`}
+    <div class="panel"><p class="note" style="margin:0">A word you miss comes back straight away. A word you get right comes back after 1, then 3, 7 and 14 days, so it stays in your memory.</p></div>
+    <h2>Unit ${fu} words</h2>${unitSections(fu).find(x => x.key === "words").html}</div>`;
+  bindActivities();
+}
+function gamesView() {
+  const fu = P.focusUnit(), u = UNITS[gamesUnit] ? gamesUnit : fu;
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Games</p><h1>Play and practise</h1>
+    <p class="lede">Games use the words and texts from the unit you choose. You can earn up to ${G.GAME_XP_DAY} XP a day from games.</p></div>
+    <div class="tabs" role="tablist" aria-label="Unit">${SEQUENCE.filter(e => e.kind === "unit").map(e => `<button role="tab" aria-selected="${e.unit === u}" data-gu="${e.unit}">Unit ${e.unit}</button>`).join("")}</div>
+    <h2>${U.esc(P.unitTitle(u))}</h2>${gamesHTML(u)}</div>`;
+  $app.querySelectorAll("[data-gu]").forEach(b => b.onclick = () => { gamesUnit = +b.dataset.gu; S.play("tap"); gamesView(); });
+  bindActivities();
+}
+let gamesUnit = null;
 function bindActivities() {
   $app.querySelectorAll("[data-text]").forEach(btn => btn.onclick = () => startPractice(btn.dataset.text));
   $app.querySelectorAll("[data-vocab]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.vocab;
@@ -713,8 +781,9 @@ function listenDone() {
 
 /* ---------------- progress & leaderboard ---------------- */
 function progressView() {
-  $app.innerHTML = `<div class="narrow pop"><div class="row"><a href="#home">← Home</a></div>
-    <div class="hero"><p class="eyebrow">My progress</p><h1>${U.esc(me.name)}</h1></div>${U.trackerHTML(history, me)}</div>`;
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Me</p><h1>${U.esc(me.name)}</h1></div>
+    <div class="tabs" role="tablist"><a role="tab" aria-selected="true" href="#me">My progress</a><a role="tab" aria-selected="false" href="#leaderboard">Class leaderboard</a></div>
+    ${U.trackerHTML(history, me)}</div>`;
 }
 async function leaderboardView() {
   $app.innerHTML = `<div class="narrow"><p class="note">Loading the leaderboard…</p></div>`;
@@ -722,7 +791,7 @@ async function leaderboardView() {
   const tabs = [["week", "This week"], ["all", "All time"], ["improved", "Most improved"]];
   let cur = "week";
   const draw = () => {
-    $app.innerHTML = `<div class="narrow pop"><div class="row"><a href="#home">← Home</a></div>
+    $app.innerHTML = `<div class="narrow pop"><div class="tabs" role="tablist"><a role="tab" aria-selected="false" href="#me">My progress</a><a role="tab" aria-selected="true" href="#leaderboard">Class leaderboard</a></div>
       <div class="hero"><p class="eyebrow">Class ${U.esc(lb.class_code)}</p><h1>Leaderboard</h1>
       <p class="lede">${cur === "week" ? "XP earned since Monday. It starts again every week." : cur === "all" ? "All the XP earned since the start." : "Biggest rise from the first baseline to the latest one."}</p></div>
       <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${k === cur}" data-k="${k}">${l}</button>`).join("")}</div>
@@ -744,7 +813,7 @@ function startPractice(id) {
   saveRun(); route(); top();
 }
 function runView() {
-  header();
+  header(); nav(null);
   if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone()
     : run.kind === "listen" ? listenDone() : run.kind === "game" ? gameDone() : practiceDone();
   if (run.kind === "game") return gameView();
