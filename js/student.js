@@ -168,9 +168,10 @@ function unitCard(u) {
         <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
       <button class="btn small" data-vocab="${u}">Practise 10 words</button></div>
       <div class="row"><button class="btn small alt" data-cards="${u}">Word cards</button><button class="btn small alt" data-family="${u}">Word families</button></div></div>
-    <div class="usec"><p class="eyebrow">Games</p>${Object.entries(G.GAMES).map(([g, x]) => { const best = G.bestScore(history, G.gameId(g, u));
-        return `<div class="urow"><div><b>${x.name}</b><br><span class="note">${U.esc(x.blurb)}${best ? ` Your best: ${best} points.` : ""}</span></div>
-          <button class="btn small" data-game="${g}" data-unit="${u}">Play</button></div>`; }).join("")}</div>
+    <div class="usec"><p class="eyebrow">Games</p>${Object.entries(G.GAMES).filter(([g]) => g !== "speed" || G.speedTexts(u).length).map(([g, x]) => {
+        const best = G.bestScore(history, G.gameId(g, u)), locked = g === "speed" && !readTexts(u).length;
+        return `<div class="urow"><div><b>${x.name}</b><br><span class="note">${locked ? "Finish a reading text in this unit first. Speed Read uses the texts you have read." : U.esc(x.blurb)}${best ? ` Your best: ${best} points.` : ""}</span></div>
+          <button class="btn small" data-game="${g}" data-unit="${u}" ${locked ? "disabled" : ""}>Play</button></div>`; }).join("")}</div>
     <div class="usec"><p class="eyebrow">Grammar</p>${P.unitGrammar(u).map(g => { const m = P.grammarMastery(g.id, history);
         return `<div class="urow"><div><b>${g.id} ${U.esc(g.title)}</b><br><span class="note">${g.code ? g.code + " · " : ""}${m == null ? "Not tried yet" : m + "% right first time"}</span></div>
           <button class="btn small alt" data-gram="${g.id}">Practise</button></div>`; }).join("")}
@@ -509,10 +510,18 @@ function startGame(game, u) {
   run = { kind: "game", game, unit: u, id: G.gameId(game, u), phase: "intro", t0: Date.now() };
   route(); top();
 }
+// Speed Read only uses texts the student has already finished in practice.
+const readTexts = u => G.speedTexts(u).filter(t => history.some(h => h.mode === "practice" && h.text_id === t.id));
 function quitGame() { if (stopGame) stopGame(); stopGame = null; run = null; saveRun(); }
 function gameView() {
   const x = G.GAMES[run.game], best = G.bestScore(history, run.id), left = Math.max(0, G.GAME_XP_DAY - G.gameXPToday(history));
-  const how = run.game === "rain"
+  if (run.game === "speed" && !run.wpm) run.wpm = G.lastSpeed(history, run.id);
+  const how = run.game === "speed"
+    ? `<li>A paragraph from a text you have read flashes up ${G.CHUNK} words at a time. Read every word.</li>
+       <li>Then answer one question about it. You can't go back, so concentrate!</li>
+       <li>Two right in a row and the words come faster. A wrong answer slows them down.</li>
+       <li>${G.SPEED_ROUND} paragraphs. Faster speeds earn more points.</li>`
+    : run.game === "rain"
     ? `<li>A meaning falls from the sky. Tap the word that matches it before it reaches the water.</li>
        <li>Catch it high up for more points. A wrong tap loses 5 points.</li>
        <li>Every 5 words you catch, the rain gets faster. From level 3, two meanings fall at once.</li>
@@ -525,14 +534,18 @@ function gameView() {
     <p class="eyebrow">Unit ${run.unit} · game</p>
     ${run.phase === "intro" ? `<h1>${x.name}</h1><div class="panel"><ul>${how}</ul></div>
       <div class="stats"><div class="stat"><b>${best || "–"}</b><span>your best</span></div><div class="stat gold"><b>${left}</b><span>game XP left today</span></div></div>
+      ${run.game === "speed" ? `<p class="stem">Starting speed (words a minute)</p><div class="row" role="radiogroup">${G.SPEEDS.slice(0, 5).map(w =>
+        `<button class="btn small${w === run.wpm ? "" : " alt"}" role="radio" aria-checked="${w === run.wpm}" data-wpm="${w}">${w}</button>`).join("")}</div>
+        <p class="note">${G.SPEEDS[0]} is slow and careful. ${G.SPEEDS[3]} is a good reading speed for Checkpoint.</p>` : ""}
       <div class="row"><button class="btn" id="gstart">Start</button></div>`
       : `<div id="gbox"></div>`}</div>`;
   document.getElementById("leave").onclick = ev => { ev.preventDefault(); const u = run.unit; quitGame(); location.hash = "#unit-" + u; route(); top(); };
   const b = document.getElementById("gstart");
   if (b) b.onclick = () => { S.play("tap"); run.phase = "play"; gameView(); };
+  $app.querySelectorAll("[data-wpm]").forEach(w => w.onclick = () => { run.wpm = +w.dataset.wpm; S.play("tap"); gameView(); });
   if (run.phase === "play") {
-    const play = run.game === "rain" ? G.playRain : G.playTrain;
-    stopGame = play(document.getElementById("gbox"), { unit: run.unit, onEnd: R => {
+    const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed }[run.game];
+    stopGame = play(document.getElementById("gbox"), { unit: run.unit, texts: readTexts(run.unit), level: me.level ?? 1, wpm: run.wpm, onEnd: R => {
       stopGame = null; if (!run || run.kind !== "game") return;
       run.result = { ...R, xp: G.gameXP(R.hits, history), best };
       run.phase = "done"; S.play(R.points > best ? "win" : "done"); saveRun(); runView(); top();
@@ -541,16 +554,18 @@ function gameView() {
 }
 function gameDone() {
   const R = run.result, x = G.GAMES[run.game], u = run.unit, record = R.points > R.best;
-  const missed = run.game === "rain"
+  const missed = run.game === "speed"
+    ? R.words.filter(w => !w.hit).map(w => `<li>${U.esc(w.w)} <b>${U.esc(w.answer)}</b></li>`)
+    : run.game === "rain"
     ? [...new Set(R.words.filter(w => !w.hit).map(w => w.w))].map(w => P.unitWords(u).find(v => v.w === w)).filter(Boolean)
         .map(v => `<li><b>${U.esc(v.w)}</b>: ${U.esc(v.def)}</li>`)
     : R.words.filter(w => !w.hit).map(w => `<li><b>${U.esc(w.w)}</b> is ${/^[aeiou]/.test(w.pos) ? "an" : "a"} ${w.pos}</li>`);
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished · Unit ${u} ${x.name}</p><h1>${R.points} points</h1>
     ${record ? `<div class="fb ok winbox"><p class="big">New personal best!</p>${R.best ? `<p>Your old best was ${R.best} points.</p>` : ""}</div>` : R.best ? `<p class="note">Your best is ${R.best} points.</p>` : ""}
-    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.hits}</b><span>${run.game === "rain" ? "words caught" : "trains on time"}</span></div>
-      <div class="stat"><b>${R.level}</b><span>level reached</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.hits}</b><span>${{ rain: "words caught", train: "trains on time", speed: `of ${R.words.length} right` }[run.game]}</span></div>
+      <div class="stat"><b>${R.level}</b><span>${run.game === "speed" ? "top speed (wpm)" : "level reached"}</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
     ${R.xp === 0 ? `<p class="note">You have reached today's ${G.GAME_XP_DAY} XP from games. Your points still count for your best score.</p>` : ""}
-    ${missed.length ? `<div class="panel"><b>${run.game === "rain" ? "Words to learn (they come back in your word review)" : "Words to look at again"}</b><ul>${missed.join("")}</ul></div>` : ""}
+    ${missed.length ? `<div class="panel"><b>${{ rain: "Words to learn (they come back in your word review)", train: "Words to look at again", speed: "Questions you missed, with the answers" }[run.game]}</b><ul>${missed.join("")}</ul></div>` : ""}
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
   document.getElementById("again").onclick = () => { const g = run.game; run = null; saveRun(); startGame(g, u); };

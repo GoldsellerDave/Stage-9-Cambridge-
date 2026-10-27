@@ -105,7 +105,7 @@ function prevWeek(key) { const d = new Date(key + "T00:00:00Z"); d.setUTCDate(d.
 // (reading texts, vocabulary or grammar sets; the baseline and the quick word cards do not count).
 export function weeklyStreak(history, now = new Date()) {
   const counts = {};
-  history.filter(h => h.mode !== "baseline" && !/^(cards|rain|train)-/.test(h.text_id || "")).forEach(h => { const k = weekKey(h.created_at); counts[k] = (counts[k] || 0) + 1; });
+  history.filter(h => h.mode !== "baseline" && !/^(cards|rain|train|speed)-/.test(h.text_id || "")).forEach(h => { const k = weekKey(h.created_at); counts[k] = (counts[k] || 0) + 1; });
   let k = weekKey(now), streak = 0;
   if ((counts[k] || 0) < 2) k = prevWeek(k);
   while ((counts[k] || 0) >= 2) { streak++; k = prevWeek(k); }
