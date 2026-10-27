@@ -34,16 +34,18 @@ export function unitWords(unit) {
 }
 export function allWords() { return Object.keys(VOCAB).flatMap(u => unitWords(+u)); }
 
-// Latest result per word: true = right first time on the latest try.
+// Latest result per word entry, keyed "unit:word" because a few words (encourage, consume) appear in two units.
+// true = right first time on the latest try.
+export const wordKey = x => `${x.unit}:${x.w}`;
 export function wordState(history) {
   const st = {};
   [...history].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).forEach(h =>
-    (h.answers || []).forEach(a => { if (a.skill === "Vocabulary" && a.word) st[a.word] = a.first_try; }));
+    (h.answers || []).forEach(a => { if (a.skill === "Vocabulary" && a.word) st[`${a.unit}:${a.word}`] = a.first_try; }));
   return st;
 }
 export function wordsToReview(history) {
   const st = wordState(history);
-  return allWords().filter(x => st[x.w] === false);
+  return allWords().filter(x => st[wordKey(x)] === false);
 }
 
 function pickDistractors(pool, correct, key, n, rnd) {
@@ -64,7 +66,7 @@ export function vocabSet({ unit = null, review = false, history = [], n = 10, rn
   const pool = unit ? unitWords(unit) : allWords();
   let words = review ? wordsToReview(history) : pool;
   const order = shuffle(words.length, rnd).map(i => words[i]);
-  order.sort((a, b) => (st[a.w] === true) - (st[b.w] === true));
+  order.sort((a, b) => (st[wordKey(a)] === true) - (st[wordKey(b)] === true));
   // Meaning questions take wrong definitions from the same unit. Gap-fill questions take wrong words from
   // other units, so near-synonyms from the same list (annoyed / angry) never compete for one gap.
   return order.slice(0, n).map((w, i) => i % 2
@@ -73,7 +75,7 @@ export function vocabSet({ unit = null, review = false, history = [], n = 10, rn
 }
 export function vocabMastery(unit, history) {
   const st = wordState(history), ws = unitWords(unit);
-  return { mastered: ws.filter(x => st[x.w] === true).length, total: ws.length };
+  return { mastered: ws.filter(x => st[wordKey(x)] === true).length, total: ws.length };
 }
 
 /* ---------------- grammar ---------------- */

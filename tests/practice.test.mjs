@@ -38,7 +38,7 @@ test("vocabulary sets: unique options, unmastered words first, review of missed 
   assert.equal(set.length, 10);
   set.forEach(q => assert.equal(new Set(q.opts).size, 4));
   const history = [{ created_at: "2026-10-20T00:00:00Z", answers: [
-    { skill: "Vocabulary", word: "anger", first_try: false }, { skill: "Vocabulary", word: "obesity", first_try: true }] }];
+    { skill: "Vocabulary", word: "anger", unit: 2, first_try: false }, { skill: "Vocabulary", word: "obesity", unit: 2, first_try: true }] }];
   assert.deepEqual(P.wordsToReview(history).map(x => x.w), ["anger"]);
   assert.equal(P.vocabMastery(2, history).mastered, 1);
   const review = P.vocabSet({ review: true, history });
@@ -64,4 +64,12 @@ test("calendar: Tourism is the focus unit in late October 2026", () => {
   assert.equal(P.unitStatus(2, d), "done");
   assert.equal(P.unitStatus(4, d), "upcoming");
   assert.equal(P.focusUnit(new Date("2026-12-20T03:00:00Z")), 6);   // narrative writing → next unit is 6
+});
+
+test("a word in two units keeps a separate state per unit", () => {
+  const h = [{ created_at: "2026-10-01", answers: [{ skill: "Vocabulary", word: "encourage", unit: 1, first_try: false }] }];
+  const review = P.wordsToReview(h).filter(x => x.w === "encourage");
+  assert.deepEqual(review.map(x => x.unit), [1]);
+  assert.equal(P.vocabMastery(6, [{ created_at: "2026-10-02", answers: [{ skill: "Vocabulary", word: "encourage", unit: 6, first_try: true }] }]).mastered, 1);
+  assert.equal(P.vocabMastery(1, [{ created_at: "2026-10-02", answers: [{ skill: "Vocabulary", word: "encourage", unit: 6, first_try: true }] }]).mastered, 0);
 });
