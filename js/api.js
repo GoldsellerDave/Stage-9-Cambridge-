@@ -9,11 +9,11 @@ async function rpc(fn, args) {
   try {
     res = await fetch(`${CONFIG.supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/${fn}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: CONFIG.supabaseAnonKey,
-                 Authorization: "Bearer " + CONFIG.supabaseAnonKey },
+      // Only the apikey header: new sb_publishable_ keys are not JWTs, so they must not go in Authorization.
+      headers: { "Content-Type": "application/json", apikey: CONFIG.supabaseAnonKey },
       body: JSON.stringify(args)
     });
-  } catch (e) { throw new Error("No connection. Check your internet and try again."); }
+  } catch (e) { throw new Error(`No connection to the database (${e.message}). Check your internet and try again.`); }
   const body = await res.json().catch(() => null);
   if (body && body.code === "PGRST202") throw new Error("The database is not set up yet. Your teacher needs to run supabase/schema.sql.");
   if (!res.ok) throw new Error((body && body.message) || "Server error " + res.status);
