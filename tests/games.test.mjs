@@ -45,3 +45,33 @@ test("missed rain words are saved for the word review", () => {
   assert.deepEqual(due, ["stereotype"], "the missed word is due, the caught word is not");
   assert.equal(G.levelAfter(0), 1); assert.equal(G.levelAfter(5), 2); assert.equal(G.levelAfter(999), 8);
 });
+
+test("Speed Read has paragraph questions for every unit with texts", () => {
+  [2, 3, 4].forEach(u => {
+    const texts = G.speedTexts(u);
+    [0, 1, 2].forEach(lv => {
+      const items = G.speedItems(texts, lv);
+      assert.ok(items.length >= G.SPEED_ROUND, `unit ${u} level ${lv}: ${items.length}`);
+      items.forEach(x => {
+        assert.ok(x.words.length > 20, `${x.text} ${x.para}`);
+        assert.equal(x.q.opts.length, 4, `${x.text} ${x.skill}`);
+        assert.ok(!["Main idea", "Writer's view"].includes(x.skill));
+      });
+    });
+  });
+  assert.equal(G.speedTexts(1).length, 0);
+});
+
+test("Speed Read speeds up after two right and slows down after a wrong answer", () => {
+  assert.equal(G.nextSpeed(1, true, 1), 1);
+  assert.equal(G.nextSpeed(1, true, 2), 2);
+  assert.equal(G.nextSpeed(1, false, 0), 0);
+  assert.equal(G.nextSpeed(0, false, 0), 0);
+  assert.equal(G.nextSpeed(G.SPEEDS.length - 1, true, 5), G.SPEEDS.length - 1);
+  assert.deepEqual(G.chunks("a b c d e f g".split(" ")), ["a b c", "d e f", "g"]);
+  assert.equal(G.lastSpeed([], "speed-u2"), 130);
+  assert.equal(G.lastSpeed([{ text_id: "speed-u2", created_at: "2026-10-27T01:00:00Z", answers: [{ skill: "Game score", wpm: 200 }] },
+                            { text_id: "speed-u2", created_at: "2026-10-26T01:00:00Z", answers: [{ skill: "Game score", wpm: 100 }] }], "speed-u2"), 200);
+  const a = G.gameAnswers("speed", { points: 40, level: 160, top: 160, words: [{ hit: true, skill: "Detail", text: "sleep", para: "C", wpm: 130 }] }, 2);
+  assert.equal(a[0].wpm, 160); assert.deepEqual(a[1], { skill: "Speed reading", sub: "Detail", text: "sleep", para: "C", wpm: 130, first_try: true });
+});

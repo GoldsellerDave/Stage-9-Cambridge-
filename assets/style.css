@@ -322,3 +322,11 @@ a.pstep:hover b{color:var(--teal)}
 .tbtns .s-noun{border-left-color:var(--noun)} .tbtns .s-verb{border-left-color:var(--verb)} .tbtns .s-adjective{border-left-color:var(--adjective)} .tbtns .s-adverb{border-left-color:var(--adverb)}
 .tbtns .gbtn.sel{background:var(--gold-bg);border-color:var(--gold)}
 @media (prefers-reduced-motion:reduce){ .drop.popped,.drop.splash,.gbtn.shake{animation:none} }
+/* Speed Read */
+.sbox{background:var(--card);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:280px}
+.sflash{flex:1;display:grid;place-items:center;min-height:170px;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:12px}
+.sflash span{font-family:var(--f-text);font-size:clamp(1.5rem,6.5vw,2rem);font-weight:700;text-align:center;line-height:1.25;color:var(--title)}
+.sbar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.sbar i{display:block;height:100%;width:0;background:var(--teal);transition:width .15s linear}
+.spara{font-family:var(--f-text);margin:8px 0 0;line-height:1.55}
+.spara mark{background:var(--mark);color:inherit}

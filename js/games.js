@@ -1,12 +1,15 @@
-// Vocabulary games: Word Rain (catch each meaning with its word) and Word Train (send each word to its word-class station).
+// Games: Word Rain (catch each meaning with its word), Word Train (send each word to its word-class station)
+// and Speed Read (a paragraph flashes up a few words at a time, then one question).
 // The pure helpers at the top are tested; playRain and playTrain draw the game into an element and call onEnd with the result.
 import { unitWords } from "./practice.js";
 import { FAMILIES } from "./families.js";
 import { play } from "./sound.js";
+import { PRACTICE_TEXTS } from "./content.js";
 
 export const GAMES = {
   rain: { name: "Word Rain", blurb: "Meanings fall from the sky. Tap the word that matches before it lands." },
-  train: { name: "Word Train", blurb: "Send each word to the right station: noun, verb, adjective or adverb." }
+  train: { name: "Word Train", blurb: "Send each word to the right station: noun, verb, adjective or adverb." },
+  speed: { name: "Speed Read", blurb: "A paragraph flashes past a few words at a time. Answer one question, then go faster." }
 };
 export const GAME_XP_DAY = 30;           // the most XP games can give in one school day
 export const RAIN_LIVES = 3, RAIN_SECONDS = 120, TRAIN_COUNT = 20;
@@ -41,7 +44,7 @@ export const trainStations = pool => STATIONS.filter(s => pool.some(x => x.pos =
 
 /* ---------------- scores and XP ---------------- */
 const dayNo = t => Math.floor((t + 7 * 3600e3) / 86400e3);        // school time zone (UTC+7)
-export const isGame = id => /^(rain|train)-u\d$/.test(id || "");
+export const isGame = id => /^(rain|train|speed)-u\d$/.test(id || "");
 export const gameId = (game, unit) => `${game}-u${unit}`;
 export function gamePoints(h) { const a = (h.answers || []).find(x => x.skill === "Game score"); return a ? a.points : 0; }
 export function bestScore(history, id) { return history.filter(h => h.text_id === id).reduce((b, h) => Math.max(b, gamePoints(h)), 0); }
@@ -57,9 +60,33 @@ export function gameXP(hits, history, now = new Date()) {
 export function gameAnswers(game, R, unit) {
   const ans = [{ skill: "Game score", game, points: R.points, level: R.level }];
   if (game === "rain") R.words.forEach(x => ans.push({ skill: "Word game", word: x.w, unit, first_try: x.hit }));
-  else R.words.forEach(x => ans.push({ skill: "Word class", word: x.w, unit, pos: x.pos, first_try: x.hit }));
+  else if (game === "train") R.words.forEach(x => ans.push({ skill: "Word class", word: x.w, unit, pos: x.pos, first_try: x.hit }));
+  else { ans[0].wpm = R.top; R.words.forEach(x => ans.push({ skill: "Speed reading", sub: x.skill, text: x.text, para: x.para, wpm: x.wpm, first_try: x.hit })); }
   return ans;
 }
+
+/* ---------------- Speed Read data ---------------- */
+// Speed Read reuses the reading texts' questions about one paragraph (not main idea or writer's view, which need the whole text).
+// Only texts the student has already finished in practice are used, so the practice questions are never seen first here.
+export const SPEEDS = [100, 130, 160, 200, 240, 280, 330];          // words per minute
+export const SPEED_ROUND = 6, CHUNK = 3;                            // questions per game, words per flash
+const SPEED_SKILLS = ["Detail", "Vocabulary in context", "Inference", "Writer's purpose"];
+export const speedTexts = unit => PRACTICE_TEXTS.filter(t => t.unitNo === unit);
+export function speedItems(texts, level = 1, rnd = Math.random) {
+  const lv = Math.min(Math.max(level ?? 1, 0), 2);
+  return texts.flatMap(t => t.slots.filter(sl => SPEED_SKILLS.includes(sl.skill) && sl.q[lv].opts).map(sl => {
+    const para = t.levels[lv].paras.find(p => p[0] === sl.para);
+    return { text: t.id, topic: t.topic, para: sl.para, words: para[1].split(/\s+/), skill: sl.skill, q: sl.q[lv] };
+  })).map(x => [rnd(), x]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
+}
+// Two right in a row → one step faster; a wrong answer → one step slower.
+export function nextSpeed(i, right, streak) { return right ? (streak >= 2 ? Math.min(i + 1, SPEEDS.length - 1) : i) : Math.max(i - 1, 0); }
+export function lastSpeed(history, id) {
+  const h = [...history].filter(x => x.text_id === id).sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+  const a = h && (h.answers || []).find(x => x.skill === "Game score");
+  return a && a.wpm ? a.wpm : 130;
+}
+export function chunks(words, n = CHUNK) { const out = []; for (let i = 0; i < words.length; i += n) out.push(words.slice(i, i + n).join(" ")); return out; }
 
 /* ---------------- shared ---------------- */
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -265,4 +292,62 @@ export function playTrain(el, { unit, onEnd }) {
   function cleanup() { stop(); document.removeEventListener("keydown", key); }
   setSwitch(0);
   return () => { over = true; cleanup(); };
+}
+
+/* ---------------- Speed Read ---------------- */
+export function playSpeed(el, { unit, texts, level, wpm, onEnd }) {
+  const items = speedItems(texts, level).slice(0, SPEED_ROUND);
+  let i = 0, si = Math.max(0, SPEEDS.indexOf(wpm)), streak = 0, points = 0, hits = 0, top = SPEEDS[si], timer = null, over = false;
+  const t0 = Date.now(), words = [];
+  el.innerHTML = `<div class="game speed">${hud(0)}<div class="sbox" id="sbox"></div><p class="note" id="gtell" aria-live="polite"></p></div>`;
+  const box = el.querySelector("#sbox");
+  const head = () => {
+    el.querySelector("#glv").textContent = SPEEDS[si] + " wpm"; el.querySelector("#gpts").textContent = points;
+    el.querySelector("#gleft").textContent = `Question ${Math.min(i + 1, items.length)} of ${items.length}`;
+  };
+  el.querySelector(".ghud span").firstChild.textContent = "Speed ";
+  function ready() {
+    head();
+    const x = items[i];
+    box.innerHTML = `<p class="eyebrow">${esc(x.topic)} · paragraph ${x.para}</p><div class="sflash" aria-live="off"><span>Get ready…</span></div>
+      <div class="sbar"><i id="sprog"></i></div>`;
+    el.querySelector("#gtell").textContent = `${SPEEDS[si]} words a minute. Read every word: the question comes after.`;
+    timer = setTimeout(() => flash(chunks(x.words), 0), 1200);
+  }
+  function flash(cs, k) {
+    if (over) return;
+    if (k >= cs.length) return ask();
+    box.querySelector(".sflash span").textContent = cs[k];
+    box.querySelector("#sprog").style.width = (100 * (k + 1) / cs.length) + "%";
+    const n = cs[k].split(" ").length;
+    timer = setTimeout(() => flash(cs, k + 1), n * 60000 / SPEEDS[si] + (/[.!?]["”]?$/.test(cs[k]) ? 150 : 0));
+  }
+  function ask() {
+    const x = items[i], order = shuffled(x.q.opts.map((_, k) => k));
+    box.innerHTML = `<p class="eyebrow">${esc(x.skill)}</p><p class="stem">${esc(x.q.stem)}</p>
+      <div class="opts">${order.map((k, n) => `<button class="opt" data-o="${k}"><span class="k">${"ABCD"[n]}</span><span>${esc(x.q.opts[k])}</span></button>`).join("")}</div>`;
+    el.querySelector("#gtell").textContent = "";
+    box.querySelectorAll(".opt").forEach(b => b.onclick = () => answer(+b.dataset.o));
+  }
+  function answer(o) {
+    const x = items[i], right = o === 0, at = SPEEDS[si];
+    words.push({ w: x.q.stem, answer: x.q.opts[0], hit: right, skill: x.skill, text: x.text, para: x.para, wpm: at, sentence: x.words.join(" "), focus: x.q.focus });
+    if (right) { hits++; streak++; const gain = 10 + Math.round(at / 10); points += gain; play("ok"); }
+    else { streak = 0; play("bad"); }
+    const was = si; si = nextSpeed(si, right, streak); if (si > was) { streak = 0; play("level"); } top = Math.max(top, SPEEDS[si]);
+    box.querySelectorAll(".opt").forEach(b => { b.disabled = true; const k = +b.dataset.o; if (k === 0) b.classList.add("right"); else if (k === o) b.classList.add("wrong"); });
+    const para = esc(x.words.join(" ")), f = x.q.focus && para.includes(esc(x.q.focus)) ? para.replace(esc(x.q.focus), `<mark>${esc(x.q.focus)}</mark>`) : para;
+    box.insertAdjacentHTML("beforeend", `<div class="fb ${right ? "ok" : "info"} pop"><p><strong>${right ? `Right! +${10 + Math.round(at / 10)} points.` : "Not this time."}</strong>
+      ${si > was ? ` Speeding up to ${SPEEDS[si]} words a minute.` : si < was ? ` Slowing down to ${SPEEDS[si]} words a minute.` : ""}</p>
+      ${right ? "" : `<p class="spara">${f}</p>`}</div>
+      <div class="row"><button class="btn" id="snext">${i + 1 >= items.length ? "Finish" : "Next paragraph"}</button></div>`);
+    box.querySelector("#snext").onclick = () => { i++; if (i >= items.length) finish(); else ready(); };
+    head();
+  }
+  function finish() {
+    over = true; clearTimeout(timer);
+    onEnd({ points, hits, misses: items.length - hits, level: top, top, words, seconds: Math.round((Date.now() - t0) / 1000) });
+  }
+  ready();
+  return () => { over = true; clearTimeout(timer); };
 }
