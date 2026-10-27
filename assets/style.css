@@ -271,3 +271,54 @@ a.pstep:hover b{color:var(--teal)}
 .transcript p{margin:0;padding:2px 6px;border-radius:6px}
 .transcript p.hot{background:var(--mark)}
 @media (min-width:700px){ .player{position:sticky;top:76px;z-index:5} }
+
+/* games: Word Rain and Word Train */
+.game{display:flex;flex-direction:column;gap:12px;--noun:#2F6FB5;--verb:#D9622B;--adjective:#1E8C87;--adverb:#8B4FB3;--sky1:#DCEEFB;--sky2:#F4FAFE;--water:#4A90C8}
+@media (prefers-color-scheme: dark){ .game{--noun:#6FA8E8;--verb:#E8895A;--adjective:#3DBDB5;--adverb:#B88BDA;--sky1:#14263A;--sky2:#1A2E44;--water:#2E6A9C} }
+.ghud{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.9rem;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.ghud b{font-size:1.1rem}
+.glives{display:flex;gap:5px}
+.glives i{width:13px;height:16px;background:var(--water);border-radius:50% 50% 50% 50%/60% 60% 40% 40%;transition:opacity .3s}
+.glives i.lost{opacity:.18}
+.arena{position:relative;overflow:hidden;border-radius:14px;border:1.5px solid var(--line);touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.rain .arena{height:min(56vh,440px);background:linear-gradient(var(--sky1),var(--sky2))}
+.water{position:absolute;left:0;right:0;bottom:0;background:var(--water);opacity:.75;transition:height .4s ease-out}
+.water::before{content:"";position:absolute;left:0;right:0;top:-6px;height:12px;background:radial-gradient(circle at 10px -2px,transparent 9px,var(--water) 10px) 0 0/20px 12px repeat-x;opacity:.9}
+.drop{position:absolute;top:0;left:0;width:min(250px,74%);padding:10px 14px;background:var(--surface);color:var(--ink);border:2px solid var(--water);border-radius:18px 18px 18px 4px;
+  font-size:.95rem;line-height:1.35;box-shadow:0 3px 10px rgba(0,0,0,.12);will-change:transform}
+.drop .gain{position:absolute;right:8px;top:-14px;color:var(--ok);font-size:1.1rem}
+.drop.popped{border-color:var(--ok);background:var(--ok-bg);animation:popout .45s ease-out forwards}
+.drop.splash{border-color:var(--bad);animation:splash .5s ease-in forwards}
+@keyframes popout{to{opacity:0;scale:1.25}}
+@keyframes splash{to{opacity:0;scale:1.1 .3}}
+.gbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.gbtn{display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 12px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-weight:700;text-align:left;font-size:1rem}
+.gbtn:active{transform:scale(.97)}
+.gbtn .gk{flex:none;display:grid;place-items:center;width:24px;height:24px;border-radius:6px;background:var(--card);color:var(--muted);font-size:.78rem}
+.gbtn.right{border-color:var(--ok);background:var(--ok-bg)}
+.gbtn.shake{border-color:var(--bad);background:var(--bad-bg);animation:shake .35s}
+@keyframes shake{25%{translate:-6px}50%{translate:5px}75%{translate:-3px}}
+.gbanner{position:absolute;left:50%;top:38%;translate:-50% -50%;padding:10px 18px;border-radius:999px;background:var(--navy);color:var(--on-dark);font-weight:700;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .25s;z-index:2}
+.gbanner.show{opacity:1}
+.gbanner.big{font-size:1.25rem;padding:14px 24px}
+/* Word Train */
+.tarena{background:var(--card)}
+.tarena svg{display:block;width:100%;height:auto}
+.rail{fill:none;stroke:var(--line);stroke-width:5;stroke-linecap:round}
+.rail.on{stroke:var(--gold);stroke-width:6}
+.junction{fill:var(--gold)}
+.station{cursor:pointer}
+.station rect{fill:var(--surface);stroke-width:3}
+.station text{font:700 13px var(--f-body);fill:var(--ink)}
+.s-noun rect{stroke:var(--noun)} .s-verb rect{stroke:var(--verb)} .s-adjective rect{stroke:var(--adjective)} .s-adverb rect{stroke:var(--adverb)}
+.s-noun.sel rect{fill:var(--noun)} .s-verb.sel rect{fill:var(--verb)} .s-adjective.sel rect{fill:var(--adjective)} .s-adverb.sel rect{fill:var(--adverb)}
+.station.sel text{fill:#fff}
+.station.good rect{fill:var(--ok)!important;stroke:var(--ok)} .station.bad rect{fill:var(--bad)!important;stroke:var(--bad)}
+.station.good text,.station.bad text{fill:#fff}
+.tcar rect{fill:var(--navy);stroke:var(--surface);stroke-width:1.5} .tcar circle{fill:var(--ink)}
+.tcar text{font:700 12.5px var(--f-body);fill:#fff}
+.tcar.in{opacity:0;transition:opacity .3s} .tcar.wrong rect{fill:var(--bad)}
+.tbtns .gbtn{border-left-width:8px}
+.tbtns .s-noun{border-left-color:var(--noun)} .tbtns .s-verb{border-left-color:var(--verb)} .tbtns .s-adjective{border-left-color:var(--adjective)} .tbtns .s-adverb{border-left-color:var(--adverb)}
+.tbtns .gbtn.sel{background:var(--gold-bg);border-color:var(--gold)}
+@media (prefers-reduced-motion:reduce){ .drop.popped,.drop.splash,.gbtn.shake{animation:none} }

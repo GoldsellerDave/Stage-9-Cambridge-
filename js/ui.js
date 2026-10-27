@@ -23,6 +23,8 @@ export function textTitle(id) {
   m = /^grammar-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} grammar quiz`;
   m = /^cards-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} word cards`;
   m = /^family-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} word families`;
+  m = /^rain-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} Word Rain`;
+  m = /^train-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} Word Train`;
   m = /^boss-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} final challenge`;
   m = /^grammar-(\d\.\d)$/.exec(id); if (m) return `Grammar ${m[1]}`;
   return id;
