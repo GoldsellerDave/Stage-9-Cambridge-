@@ -640,8 +640,9 @@ function baselineDone() {
 /* ---- practice ---- */
 function practiceView() {
   const text = PRACTICE_TEXTS.find(t => t.id === run.textId), r = run.r, T = text.levels[r.level];
-  // Unit words are tappable for their meaning, except while the question tests a word from the text.
-  const unit = text.slots[r.slot].skill === "Vocabulary in context" ? null : text.unitNo;
+  // Unit words are tappable for their meaning, except a word the current question asks about.
+  const slotNow = text.slots[r.slot];
+  const unit = { no: text.unitNo, skip: slotNow.skill === "Vocabulary in context" ? slotNow.q.map(x => x.stem).join(" ") : "" };
   if (run.phase === "read" || run.phase === "shift") {
     const up = run.shift === "up";
     $app.innerHTML = `<div class="narrow pop">
