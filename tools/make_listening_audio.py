@@ -17,6 +17,14 @@ def tasks():
     js = 'import("./js/listening.js").then(m => console.log(JSON.stringify(m.LISTENING)))'
     return json.loads(subprocess.check_output(["node", "-e", js], cwd=ROOT))
 
+def shift(audio, semitones):
+    """Raise the pitch by a number of semitones, keeping the length (ffmpeg rubberband)."""
+    src, dst = (os.path.join(tempfile.gettempdir(), n) for n in ("shift-in.wav", "shift-out.wav"))
+    sf.write(src, audio, SR)
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", src, "-af", f"rubberband=pitch={2 ** (semitones / 12):.4f}", dst], check=True)
+    out, _ = sf.read(dst, dtype="float32")
+    return out
+
 def main():
     model_dir, only = sys.argv[1], set(sys.argv[2:])
     k = Kokoro(os.path.join(model_dir, "kokoro-v1.0.onnx"), os.path.join(model_dir, "voices-v1.0.bin"))
@@ -31,10 +39,16 @@ def main():
         for n, (who, text) in enumerate(t["lines"]):
             if n and who == "NARRATOR":
                 parts.append(np.zeros(int(SR * SECTION_GAP))); pos += SECTION_GAP
-            voice = t["voices"][who]
-            audio, sr = k.create(text, voice=voice, speed=0.92 if who != "NARRATOR" else 0.95,
-                                 lang="en-gb" if voice[0] == "b" else "en-us")
+            spec = t["voices"][who]
+            if isinstance(spec, str):
+                spec = {"mix": [[spec, 1]], "pitch": 0}
+            first = spec["mix"][0][0]
+            style = sum(k.get_voice_style(v) * w for v, w in spec["mix"])
+            audio, sr = k.create(text, voice=style, speed=0.92 if who != "NARRATOR" else 0.95,
+                                 lang="en-gb" if first[0] == "b" else "en-us")
             assert sr == SR
+            if spec.get("pitch"):
+                audio = shift(audio, spec["pitch"])
             spans.append([round(pos, 2), round(pos + len(audio) / SR, 2)])
             parts.append(audio); pos += len(audio) / SR
             parts.append(np.zeros(int(SR * GAP))); pos += GAP
