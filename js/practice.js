@@ -56,7 +56,8 @@ const dayNo = t => Math.floor((t + 7 * 3600e3) / 86400e3);        // days in the
 export function wordSchedule(history) {
   const sc = {};
   byDate(history).forEach(h => (h.answers || []).forEach(a => {
-    if (a.skill !== "Vocabulary" || !a.word) return;
+    // A word missed in a game (Word Rain) also comes back for review; a word caught in a game does not move it up.
+    if (!a.word || !(a.skill === "Vocabulary" || (a.skill === "Word game" && !a.first_try))) return;
     const k = `${a.unit}:${a.word}`, prev = sc[k] ? sc[k].box : 0;
     sc[k] = { box: a.first_try ? Math.min(prev + 1, REVIEW_DAYS.length - 1) : 0, last: new Date(h.created_at).getTime() };
   }));

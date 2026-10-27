@@ -9,6 +9,7 @@ import { SEQUENCE, UNITS } from "./curriculum.js";
 import { VOCAB } from "./vocab.js";
 import { LISTENING, listeningFor } from "./listening.js";
 import { TIMES } from "./listening-times.js";
+import * as G from "./games.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -18,7 +19,7 @@ let run = null;              // the reading in progress (practice or baseline), 
 let timerId = null;
 
 const RUN_KEY = () => "ckpt-run-" + (session ? session.username : "");
-function saveRun() { try { run ? localStorage.setItem(RUN_KEY(), JSON.stringify(run)) : localStorage.removeItem(RUN_KEY()); } catch (e) {} }
+function saveRun() { if (run && run.kind === "game" && run.phase !== "done") return; try { run ? localStorage.setItem(RUN_KEY(), JSON.stringify(run)) : localStorage.removeItem(RUN_KEY()); } catch (e) {} }
 function loadRun() { try { return JSON.parse(localStorage.getItem(RUN_KEY())); } catch (e) { return null; } }
 const top = () => window.scrollTo(0, 0);
 
@@ -29,7 +30,7 @@ function header() {
   if (run && run.kind === "practice" && run.phase !== "done") {
     h += `<div class="meter" aria-label="Text level">${E.LEVELS.map((l, i) => `<span class="${i === run.r.level ? "on" : ""}">${l}</span>`).join("")}</div>`;
   }
-  if (run && run.phase !== "done") h += `<span class="pill" id="clock">00:00</span>`;
+  if (run && run.phase !== "done" && run.kind !== "game") h += `<span class="pill" id="clock">00:00</span>`;
   h += `<span class="pill xp" title="Your XP">${me.xp_total + (run && run.xpSoFar ? run.xpSoFar : 0)} XP</span>`;
   const on = S.soundOn();
   h += `<button class="pill snd" id="snd" aria-pressed="${on}" aria-label="Sound effects ${on ? "on" : "off"}" title="Sound effects ${on ? "on" : "off"}">${on ? SOUND_ON : SOUND_OFF}</button>`;
@@ -167,6 +168,9 @@ function unitCard(u) {
         <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
       <button class="btn small" data-vocab="${u}">Practise 10 words</button></div>
       <div class="row"><button class="btn small alt" data-cards="${u}">Word cards</button><button class="btn small alt" data-family="${u}">Word families</button></div></div>
+    <div class="usec"><p class="eyebrow">Games</p>${Object.entries(G.GAMES).map(([g, x]) => { const best = G.bestScore(history, G.gameId(g, u));
+        return `<div class="urow"><div><b>${x.name}</b><br><span class="note">${U.esc(x.blurb)}${best ? ` Your best: ${best} points.` : ""}</span></div>
+          <button class="btn small" data-game="${g}" data-unit="${u}">Play</button></div>`; }).join("")}</div>
     <div class="usec"><p class="eyebrow">Grammar</p>${P.unitGrammar(u).map(g => { const m = P.grammarMastery(g.id, history);
         return `<div class="urow"><div><b>${g.id} ${U.esc(g.title)}</b><br><span class="note">${g.code ? g.code + " · " : ""}${m == null ? "Not tried yet" : m + "% right first time"}</span></div>
           <button class="btn small alt" data-gram="${g.id}">Practise</button></div>`; }).join("")}
@@ -222,6 +226,7 @@ function bindActivities() {
   $app.querySelectorAll("[data-cards]").forEach(btn => btn.onclick = () => startCards(+btn.dataset.cards));
   $app.querySelectorAll("[data-family]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.family;
     startSmall("vocab", `family-u${u}`, `Unit ${u} word families`, P.familySet(u)); });
+  $app.querySelectorAll("[data-game]").forEach(btn => btn.onclick = () => startGame(btn.dataset.game, +btn.dataset.unit));
   $app.querySelectorAll("[data-step]").forEach(btn => btn.onclick = () => missionStep(btn.dataset.step, +btn.dataset.unit));
   $app.querySelectorAll("[data-gramunit]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.gramunit;
     startSmall("grammar", `grammar-u${u}`, `Unit ${u} grammar quiz`, P.grammarSet({ unit: u })); });
@@ -497,6 +502,63 @@ function showGloss(key) {
 $app.addEventListener("click", ev => { const b = ev.target.closest(".gw"); if (b) showGloss(b.dataset.gw); });
 document.addEventListener("keydown", ev => { const el = document.getElementById("sheet"); if (ev.key === "Escape" && el) el.hidden = true; });
 
+/* ---------------- games ---------------- */
+// A game is not paused or kept on the device while it is being played: leaving ends it without saving.
+let stopGame = null;
+function startGame(game, u) {
+  run = { kind: "game", game, unit: u, id: G.gameId(game, u), phase: "intro", t0: Date.now() };
+  route(); top();
+}
+function quitGame() { if (stopGame) stopGame(); stopGame = null; run = null; saveRun(); }
+function gameView() {
+  const x = G.GAMES[run.game], best = G.bestScore(history, run.id), left = Math.max(0, G.GAME_XP_DAY - G.gameXPToday(history));
+  const how = run.game === "rain"
+    ? `<li>A meaning falls from the sky. Tap the word that matches it before it reaches the water.</li>
+       <li>Catch it high up for more points. A wrong tap loses 5 points.</li>
+       <li>Every 5 words you catch, the rain gets faster. From level 3, two meanings fall at once.</li>
+       <li>Three meanings in the water and the game ends. A game lasts up to ${G.RAIN_SECONDS / 60} minutes.</li>`
+    : `<li>Each train carries a word. Decide if it is a noun, a verb, an adjective or an adverb.</li>
+       <li>Tap that station to set the points <b>before</b> the train reaches the junction.</li>
+       <li>When more trains come at once, set the points for the train nearest the junction first.</li>
+       <li>${G.TRAIN_COUNT} trains. Every 5 right, the trains get faster.</li>`;
+  $app.innerHTML = `<div class="narrow pop"><div class="row back"><a href="#home" id="leave">← Back</a><span class="note">${run.phase === "play" ? "Leaving ends this game." : ""}</span></div>
+    <p class="eyebrow">Unit ${run.unit} · game</p>
+    ${run.phase === "intro" ? `<h1>${x.name}</h1><div class="panel"><ul>${how}</ul></div>
+      <div class="stats"><div class="stat"><b>${best || "–"}</b><span>your best</span></div><div class="stat gold"><b>${left}</b><span>game XP left today</span></div></div>
+      <div class="row"><button class="btn" id="gstart">Start</button></div>`
+      : `<div id="gbox"></div>`}</div>`;
+  document.getElementById("leave").onclick = ev => { ev.preventDefault(); const u = run.unit; quitGame(); location.hash = "#unit-" + u; route(); top(); };
+  const b = document.getElementById("gstart");
+  if (b) b.onclick = () => { S.play("tap"); run.phase = "play"; gameView(); };
+  if (run.phase === "play") {
+    const play = run.game === "rain" ? G.playRain : G.playTrain;
+    stopGame = play(document.getElementById("gbox"), { unit: run.unit, onEnd: R => {
+      stopGame = null; if (!run || run.kind !== "game") return;
+      run.result = { ...R, xp: G.gameXP(R.hits, history), best };
+      run.phase = "done"; S.play(R.points > best ? "win" : "done"); saveRun(); runView(); top();
+    } });
+  }
+}
+function gameDone() {
+  const R = run.result, x = G.GAMES[run.game], u = run.unit, record = R.points > R.best;
+  const missed = run.game === "rain"
+    ? [...new Set(R.words.filter(w => !w.hit).map(w => w.w))].map(w => P.unitWords(u).find(v => v.w === w)).filter(Boolean)
+        .map(v => `<li><b>${U.esc(v.w)}</b>: ${U.esc(v.def)}</li>`)
+    : R.words.filter(w => !w.hit).map(w => `<li><b>${U.esc(w.w)}</b> is ${/^[aeiou]/.test(w.pos) ? "an" : "a"} ${w.pos}</li>`);
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished · Unit ${u} ${x.name}</p><h1>${R.points} points</h1>
+    ${record ? `<div class="fb ok winbox"><p class="big">New personal best!</p>${R.best ? `<p>Your old best was ${R.best} points.</p>` : ""}</div>` : R.best ? `<p class="note">Your best is ${R.best} points.</p>` : ""}
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.hits}</b><span>${run.game === "rain" ? "words caught" : "trains on time"}</span></div>
+      <div class="stat"><b>${R.level}</b><span>level reached</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
+    ${R.xp === 0 ? `<p class="note">You have reached today's ${G.GAME_XP_DAY} XP from games. Your points still count for your best score.</p>` : ""}
+    ${missed.length ? `<div class="panel"><b>${run.game === "rain" ? "Words to learn (they come back in your word review)" : "Words to look at again"}</b><ul>${missed.join("")}</ul></div>` : ""}
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
+  document.getElementById("again").onclick = () => { const g = run.game; run = null; saveRun(); startGame(g, u); };
+  document.getElementById("unit").onclick = () => { run = null; saveRun(); location.hash = "#unit-" + u; route(); top(); };
+  saveAttempt({ mode: "vocab", text_id: run.id, level_start: null, level_end: null, score: R.hits, max_score: R.words.length,
+                xp: R.xp, seconds: R.seconds, answers: G.gameAnswers(run.game, R, u) });
+}
+
 /* ---------------- listening ---------------- */
 // One recording, played twice in full like the exam; all questions on one page with a check for the whole task.
 // A wrong answer gets a hint and a replay of just that part; a second wrong answer shows the answer.
@@ -668,7 +730,9 @@ function startPractice(id) {
 }
 function runView() {
   header();
-  if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone() : run.kind === "listen" ? listenDone() : practiceDone();
+  if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone()
+    : run.kind === "listen" ? listenDone() : run.kind === "game" ? gameDone() : practiceDone();
+  if (run.kind === "game") return gameView();
   if (run.kind === "baseline") baselineView();
   else if (run.kind === "small") smallView();
   else if (run.kind === "cards") cardsView();
