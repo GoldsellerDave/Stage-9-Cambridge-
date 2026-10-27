@@ -4,6 +4,7 @@
 // Short answer: groups of keyword stems; "need" = how many different groups the answer must hit.
 // Texts for other units live in texts-u*.js and are added to PRACTICE_TEXTS below.
 import { UNIT3_TEXTS } from "./texts-u3.js";
+import { UNIT4_TEXTS } from "./texts-u4.js";
 
 export const STRATEGY = {
  "Main idea":{name:"Finding the main idea",steps:["Read the first paragraph and the last paragraph again.","Ask: what does almost every paragraph talk about?","Cross out answers that only match one paragraph or one detail.","Choose the answer that covers the whole text."]},
@@ -124,7 +125,8 @@ export const PRACTICE_TEXTS = [
   { id: "sleep", unitNo: 2, unit: "Unit 2 · Well-being", topic: "Teenagers and sleep",
     blurb: "Why do teenagers find it so hard to get up in the morning?",
     levels: SLEEP_LEVELS, slots: SLEEP_SLOTS },
-  ...UNIT3_TEXTS
+  ...UNIT3_TEXTS,
+  ...UNIT4_TEXTS
 ];
 
 /* ---------- Baseline: three short passages, Easier to Harder, 4 MCQs each, no hints ---------- */
