@@ -40,6 +40,10 @@ create table if not exists ck_attempts (
   created_at  timestamptz not null default now()
 );
 create index if not exists ck_attempts_student on ck_attempts(student_id, created_at);
+-- Activity types: reading baseline, reading practice, vocabulary and grammar practice.
+alter table ck_attempts drop constraint if exists ck_attempts_mode_check;
+alter table ck_attempts add constraint ck_attempts_mode_check
+  check (mode in ('baseline', 'practice', 'vocab', 'grammar'));
 
 alter table ck_students enable row level security;
 alter table ck_tokens   enable row level security;
@@ -117,12 +121,15 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_auth(p_token); v_xp integer; v_level smallint;
 begin
   if s.role <> 'student' then raise exception 'Only students can save attempts.'; end if;
-  if (p_attempt->>'mode') not in ('baseline', 'practice') then raise exception 'Unknown attempt type.'; end if;
+  if (p_attempt->>'mode') not in ('baseline', 'practice', 'vocab', 'grammar') then raise exception 'Unknown attempt type.'; end if;
   v_xp := least(greatest(coalesce((p_attempt->>'xp')::int, 0), 0), 400);
-  v_level := least(greatest((p_attempt->>'level_end')::int, 0), 2);
+  -- Only reading changes the reading level; vocabulary and grammar keep it as it is.
+  v_level := case when (p_attempt->>'mode') in ('baseline', 'practice')
+                  then least(greatest((p_attempt->>'level_end')::int, 0), 2) else s.level end;
   insert into ck_attempts(student_id, mode, text_id, level_start, level_end, score, max_score, xp, seconds, answers)
   values (s.id, p_attempt->>'mode', left(coalesce(p_attempt->>'text_id', ''), 60),
-          (p_attempt->>'level_start')::smallint, v_level,
+          (p_attempt->>'level_start')::smallint,
+          case when (p_attempt->>'mode') in ('baseline', 'practice') then v_level end,
           coalesce((p_attempt->>'score')::int, 0), coalesce((p_attempt->>'max_score')::int, 0),
           v_xp, least(coalesce((p_attempt->>'seconds')::int, 0), 36000),
           coalesce(p_attempt->'answers', '[]'::jsonb));

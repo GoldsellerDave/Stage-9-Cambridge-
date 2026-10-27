@@ -88,7 +88,7 @@ function draw() {
   } else if (tab === "heat") {
     h += `<p class="lede">Percentage of questions right first time, per student and skill. Blank cells mean not tried yet.</p>
       <div class="legend"><span><i class="h0"></i>under 40%</span><span><i class="h1"></i>40–59%</span><span><i class="h2"></i>60–79%</span><span><i class="h3"></i>80% or more</span></div>
-      <div class="tbl"><table class="heat"><thead><tr><th>Student</th>${U.SKILLS.map(s => `<th class="num" title="${U.esc(s)}">${U.esc(s.replace("Vocabulary in context", "Vocab").replace("Detail: two points", "Two points").replace("Cause and effect", "Cause/effect").replace("Writer's ", "W. "))}</th>`).join("")}</tr></thead><tbody>${
+      <div class="tbl"><table class="heat"><thead><tr><th>Student</th>${U.SKILLS.map(s => `<th class="num" title="${U.esc(s)}">${U.esc(s.replace("Vocabulary in context", "In context").replace("Detail: two points", "Two points").replace("Cause and effect", "Cause/effect").replace("Writer's ", "W. "))}</th>`).join("")}</tr></thead><tbody>${
         rows.map(r => `<tr><td>${U.esc(r.name)}</td>${U.SKILLS.map(s => { const p = pct((r.skills || {})[s]);
           return p == null ? `<td class="h hn"></td>` : `<td class="h h${p < 40 ? 0 : p < 60 ? 1 : p < 80 ? 2 : 3}">${p}%</td>`; }).join("")}</tr>`).join("")
       }</tbody><tfoot><tr><th>Class</th>${U.SKILLS.map(s => { let rt = 0, tt = 0; rows.forEach(r => { const k = (r.skills || {})[s]; if (k) { rt += k.right; tt += k.total; } });

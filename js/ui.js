@@ -3,7 +3,7 @@ import { LEVELS, skillStats, badges, weeklyStreak, SKILL_BADGES, SUPPORT_LABEL }
 import { PRACTICE_TEXTS } from "./content.js";
 
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
-                       "Cause and effect", "Writer's purpose", "Writer's view"];
+                       "Cause and effect", "Writer's purpose", "Writer's view", "Vocabulary", "Grammar"];
 
 export function esc(t) {
   return String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
@@ -11,7 +11,15 @@ export function esc(t) {
 export function levelName(l) { return l == null ? "Not placed" : LEVELS[l]; }
 export function fmtDate(d) { return d ? new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "–"; }
 export function fmtTime(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + " min " + (s % 60) + " s"; }
-export function textTitle(id) { const t = PRACTICE_TEXTS.find(x => x.id === id); return t ? t.topic : id === "baseline" ? "Baseline" : id; }
+export function textTitle(id) {
+  const t = PRACTICE_TEXTS.find(x => x.id === id); if (t) return t.topic;
+  if (id === "baseline") return "Baseline";
+  if (id === "vocab-review") return "Word review";
+  let m = /^vocab-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} vocabulary`;
+  m = /^grammar-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} grammar quiz`;
+  m = /^grammar-(\d\.\d)$/.exec(id); if (m) return `Grammar ${m[1]}`;
+  return id;
+}
 
 export function paraHTML(p, focus, here) {
   let body = esc(p[1]);
@@ -50,7 +58,7 @@ export function skillBars(history) {
   return `<div class="skills">${SKILLS.map(s => {
     const k = st[s]; const pct = k && k.total ? Math.round(100 * k.right / k.total) : null;
     return `<div class="skillrow"><span>${esc(s)}</span><div class="bar" aria-hidden="true"><i class="${pct != null && pct < 50 ? "low" : ""}" style="width:${pct || 0}%"></i></div><span>${pct == null ? "–" : pct + "%"}</span></div>`;
-  }).join("")}</div><p class="note">Right first time, from your last 20 questions on each skill.</p>`;
+  }).join("")}</div><p class="note">Right first time, from the last 20 questions on each skill.</p>`;
 }
 
 export function badgeShelf(history) {
@@ -66,7 +74,7 @@ export function badgeShelf(history) {
 export function historyTable(history) {
   if (!history.length) return `<p class="note">No readings yet.</p>`;
   return `<div class="tbl"><table><thead><tr><th>Date</th><th>Reading</th><th>Level</th><th class="num">Score</th><th class="num">XP</th></tr></thead><tbody>${
-    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td><span class="lvl">${h.level_start != null && h.level_start !== h.level_end && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(h.level_end)}</span></td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
+    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td>${h.mode === "vocab" || h.mode === "grammar" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== h.level_end && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(h.level_end)}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 
