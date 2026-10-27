@@ -315,9 +315,9 @@ a.pstep:hover b{color:var(--teal)}
 .station.sel text{fill:#fff}
 .station.good rect{fill:var(--ok)!important;stroke:var(--ok)} .station.bad rect{fill:var(--bad)!important;stroke:var(--bad)}
 .station.good text,.station.bad text{fill:#fff}
-.tcar rect{fill:var(--navy);stroke:var(--surface);stroke-width:1.5} .tcar circle{fill:var(--ink)}
+.tcar rect{fill:var(--navy);stroke:var(--surface);stroke-width:1.5} .tcar .nose{fill:var(--gold);stroke:none}
 .tcar text{font:700 12.5px var(--f-body);fill:#fff}
-.tcar.in{opacity:0;transition:opacity .3s} .tcar.wrong rect{fill:var(--bad)}
+.tcar.in{opacity:0;transition:opacity .3s} .tcar.wrong rect:not(.nose){fill:var(--bad)}
 .tbtns .gbtn{border-left-width:8px}
 .tbtns .s-noun{border-left-color:var(--noun)} .tbtns .s-verb{border-left-color:var(--verb)} .tbtns .s-adjective{border-left-color:var(--adjective)} .tbtns .s-adverb{border-left-color:var(--adverb)}
 .tbtns .gbtn.sel{background:var(--gold-bg);border-color:var(--gold)}
