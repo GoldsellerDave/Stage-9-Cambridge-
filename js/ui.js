@@ -32,9 +32,10 @@ function glossRules(unit) {
     .map(x => ({ key: `${x.unit}:${x.w}`, re: new RegExp(wordPattern(x.w).source, "gi") }));
   return glossCache[unit];
 }
-function gloss(html, unit) {
+function gloss(html, unit, skip = "") {
   // Only text between tags is changed, and each word is marked once per paragraph.
-  const seen = new Set();
+  // Words named in `skip` (a question that tests them) are left plain.
+  const seen = new Set(glossRules(unit).filter(r => { r.re.lastIndex = 0; return r.re.test(skip); }).map(r => r.key));
   return html.split(/(<[^>]+>)/).map(part => {
     if (part.startsWith("<")) return part;
     let pieces = [{ t: part }];
@@ -54,7 +55,8 @@ function gloss(html, unit) {
 export function paraHTML(p, focus, here, unit) {
   let body = esc(p[1]);
   if (focus) { const f = esc(focus), i = body.indexOf(f); if (i >= 0) body = body.slice(0, i) + "<mark>" + f + "</mark>" + body.slice(i + f.length); }
-  if (unit) body = gloss(body, unit);
+  if (unit && typeof unit === "object") body = gloss(body, unit.no, unit.skip);
+  else if (unit) body = gloss(body, unit);
   return `<div class="para${here ? " here" : ""}"><b class="lt">${p[0]}</b><p>${body}</p></div>`;
 }
 export function textHTML(t, opts = {}) {
