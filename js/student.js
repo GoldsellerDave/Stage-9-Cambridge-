@@ -10,6 +10,7 @@ import { VOCAB } from "./vocab.js";
 import { LISTENING, listeningFor } from "./listening.js";
 import { TIMES } from "./listening-times.js";
 import * as G from "./games.js";
+import * as L from "./look.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -70,7 +71,7 @@ function nav(view) {
   if (!el) { el = document.createElement("nav"); el.id = "nav"; el.className = "bnav"; el.setAttribute("aria-label", "Main"); document.body.appendChild(el); }
   document.body.classList.toggle("has-nav", view != null);
   if (view == null) { el.hidden = true; return; }
-  const on = /^unit-/.test(view) ? "units" : ["progress", "leaderboard"].includes(view) ? "me" : NAV.some(n => n[0] === view) ? view : "home";
+  const on = /^unit-/.test(view) ? "units" : ["progress", "leaderboard", "settings"].includes(view) ? "me" : NAV.some(n => n[0] === view) ? view : "home";
   const due = P.wordsToReview(history).length;
   el.hidden = false;
   el.innerHTML = `<div class="bnav-in">${NAV.map(([k, label, icon]) => `<a href="#${k}" ${k === on ? 'aria-current="page"' : ""}>${icon}<span>${label}</span>${k === "review" && due ? `<b class="nbadge">${due > 99 ? "99+" : due}</b>` : ""}</a>`).join("")}</div>`;
@@ -78,7 +79,7 @@ function nav(view) {
 
 /* ---------------- sign in ---------------- */
 function loginView(msg) {
-  header(); nav(null);
+  header(); nav(null); L.clearLook();
   $app.innerHTML = `<div class="narrow pop">
     <div class="hero"><p class="eyebrow">Stage 9 · Checkpoint English</p><h1>Read, learn words, practise grammar and level up</h1>
     <p class="lede">Sign in with the username and PIN your teacher gave you.</p></div>
@@ -109,17 +110,19 @@ async function refresh() {
 async function route() {
   clearInterval(timerId);
   if (!session) return loginView();
-  S.soundUser(session.username);
+  S.soundUser(session.username); L.lookUser(session.username);
   if (!me) {
     $app.innerHTML = `<div class="narrow"><p class="note">Loading…</p></div>`;
     try { await refresh(); } catch (e) { setSession(null); session = null; return loginView(e.message); }
   }
+  L.applyLook(L.getLook(), lookStats());
   if (!run) { const r = loadRun(); if (r && !r.pausedAt) run = r; }
   if (run) return runView();
   const view = (location.hash || "#home").slice(1);
   header();
   nav(view);
   if (view === "progress" || view === "me") return progressView();
+  if (view === "settings") return settingsView();
   if (view === "leaderboard") return leaderboardView();
   if (view === "units") return unitsView();
   if (view === "review") return reviewView();
@@ -780,9 +783,31 @@ function listenDone() {
 }
 
 /* ---------------- progress & leaderboard ---------------- */
+const meTabs = cur => `<div class="tabs" role="tablist">${[["me", "My progress"], ["leaderboard", "Leaderboard"], ["settings", "Settings"]]
+  .map(([k, l]) => `<a role="tab" aria-selected="${k === cur}" href="#${k}">${l}</a>`).join("")}</div>`;
+const lookStats = () => ({ xp: me ? me.xp_total : 0, missionBadges: P.missionBadges(history).length });
+function settingsView() {
+  const l = L.getLook(), st = lookStats();
+  const seg = (key, opts) => `<div class="seg" role="radiogroup">${opts.map(([v, label]) =>
+    `<button role="radio" aria-checked="${l[key] === v}" data-look="${key}" data-v="${v}">${label}</button>`).join("")}</div>`;
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Me</p><h1>Settings</h1></div>${meTabs("settings")}
+    <div class="panel"><h3>Light or dark</h3>${seg("mode", [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]])}
+      <p class="note">Auto follows your phone or computer.</p></div>
+    <div class="panel"><h3>Colour theme</h3><div class="swatches" role="radiogroup">${L.THEMES.map(t => { const open = L.themeOpen(t, st);
+        return `<button class="swatch" role="radio" aria-checked="${l.theme === t.id}" data-look="theme" data-v="${t.id}" ${open ? "" : "disabled"}>
+          <span class="chips">${t.colors.map(c => `<i style="background:${c}"></i>`).join("")}</span>${t.name}${open ? "" : `<small>🔒 ${t.need}</small>`}</button>`; }).join("")}</div></div>
+    <div class="panel"><h3>Text size</h3>${seg("size", [["m", "Normal"], ["l", "Large"], ["xl", "Extra large"]])}</div>
+    <div class="panel"><h3>Font</h3>${seg("font", [["normal", "Normal"], ["easy", "Easy-read"]])}
+      <p class="note">Easy-read uses a clear, wide font with more space between lines.</p></div>
+    <div class="panel"><h3>Reading texts</h3>${seg("paper", [["off", "White page"], ["on", "Paper"]])}
+      <p class="note">Paper puts the reading texts on a soft cream page, which some people find easier on the eyes.</p></div>
+    <div class="text"><h2>A sample paragraph</h2><p>Teenagers need between eight and ten hours of sleep a night, but most get around seven. This is how reading texts will look.</p></div>
+    <p class="note">Your settings are saved on this device.</p></div>`;
+  $app.querySelectorAll("[data-look]").forEach(b => b.onclick = () => { L.setLook({ [b.dataset.look]: b.dataset.v }); S.play("tap"); settingsView(); });
+}
 function progressView() {
   $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Me</p><h1>${U.esc(me.name)}</h1></div>
-    <div class="tabs" role="tablist"><a role="tab" aria-selected="true" href="#me">My progress</a><a role="tab" aria-selected="false" href="#leaderboard">Class leaderboard</a></div>
+    ${meTabs("me")}
     ${U.trackerHTML(history, me)}</div>`;
 }
 async function leaderboardView() {
@@ -791,7 +816,7 @@ async function leaderboardView() {
   const tabs = [["week", "This week"], ["all", "All time"], ["improved", "Most improved"]];
   let cur = "week";
   const draw = () => {
-    $app.innerHTML = `<div class="narrow pop"><div class="tabs" role="tablist"><a role="tab" aria-selected="false" href="#me">My progress</a><a role="tab" aria-selected="true" href="#leaderboard">Class leaderboard</a></div>
+    $app.innerHTML = `<div class="narrow pop">${meTabs("leaderboard")}
       <div class="hero"><p class="eyebrow">Class ${U.esc(lb.class_code)}</p><h1>Leaderboard</h1>
       <p class="lede">${cur === "week" ? "XP earned since Monday. It starts again every week." : cur === "all" ? "All the XP earned since the start." : "Biggest rise from the first baseline to the latest one."}</p></div>
       <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${k === cur}" data-k="${k}">${l}</button>`).join("")}</div>
