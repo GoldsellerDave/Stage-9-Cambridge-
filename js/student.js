@@ -84,7 +84,7 @@ async function route() {
     $app.innerHTML = `<div class="narrow"><p class="note">Loading…</p></div>`;
     try { await refresh(); } catch (e) { setSession(null); session = null; return loginView(e.message); }
   }
-  run = run || loadRun();
+  if (!run) { const r = loadRun(); if (r && !r.pausedAt) run = r; }
   if (run) return runView();
   const view = (location.hash || "#home").slice(1);
   header();
@@ -104,11 +104,15 @@ function homeView() {
   const review = P.wordsToReview(history);
   let h = `<div class="narrow pop">
     <div class="hero"><p class="eyebrow">Class ${U.esc(me.class_code)}</p><h1>Hi, ${U.esc(first)}</h1></div>`;
-  if (!me.baseline_done) {
+  const paused = pausedRun();
+  if (paused) h += `<div class="tcard"><span class="tag gold">Unfinished</span><h3>${U.esc(runName(paused))}</h3>
+      <p class="note">Carry on where you stopped. Starting a different activity will replace this one.</p>
+      <div class="row"><button class="btn" id="resume">Continue</button></div></div>`;
+  if (!me.baseline_done && !(paused && paused.kind === "baseline")) {
     h += `<div class="tcard"><span class="tag gold">Start here</span><h3>Baseline reading</h3>
       <p class="note" style="font-size:1rem">Three short texts, from easier to harder, with 12 questions and no hints. Your score sets your starting reading level. It takes about 15 minutes.</p>
       <div class="row"><button class="btn" id="base">Start the baseline</button></div></div>`;
-  } else {
+  } else if (me.baseline_done) {
     h += `<div class="stats">
       <div class="stat gold"><b>${me.xp_week}</b><span>XP this week</span></div>
       <div class="stat"><b>${U.levelName(me.level)}</b><span>reading level</span></div>
@@ -128,6 +132,7 @@ function homeView() {
     ${LIVE ? "" : `<p class="note">Demo mode: <button class="linkbtn" style="color:var(--teal)" id="reset">reset the demo data</button></p>`}</div>`;
   $app.innerHTML = h;
   const b = document.getElementById("base"); if (b) b.onclick = startBaseline;
+  const rr = document.getElementById("resume"); if (rr) rr.onclick = resumeRun;
   const rb = document.getElementById("rebase"); if (rb) rb.onclick = startBaseline;
   const rs = document.getElementById("reset"); if (rs) rs.onclick = () => { resetDemo(); setSession(null); session = null; me = null; route(); };
   bindActivities();
@@ -207,7 +212,7 @@ function smallView() {
     if (out === "correct") { const xp = set.results[set.i].support === "none" ? P.XP_SMALL.first : P.XP_SMALL.hint; run.xpSoFar += xp; run.fb = { kind: "ok", xp }; }
     else if (out === "hint") run.fb = { kind: "hint", wrong: run.pick };
     else run.fb = { kind: "reveal" };
-    saveRun(); header(); smallView();
+    saveRun(); runView();
   };
   const n = document.getElementById("next"); if (n) n.onclick = () => {
     run.pick = null; run.fb = null;
@@ -271,9 +276,31 @@ function startPractice(id) {
 function runView() {
   header();
   if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "small" ? smallDone() : practiceDone();
-  if (run.kind === "baseline") return baselineView();
-  if (run.kind === "small") return smallView();
-  return practiceView();
+  if (run.kind === "baseline") baselineView();
+  else if (run.kind === "small") smallView();
+  else practiceView();
+  backButton();
+}
+// Leaving an activity part-way pauses it on this device; the home page offers to continue it.
+function backButton() {
+  if (document.getElementById("leave")) return;
+  const box = $app.querySelector(".narrow") || $app;
+  box.insertAdjacentHTML("afterbegin", `<div class="row back"><a href="#home" id="leave">← Home</a><span class="note">Your place is saved.</span></div>`);
+  document.getElementById("leave").onclick = ev => {
+    ev.preventDefault(); run.pausedAt = Date.now(); saveRun(); run = null; location.hash = "#home"; route(); top();
+  };
+}
+function pausedRun() { const r = loadRun(); return r && r.pausedAt ? r : null; }
+function runName(r) {
+  if (r.kind === "baseline") return `Baseline reading (text ${r.part + 1} of 3)`;
+  if (r.kind === "small") return `${r.label} (question ${r.set.i + 1} of ${r.set.qs.length})`;
+  return U.textTitle(r.textId);
+}
+function resumeRun() {
+  const r = pausedRun(); if (!r) return;
+  const away = Date.now() - r.pausedAt;          // the timer does not count time away
+  r.t0 += away; if (r.readStart) r.readStart += away; delete r.pausedAt;
+  run = r; saveRun(); route(); top();
 }
 function readGate(paras, onGo, label) {
   const need = E.minReadSeconds(paras);
@@ -297,7 +324,7 @@ function optsHTML(q, ord, state) {
   }).join("")}</div>`;
 }
 function bindOpts(after) {
-  $app.querySelectorAll(".opt").forEach(b => b.onclick = () => { run.pick = +b.dataset.o; saveRun(); after(); });
+  $app.querySelectorAll(".opt").forEach(b => b.onclick = () => { run.pick = +b.dataset.o; saveRun(); after(); backButton(); });
 }
 
 /* ---- baseline ---- */
