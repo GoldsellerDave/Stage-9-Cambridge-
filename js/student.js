@@ -7,6 +7,8 @@ import * as P from "./practice.js";
 import * as S from "./sound.js";
 import { SEQUENCE, UNITS } from "./curriculum.js";
 import { VOCAB } from "./vocab.js";
+import { LISTENING, listeningFor } from "./listening.js";
+import { TIMES } from "./listening-times.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -42,7 +44,7 @@ const SOUND_OFF = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="
 function tick() {
   const el = document.getElementById("clock"); if (!el || !run) return;
   const s = Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
-  const target = { baseline: 15, practice: 20, small: 10, cards: 5 }[run.kind];
+  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12 }[run.kind];
   el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${target}:00`;
   el.classList.toggle("over", s > target * 60);
 }
@@ -150,7 +152,7 @@ function homeView() {
 const STATUS = { done: ["Done", "none"], now: ["Now", "hint"], upcoming: ["Coming up", "rescue"] };
 function unitCard(u) {
   const texts = PRACTICE_TEXTS.filter(t => t.unitNo === u);
-  const done = new Set(history.filter(h => h.mode === "practice").map(h => h.text_id));
+  const done = new Set(history.filter(h => h.mode === "practice" || h.mode === "listening").map(h => h.text_id));
   const vm = P.vocabMastery(u, history), st = P.unitStatus(u);
   const lists = VOCAB[u].map((l, i) => `List ${i + 1}: ${l.length} words`).join(" · ");
   return `<div class="tcard unit">
@@ -159,6 +161,8 @@ function unitCard(u) {
     <div class="usec"><p class="eyebrow">Reading</p>${texts.length ? texts.map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${done.has(t.id) ? "Done before: half XP this time." : U.esc(t.blurb)}</span></div>
         ${me.baseline_done ? `<button class="btn small" data-text="${t.id}">${done.has(t.id) ? "Read again" : "Read"}</button>` : `<span class="note">Take the baseline first</span>`}</div>`).join("")
       : `<p class="note">A reading text for this unit is coming soon.</p>`}</div>
+    ${listeningFor(u).length ? `<div class="usec"><p class="eyebrow">Listening</p>${listeningFor(u).map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${U.esc(t.part)} · ${done.has(t.id) ? "Done before" : U.esc(t.blurb)}</span></div>
+        <button class="btn small" data-listen="${t.id}">${done.has(t.id) ? "Again" : "Listen"}</button></div>`).join("")}</div>` : ""}
     <div class="usec"><p class="eyebrow">Vocabulary</p><div class="urow"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
         <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
       <button class="btn small" data-vocab="${u}">Practise 10 words</button></div>
@@ -184,6 +188,7 @@ function missionStep(key, u) {
   if (key === "vocab") return startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history }));
   if (key === "family") return startSmall("vocab", `family-u${u}`, `Unit ${u} word families`, P.familySet(u));
   if (key === "boss") return startBoss(u);
+  if (key === "listen") { const done = new Set(history.map(h => h.text_id)), ts = listeningFor(u); return startListening((ts.find(t => !done.has(t.id)) || ts[0]).id); }
   if (key === "grammar") { const g = P.unitGrammar(u).find(x => P.grammarMastery(x.id, history) == null) || P.unitGrammar(u)[0]; return startPoint(g.id); }
   if (key === "read") {
     if (!me.baseline_done) { alert("Take the baseline reading first. It is on your home page."); return; }
@@ -213,6 +218,7 @@ function bindActivities() {
   $app.querySelectorAll("[data-review]").forEach(btn => btn.onclick = () =>
     startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history })));
   $app.querySelectorAll("[data-gram]").forEach(btn => btn.onclick = () => startPoint(btn.dataset.gram));
+  $app.querySelectorAll("[data-listen]").forEach(btn => btn.onclick = () => startListening(btn.dataset.listen));
   $app.querySelectorAll("[data-cards]").forEach(btn => btn.onclick = () => startCards(+btn.dataset.cards));
   $app.querySelectorAll("[data-family]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.family;
     startSmall("vocab", `family-u${u}`, `Unit ${u} word families`, P.familySet(u)); });
@@ -491,6 +497,143 @@ function showGloss(key) {
 $app.addEventListener("click", ev => { const b = ev.target.closest(".gw"); if (b) showGloss(b.dataset.gw); });
 document.addEventListener("keydown", ev => { const el = document.getElementById("sheet"); if (ev.key === "Escape" && el) el.hidden = true; });
 
+/* ---------------- listening ---------------- */
+// One recording, played twice in full like the exam; all questions on one page with a check for the whole task.
+// A wrong answer gets a hint and a replay of just that part; a second wrong answer shows the answer.
+let audioEl = null, audioFor = null, segEnd = null;
+const MAX_PLAYS = 2;
+function startListening(id) {
+  run = { kind: "listen", id, phase: "q", plays: 0, resp: {}, stage: {}, results: {}, notes: {}, t0: Date.now(), orders: {}, pick: null, xpSoFar: 0 };
+  saveRun(); route(); top();
+}
+function audio() {
+  if (!audioEl || audioFor !== run.id) {
+    if (audioEl) audioEl.pause();
+    audioEl = new Audio(`audio/listening/${run.id}.mp3`); audioFor = run.id; audioEl.preload = "auto";
+    audioEl.addEventListener("timeupdate", () => {
+      if (segEnd != null && audioEl.currentTime >= segEnd) { audioEl.pause(); segEnd = null; }
+      playerUpdate();
+    });
+    audioEl.addEventListener("ended", () => {
+      if (run && run.kind === "listen" && segEnd == null && !audioEl.seg) { run.plays++; saveRun(); }
+      segEnd = null; audioEl.seg = false; playerUpdate();
+    });
+    audioEl.addEventListener("pause", playerUpdate); audioEl.addEventListener("play", playerUpdate);
+  }
+  return audioEl;
+}
+function stopAudio() { if (audioEl) { audioEl.pause(); segEnd = null; } }
+function playerUpdate() {
+  const a = audioEl, btn = document.getElementById("lplay"); if (!a || !btn || !run || run.kind !== "listen") return;
+  const playing = !a.paused && !a.seg, left = MAX_PLAYS - run.plays, full = !a.seg;
+  const bar = document.getElementById("lbar"), t = document.getElementById("ltime");
+  if (bar && full && a.duration) bar.style.width = `${Math.min(100, 100 * a.currentTime / a.duration)}%`;
+  if (t && a.duration) t.textContent = `${U.fmtClock(a.currentTime)} / ${U.fmtClock(a.duration)}`;
+  btn.disabled = left <= 0 && !playing && !(a.currentTime > 0 && a.currentTime < a.duration && !a.seg);
+  btn.innerHTML = playing ? `${PAUSE} Pause` : left <= 0 ? "You have heard it twice" : a.currentTime > 0 && a.currentTime < a.duration && !a.seg ? `${PLAY} Carry on` : `${PLAY} Play (${left === MAX_PLAYS ? "first" : "second"} time)`;
+  const n = document.getElementById("lplays"); if (n) n.textContent = `Listen ${Math.min(run.plays + (playing ? 1 : 0), MAX_PLAYS)} of ${MAX_PLAYS}`;
+  const c = document.getElementById("check"); if (c) c.disabled = !canCheckListen();
+}
+const PLAY = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>`;
+const PAUSE = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z" fill="currentColor"/></svg>`;
+function playFull() {
+  const a = audio();
+  if (!a.paused && !a.seg) return a.pause();
+  if (a.seg || a.ended || a.currentTime === 0 || a.currentTime >= a.duration) { if (run.plays >= MAX_PLAYS) return; a.seg = false; segEnd = null; a.currentTime = 0; }
+  a.play().catch(() => {}); S.play("tap");
+}
+function playPart(k) {
+  const task = LISTENING.find(t => t.id === run.id), [a, b] = P.cueLines(task, task.qs[k]), span = TIMES[run.id];
+  if (!span) return;
+  const el = audio(); el.seg = true; el.currentTime = Math.max(0, span[a][0] - 0.2); segEnd = span[b][1] + 0.3; el.play().catch(() => {});
+}
+const lockedQ = k => !!run.results[k];
+function canCheckListen() {
+  const task = LISTENING.find(t => t.id === run.id);
+  return run.plays >= 1 && task.qs.every((q, k) => lockedQ(k) || (run.resp[k] != null && run.resp[k] !== ""));
+}
+function listenView() {
+  const task = LISTENING.find(t => t.id === run.id), total = task.qs.length;
+  let h = `<div class="narrow pop"><p class="eyebrow">Unit ${task.unitNo} listening · ${U.esc(task.part)}</p><h1>${U.esc(task.topic)}</h1>
+    <div class="panel"><p style="margin:0">${U.esc(task.instructions)}</p><p class="note">You can hear the recording twice, like in the exam. Read the questions first.</p></div>
+    <div class="player"><button class="btn" id="lplay">${PLAY} Play</button><div class="lmeta"><div class="bar"><i id="lbar" style="width:0;background:var(--teal)"></i></div>
+      <div class="row" style="justify-content:space-between"><span class="note" id="lplays"></span><span class="note" id="ltime"></span></div></div></div>`;
+  if (task.statements) h += `<div class="panel stmts">${task.statements.map(s => `<p style="margin:0">${U.esc(s)}</p>`).join("")}</div>`;
+  h += task.qs.map((q, k) => listenQ(task, q, k)).join("");
+  const done = task.qs.every((_, k) => lockedQ(k));
+  h += `<div class="row">${done ? `<button class="btn" id="lfinish">See my results</button>` : `<button class="btn" id="check" disabled>Check my answers</button>`}
+    ${!done && run.plays < 1 ? `<span class="note">Listen once before you check.</span>` : ""}</div></div>`;
+  $app.innerHTML = h;
+  $app.querySelectorAll("[data-lq]").forEach(b => b.onclick = () => { run.resp[+b.dataset.lq] = +b.dataset.v; S.play("tap"); saveRun(); listenView(); backButton(); });
+  $app.querySelectorAll("[data-lg]").forEach(inp => inp.oninput = () => { run.resp[+inp.dataset.lg] = inp.value; saveRun(); playerUpdate(); });
+  $app.querySelectorAll("[data-part]").forEach(b => b.onclick = () => playPart(+b.dataset.part));
+  document.getElementById("lplay").onclick = playFull;
+  const c = document.getElementById("check"); if (c) c.onclick = () => checkListen(task);
+  const f = document.getElementById("lfinish"); if (f) f.onclick = () => finishListen(task);
+  audio(); playerUpdate();
+}
+function listenQ(task, q, k) {
+  const r = run.results[k], st = run.stage[k] || 0, locked = !!r, resp = run.resp[k];
+  let body;
+  if (q.type === "gap") {
+    const [a, b] = q.stem.split("___");
+    body = `<p class="stem lgap">${U.esc(a)}<input type="text" class="gapin${locked ? (r.support === "explained" ? " wrong" : " right") : ""}" data-lg="${k}" value="${U.esc(resp || "")}" autocomplete="off" autocapitalize="none" spellcheck="false" aria-label="Answer ${k + 1}" ${locked ? "disabled" : ""}>${U.esc(b)}</p>`;
+  } else {
+    const opts = task.statements ? task.statements.map(s => s.slice(0, 1)) : q.opts, ord = task.statements ? opts.map((_, i) => i) : order(`l${k}`, opts.length);
+    const correct = q.answer != null ? q.answer : 0;
+    body = `<p class="stem">${U.esc(q.stem)}</p><div class="${task.statements ? "letters-row" : "opts"}">${ord.map((oi, n) => {
+      let cls = (task.statements ? "lopt" : "opt") + (resp === oi ? " sel" : "");
+      if (locked && oi === correct) cls += " right"; else if (resp === oi && (locked || run.notes[k] === "wrong")) cls += " wrong";
+      return `<button class="${cls}" data-lq="${k}" data-v="${oi}" ${locked ? "disabled" : ""}>${task.statements ? U.esc(opts[oi]) : `<span class="k">${"ABCD"[n]}</span><span>${U.esc(opts[oi])}</span>`}</button>`; }).join("")}</div>`;
+  }
+  let fb = "";
+  if (locked && r.support !== "explained") fb = `<div class="fb ok"><p><strong>Correct.</strong> <span class="xpgain">+${r.support === "none" ? P.XP_LISTEN.first : P.XP_LISTEN.hint} XP</span>${run.notes[k] === "spelling" ? ` Check the spelling: <b>${U.esc(q.answers[0])}</b>.` : ""}</p></div>`;
+  else if (locked) fb = `<div class="fb info"><p><strong>The answer is "${U.esc(q.type === "gap" ? q.answers[0] : task.statements ? task.statements[q.answer] : q.opts[0])}".</strong></p><p>${U.esc(q.explain)}</p>
+    <div class="row">${partBtn(k, "Hear that part again")}</div></div>`;
+  else if (st === 1) fb = `<div class="fb bad"><p><strong>Not quite.</strong> ${U.esc(q.hint)}</p><div class="row">${partBtn(k, "Listen to that part again")}</div></div>`;
+  return `<div class="qcard lq${locked ? " done" : ""}"><div class="qhead"><span class="tag">${U.esc(q.skill)}</span><span class="qnum">${k + 1} of ${task.qs.length}</span></div>${q.type === "gap" || task.statements ? (task.statements ? body : `${body}`) : body}${fb}</div>`;
+}
+const partBtn = (k, label) => TIMES[run.id] ? `<button class="btn small alt" data-part="${k}">${PLAY} ${label}</button>` : "";
+function checkListen(task) {
+  let right = 0, wrong = 0;
+  task.qs.forEach((q, k) => {
+    if (lockedQ(k)) return;
+    const ok = P.listenCorrect(q, run.resp[k]), st = run.stage[k] || 0;
+    if (ok) {
+      if (q.type === "gap" && P.markGap(q, run.resp[k]) === "spelling") run.notes[k] = "spelling";
+      run.results[k] = { skill: "Listening", sub: q.skill, first_try: st === 0, support: st === 0 ? "none" : "hint" }; right++;
+    } else if (st === 0) { run.stage[k] = 1; run.notes[k] = "wrong"; wrong++; }
+    else { run.results[k] = { skill: "Listening", sub: q.skill, first_try: false, support: "explained" }; wrong++; }
+  });
+  run.xpSoFar = P.listenXP(Object.values(run.results)) - P.XP_LISTEN.finish;
+  S.play(wrong ? (right ? "info" : "bad") : "ok");
+  saveRun(); listenView(); backButton();
+  const first = $app.querySelector(".fb.bad, .fb.info"); if (first) first.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+function finishListen(task) {
+  stopAudio();
+  const results = task.qs.map((_, k) => run.results[k]), bonus = E.streakBonus(history);
+  run.result = { results, score: results.filter(r => r.first_try).length, xp: P.listenXP(results) + bonus, bonus, seconds: Math.round((Date.now() - run.t0) / 1000) };
+  run.phase = "done"; run.xpSoFar = 0; S.play("done"); saveRun(); runView(); top();
+}
+function listenDone() {
+  const task = LISTENING.find(t => t.id === run.id), R = run.result;
+  const hot = new Set(task.qs.flatMap(q => { const [a, b] = P.cueLines(task, q); return Array.from({ length: b - a + 1 }, (_, i) => a + i); }));
+  const rows = R.results.map((r, k) => `<tr><td>${k + 1}</td><td>${U.esc(task.qs[k].skill)}</td><td><span class="chip ${r.support}">${E.SUPPORT_LABEL[r.support]}</span></td></tr>`).join("");
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished · ${U.esc(task.topic)}</p><h1>${R.score} of ${task.qs.length} right first time</h1>
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${task.qs.length}</b><span>right first time</span></div>
+      <div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div><div class="stat"><b>${R.results.filter(r => r.support === "explained").length}</b><span>to review</span></div></div>
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 activities this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    <div class="tbl"><table><thead><tr><th>#</th><th>Skill</th><th>Result</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <details class="panel"><summary><b>Read the transcript</b> <span class="note">(the parts with answers are highlighted)</span></summary>
+      <div class="transcript">${task.lines.map((l, i) => `<p class="${hot.has(i) ? "hot" : ""}"><b>${U.esc(l[0] === "NARRATOR" ? "Narrator" : l[0][0] + l[0].slice(1).toLowerCase())}:</b> ${U.esc(l[1])}</p>`).join("")}</div></details>
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row"><button class="btn" id="home">Back to home</button></div></div>`;
+  document.getElementById("home").onclick = () => { run = null; saveRun(); location.hash = "#home"; route(); };
+  saveAttempt({ mode: "listening", text_id: task.id, level_start: null, level_end: null, score: R.score, max_score: task.qs.length,
+                xp: R.xp, seconds: R.seconds, answers: R.results });
+}
+
 /* ---------------- progress & leaderboard ---------------- */
 function progressView() {
   $app.innerHTML = `<div class="narrow pop"><div class="row"><a href="#home">← Home</a></div>
@@ -525,10 +668,11 @@ function startPractice(id) {
 }
 function runView() {
   header();
-  if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone() : practiceDone();
+  if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone() : run.kind === "listen" ? listenDone() : practiceDone();
   if (run.kind === "baseline") baselineView();
   else if (run.kind === "small") smallView();
   else if (run.kind === "cards") cardsView();
+  else if (run.kind === "listen") listenView();
   else practiceView();
   backButton();
 }
@@ -538,13 +682,14 @@ function backButton() {
   const box = $app.querySelector(".narrow") || $app;
   box.insertAdjacentHTML("afterbegin", `<div class="row back"><a href="#home" id="leave">← Home</a><span class="note">Your place is saved.</span></div>`);
   document.getElementById("leave").onclick = ev => {
-    ev.preventDefault(); run.pausedAt = Date.now(); saveRun(); run = null; location.hash = "#home"; route(); top();
+    ev.preventDefault(); stopAudio(); run.pausedAt = Date.now(); saveRun(); run = null; location.hash = "#home"; route(); top();
   };
 }
 function pausedRun() { const r = loadRun(); return r && r.pausedAt ? r : null; }
 function runName(r) {
   if (r.kind === "baseline") return `Baseline reading (text ${r.part + 1} of 3)`;
   if (r.kind === "small") return `${r.label} (question ${r.set.i + 1} of ${r.set.qs.length})`;
+  if (r.kind === "listen") return `Listening: ${LISTENING.find(t => t.id === r.id).topic}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
   return U.textTitle(r.textId);
 }

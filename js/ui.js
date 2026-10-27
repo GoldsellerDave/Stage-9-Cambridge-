@@ -2,18 +2,21 @@
 import { LEVELS, skillStats, badges, weeklyStreak, SKILL_BADGES, SUPPORT_LABEL } from "./engine.js";
 import { PRACTICE_TEXTS } from "./content.js";
 import { unitWords, wordPattern, missionBadges, MISSION_BADGES } from "./practice.js";
+import { LISTENING } from "./listening.js";
 
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
-                       "Cause and effect", "Writer's purpose", "Writer's view", "Vocabulary", "Grammar"];
+                       "Cause and effect", "Writer's purpose", "Writer's view", "Vocabulary", "Grammar", "Listening"];
 
 export function esc(t) {
   return String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
 }
 export function levelName(l) { return l == null ? "Not placed" : LEVELS[l]; }
 export function fmtDate(d) { return d ? new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "–"; }
+export function fmtClock(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 export function fmtTime(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + " min " + (s % 60) + " s"; }
 export function textTitle(id) {
   const t = PRACTICE_TEXTS.find(x => x.id === id); if (t) return t.topic;
+  const l = LISTENING.find(x => x.id === id); if (l) return `Listening: ${l.topic}`;
   if (id === "baseline") return "Baseline";
   if (id === "vocab-review") return "Word review";
   let m = /^vocab-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} vocabulary`;
@@ -109,7 +112,7 @@ export function badgeShelf(history) {
 export function historyTable(history) {
   if (!history.length) return `<p class="note">No readings yet.</p>`;
   return `<div class="tbl"><table><thead><tr><th>Date</th><th>Reading</th><th>Level</th><th class="num">Score</th><th class="num">XP</th></tr></thead><tbody>${
-    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td>${h.mode === "vocab" || h.mode === "grammar" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== h.level_end && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(h.level_end)}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
+    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td>${h.mode !== "practice" && h.mode !== "baseline" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== h.level_end && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(h.level_end)}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 

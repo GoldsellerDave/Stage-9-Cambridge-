@@ -40,10 +40,10 @@ create table if not exists ck_attempts (
   created_at  timestamptz not null default now()
 );
 create index if not exists ck_attempts_student on ck_attempts(student_id, created_at);
--- Activity types: reading baseline, reading practice, vocabulary and grammar practice.
+-- Activity types: reading baseline, reading practice, vocabulary and grammar practice, listening.
 alter table ck_attempts drop constraint if exists ck_attempts_mode_check;
 alter table ck_attempts add constraint ck_attempts_mode_check
-  check (mode in ('baseline', 'practice', 'vocab', 'grammar'));
+  check (mode in ('baseline', 'practice', 'vocab', 'grammar', 'listening'));
 
 alter table ck_students enable row level security;
 alter table ck_tokens   enable row level security;
@@ -121,7 +121,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_auth(p_token); v_xp integer; v_level smallint;
 begin
   if s.role <> 'student' then raise exception 'Only students can save attempts.'; end if;
-  if (p_attempt->>'mode') not in ('baseline', 'practice', 'vocab', 'grammar') then raise exception 'Unknown attempt type.'; end if;
+  if (p_attempt->>'mode') not in ('baseline', 'practice', 'vocab', 'grammar', 'listening') then raise exception 'Unknown attempt type.'; end if;
   v_xp := least(greatest(coalesce((p_attempt->>'xp')::int, 0), 0), 400);
   -- Only reading changes the reading level; vocabulary and grammar keep it as it is.
   v_level := case when (p_attempt->>'mode') in ('baseline', 'practice')

@@ -4,6 +4,7 @@ import { GRAMMAR, SEQUENCE, UNITS } from "./curriculum.js";
 import { FAMILIES } from "./families.js";
 import { wrongNote } from "./feedback.js";
 import { PRACTICE_TEXTS } from "./content.js";
+import { LISTENING } from "./listening.js";
 import { shuffle } from "./engine.js";
 
 export const XP_SMALL = { first: 5, hint: 2, reveal: 0, finish: 10 };
@@ -259,6 +260,8 @@ export function mission(unit, history) {
   const gp = unitGrammar(unit), tried = gp.filter(g => grammarMastery(g.id, history) != null).length;
   const steps = [{ key: "cards", label: "Meet the words", detail: "Look at the word cards and listen to them.", done: ids.has(`cards-u${unit}`) }];
   if (texts.length) steps.push({ key: "read", label: "Read a text", detail: `${texts.length} texts for this unit`, done: history.some(h => h.mode === "practice" && texts.some(t => t.id === h.text_id)) });
+  const lm = listeningMastery(unit, history);
+  if (lm.total) steps.push({ key: "listen", label: "Do a listening task", detail: `${lm.done} of ${lm.total} done`, done: lm.done > 0 });
   steps.push({ key: "vocab", label: "Learn half the words", detail: `${vm.mastered} of ${vm.total} learned`, done: vm.mastered * 2 >= vm.total });
   steps.push({ key: "family", label: "Word families", detail: "Choose the right form of the word.", done: ids.has(`family-u${unit}`) });
   steps.push({ key: "grammar", label: "Try every grammar point", detail: `${tried} of ${gp.length} tried`, done: tried === gp.length });
@@ -302,4 +305,41 @@ export function nextSmall(set) { set.i++; set.stage = 0; return set.i >= set.qs.
 export const flatResults = results => results.flatMap(r => r.group || [r]);
 export function smallXP(results) {
   return flatResults(results).reduce((t, r) => t + (r.support === "none" ? XP_SMALL.first : r.support === "hint" ? XP_SMALL.hint : 0), 0) + XP_SMALL.finish;
+}
+
+/* ---------------- listening ---------------- */
+export const XP_LISTEN = { first: 10, hint: 4, finish: 10 };
+const gapNorm = s => String(s).toLowerCase().replace(/:/g, ".").replace(/[^a-z0-9. -]/g, "").replace(/\s+/g, " ").replace(/\.$/, "").trim();
+function editDistance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+// A gap answer: "ok", "spelling" (one letter out in a word of 6+ letters: accepted, with a spelling note) or false.
+export function markGap(q, text) {
+  const v = gapNorm(text);
+  if (!v) return false;
+  if (q.answers.some(a => gapNorm(a) === v)) return "ok";
+  return q.answers.some(a => /[a-z]{6,}/.test(a) && editDistance(v, gapNorm(a)) <= 1) ? "spelling" : false;
+}
+// resp: the typed text (gap), the statement index (matching) or the option index (MCQ, 0 = correct).
+export function listenCorrect(q, resp) {
+  if (resp == null || resp === "") return false;
+  if (q.type === "gap") return !!markGap(q, resp);
+  return q.answer != null ? resp === q.answer : resp === 0;
+}
+// The lines replayed as support for a question: from the line with q.cue to the line with q.cueEnd.
+export function cueLines(task, q) {
+  const find = s => task.lines.findIndex(l => l[1].includes(s));
+  const a = find(q.cue), b = q.cueEnd ? find(q.cueEnd) : a;
+  return [a, Math.max(a, b)];
+}
+export function listenXP(results) {
+  return results.reduce((t, r) => t + (r.support === "none" ? XP_LISTEN.first : r.support === "hint" ? XP_LISTEN.hint : 0), 0) + XP_LISTEN.finish;
+}
+export function listeningMastery(unit, history) {
+  const ids = new Set(LISTENING.filter(t => t.unitNo === unit).map(t => t.id));
+  return { done: new Set(history.filter(h => h.mode === "listening" && ids.has(h.text_id)).map(h => h.text_id)).size, total: ids.size };
 }

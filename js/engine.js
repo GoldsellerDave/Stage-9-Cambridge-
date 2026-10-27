@@ -130,7 +130,7 @@ export function skillStats(history, last = 20) {
 export const SKILL_BADGES = {
   "Main idea": "Big picture", "Detail": "Detail detective", "Vocabulary in context": "Word wizard",
   "Detail: two points": "Point collector", "Inference": "Inference detective", "Cause and effect": "Cause and effect expert",
-  "Writer's purpose": "Purpose spotter", "Writer's view": "Opinion reader" };
+  "Writer's purpose": "Purpose spotter", "Writer's view": "Opinion reader", "Listening": "Sharp ears" };
 export function badges(history) {
   const out = [];
   const practice = history.filter(h => h.mode === "practice");
