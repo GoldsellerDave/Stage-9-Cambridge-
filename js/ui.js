@@ -1,6 +1,7 @@
 // Shared rendering helpers for the student and teacher pages.
 import { LEVELS, skillStats, badges, weeklyStreak, SKILL_BADGES, SUPPORT_LABEL } from "./engine.js";
 import { PRACTICE_TEXTS } from "./content.js";
+import { unitWords, wordPattern, missionBadges, MISSION_BADGES } from "./practice.js";
 
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
                        "Cause and effect", "Writer's purpose", "Writer's view", "Vocabulary", "Grammar"];
@@ -17,17 +18,48 @@ export function textTitle(id) {
   if (id === "vocab-review") return "Word review";
   let m = /^vocab-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} vocabulary`;
   m = /^grammar-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} grammar quiz`;
+  m = /^cards-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} word cards`;
+  m = /^family-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} word families`;
+  m = /^boss-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} final challenge`;
   m = /^grammar-(\d\.\d)$/.exec(id); if (m) return `Grammar ${m[1]}`;
   return id;
 }
 
-export function paraHTML(p, focus, here) {
+// Unit words in a reading text become buttons that show their meaning (opts.unit). Longer phrases are matched first.
+const glossCache = {};
+function glossRules(unit) {
+  if (!glossCache[unit]) glossCache[unit] = unitWords(unit).sort((a, b) => b.w.length - a.w.length)
+    .map(x => ({ key: `${x.unit}:${x.w}`, re: new RegExp(wordPattern(x.w).source, "gi") }));
+  return glossCache[unit];
+}
+function gloss(html, unit) {
+  // Only text between tags is changed, and each word is marked once per paragraph.
+  const seen = new Set();
+  return html.split(/(<[^>]+>)/).map(part => {
+    if (part.startsWith("<")) return part;
+    let pieces = [{ t: part }];
+    glossRules(unit).forEach(r => {
+      if (seen.has(r.key)) return;
+      pieces = pieces.flatMap(p => {
+        if (p.key) return [p];
+        r.re.lastIndex = 0;
+        const m = r.re.exec(p.t); if (!m || seen.has(r.key)) return [p];
+        seen.add(r.key);
+        return [{ t: p.t.slice(0, m.index) }, { t: m[0], key: r.key }, { t: p.t.slice(m.index + m[0].length) }];
+      });
+    });
+    return pieces.map(p => p.key ? `<button type="button" class="gw" data-gw="${esc(p.key)}">${p.t}</button>` : p.t).join("");
+  }).join("");
+}
+export function paraHTML(p, focus, here, unit) {
   let body = esc(p[1]);
   if (focus) { const f = esc(focus), i = body.indexOf(f); if (i >= 0) body = body.slice(0, i) + "<mark>" + f + "</mark>" + body.slice(i + f.length); }
+  if (unit) body = gloss(body, unit);
   return `<div class="para${here ? " here" : ""}"><b class="lt">${p[0]}</b><p>${body}</p></div>`;
 }
 export function textHTML(t, opts = {}) {
-  return `<div class="text"><h2>${esc(t.title)}</h2>${t.paras.map(p => paraHTML(p, opts.para === p[0] ? opts.focus : null, opts.para === p[0])).join("")}` +
+  return `<div class="text"><h2>${esc(t.title)}</h2>${t.paras.map(p => paraHTML(p, opts.para === p[0] ? opts.focus : null, opts.para === p[0], opts.unit)).join("")}` +
+         (opts.unit ? `<p class="note">Tap an underlined word to see what it means.</p>` : "") +
          (t.gloss ? `<div class="gloss">${esc(t.gloss)}</div>` : "") + "</div>";
 }
 
@@ -62,11 +94,12 @@ export function skillBars(history) {
 }
 
 export function badgeShelf(history) {
-  const got = badges(history), names = new Set(got.map(b => b.name));
+  const got = [...badges(history), ...missionBadges(history)], names = new Set(got.map(b => b.name));
   const all = [{ name: "First steps", why: "Finish the baseline" }, { name: "Off the mark", why: "Finish a practice text" },
                { name: "Bookworm", why: "Finish 5 practice texts" }, { name: "Top level", why: "Reach the Harder text" },
                { name: "On a roll", why: "Keep a 3-week streak" },
-               ...Object.entries(SKILL_BADGES).map(([s, n]) => ({ name: n, why: "10 " + s.toLowerCase() + " questions right first time" }))];
+               ...Object.entries(SKILL_BADGES).map(([s, n]) => ({ name: n, why: "10 " + s.toLowerCase() + " questions right first time" })),
+               ...Object.entries(MISSION_BADGES).map(([u, n]) => ({ name: n, why: `Complete the Unit ${u} mission` }))];
   return `<div class="badges">${all.map(b => { const on = names.has(b.name); const why = on ? got.find(g => g.name === b.name).why : b.why;
     return `<div class="badge${on ? "" : " locked"}">${medalSVG(on)}<div><b>${esc(b.name)}</b>${esc(why)}</div></div>`; }).join("")}</div>`;
 }
