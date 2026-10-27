@@ -154,7 +154,7 @@ export function playRain(el, { unit, onEnd }) {
   }
   function finish(msg) {
     if (over) return; over = true; stop();
-    drops.forEach(d => { words.push({ w: d.x.w, hit: false }); });
+    // Meanings still falling when the time is up are not counted: the student had no chance to answer them.
     banner(el, msg, "big"); btns.forEach(b => b.disabled = true);
     setTimeout(() => { cleanup(); onEnd({ points, hits, misses, level, words, seconds: Math.round(t) }); }, 1500);
   }
