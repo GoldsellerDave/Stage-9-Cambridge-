@@ -181,3 +181,74 @@ tr.me td{background:var(--gold-bg);font-weight:700}
 .pstep.minor.now .dot{background:var(--orange);border-color:var(--orange)}
 a.pstep:hover b{color:var(--teal)}
 .row.back{margin:0 0 10px;align-items:center}
+
+/* sound button, missions */
+.pill.snd{border:0;color:var(--on-dark);display:inline-flex;align-items:center;padding:5px 9px;cursor:pointer}
+.pill.snd[aria-pressed=false]{opacity:.6}
+.mission{background:var(--gold-bg);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.mbar{height:8px;border-radius:4px;background:var(--surface);overflow:hidden}
+.mbar i{display:block;height:100%;background:var(--gold);border-radius:4px;transition:width .4s}
+.msteps{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.msteps li{display:flex;gap:10px;align-items:center;padding:6px 0}
+.msteps li>div{flex:1;min-width:0}
+.msteps li .btn{flex:0 0 auto}
+.mdot{flex:0 0 28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:.85rem;background:var(--surface);border:2px solid var(--line);color:var(--muted)}
+.msteps li.done .mdot{background:var(--ok);border-color:var(--ok);color:var(--on-dark)}
+.msteps li.next .mdot{background:var(--orange);border-color:var(--orange);color:var(--on-dark)}
+.msteps li.locked{opacity:.55}
+.msteps li.done b{color:var(--muted)}
+.winbox{text-align:center;border-width:2px}
+
+/* word cards */
+.wcard{border:2px solid var(--line);border-radius:18px;padding:22px 18px;display:flex;flex-direction:column;gap:12px;background:var(--surface);text-align:left}
+.wcard.back{border-color:var(--teal)}
+.wword{font-family:var(--f-head);font-size:clamp(1.8rem,8vw,2.6rem);font-weight:700;color:var(--title);text-align:center;margin:0;overflow-wrap:anywhere}
+.wdef{font-size:1.15rem;font-weight:600;margin:0}
+.wex{font-family:var(--f-text);font-size:1.05rem;margin:0}
+.wtext{background:var(--card);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.wtext p{margin:0;font-family:var(--f-text)}
+.wtext .btn{align-self:flex-start}
+.row.center{justify-content:center}
+.say{display:inline-flex;gap:6px;align-items:center}
+
+/* vocabulary question types */
+.clue{margin:0}
+.letters{margin:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.2rem;letter-spacing:.12em}
+.letters .note{font-family:var(--f-body);letter-spacing:0}
+.mwords{display:flex;flex-wrap:wrap;gap:8px}
+.mword{border:1.5px solid var(--teal);background:var(--surface);color:var(--teal);font-weight:700;border-radius:999px;padding:7px 14px}
+.mword.sel{background:var(--teal);color:var(--on-dark)}
+.mword.used{opacity:.4}
+.mword:disabled{opacity:.3;cursor:default}
+.mdefs{display:grid;gap:8px}
+.mdef{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--card);border:1.5px solid transparent;border-radius:10px;padding:10px 12px;color:var(--ink)}
+.mdef .slot{font-size:.8rem;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.04em}
+.mdef.right{border-color:var(--ok-line);background:var(--ok-bg)} .mdef.right .slot{color:var(--ok)}
+.mdef.wrong{border-color:var(--bad-line);background:var(--bad-bg)} .mdef.wrong .slot{color:var(--bad)}
+.mdef:disabled{cursor:default}
+.pairs{margin:0;padding-left:20px;display:grid;gap:3px}
+
+/* grammar question types */
+.examples{margin:0;padding-left:20px;display:grid;gap:6px;font-family:var(--f-text);font-size:1.05rem}
+.tapline{display:flex;flex-wrap:wrap;gap:6px;font-family:var(--f-text);font-size:1.1rem}
+.tw{border:1.5px dashed var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:5px 8px;font-family:inherit;font-size:inherit}
+.tw.sel{border:1.5px solid var(--teal);background:var(--mint)}
+.tw.nope{border:1.5px solid var(--bad-line);background:var(--bad-bg)}
+.tw.bad{border:1.5px solid var(--bad-line);background:var(--bad-bg);text-decoration:line-through}
+.tw:disabled{cursor:default}
+.fixed{margin:0;color:var(--ok);font-weight:600}
+.tilestem{line-height:2.4}
+.gapbox{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;min-width:6em;min-height:2.2em;border-bottom:2px solid var(--teal);padding:2px 4px;margin:0 4px;vertical-align:middle;line-height:1.3}
+.bank{display:flex;flex-wrap:wrap;gap:8px}
+.tile{border:1.5px solid var(--navy);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 12px;font-weight:600}
+.tile.placed{background:var(--mint);border-color:var(--teal);padding:3px 8px;font-size:.95rem}
+.tile.used{opacity:.3}
+.tile:disabled{cursor:default}
+
+/* tap-a-word meanings */
+.gw{font:inherit;color:inherit;background:none;border:0;padding:0;text-decoration:underline dotted var(--teal) 2px;text-underline-offset:3px;cursor:pointer}
+.gw:hover{background:var(--mint)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;padding:0 12px max(12px,env(safe-area-inset-bottom,0px));display:flex;justify-content:center;pointer-events:none}
+.sheet-in{pointer-events:auto;width:100%;max-width:560px;background:var(--surface);border:2px solid var(--teal);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
+.sw{font-family:var(--f-head);font-size:1.3rem;color:var(--title)}
+.xbtn{background:none;border:0;color:var(--muted);font-size:1.1rem;padding:4px 8px}

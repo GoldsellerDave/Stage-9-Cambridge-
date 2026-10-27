@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import * as P from "../js/practice.js";
 import { VOCAB } from "../js/vocab.js";
 import { GRAMMAR, OBJECTIVES, SEQUENCE, UNITS } from "../js/curriculum.js";
+import { FAMILIES } from "../js/families.js";
+import { wrongNote } from "../js/feedback.js";
 
 test("every unit in the sequence has words and grammar", () => {
   SEQUENCE.filter(e => e.kind === "unit").forEach(e => {
@@ -35,15 +37,118 @@ test("grammar items have four different options and valid codes", () => {
 
 test("vocabulary sets: unique options, unmastered words first, review of missed words", () => {
   const set = P.vocabSet({ unit: 2 });
-  assert.equal(set.length, 10);
-  set.forEach(q => assert.equal(new Set(q.opts).size, 4));
+  assert.equal(set[0].kind, "match", "a new set starts with matching");
+  assert.equal(P.flatResults(set.map(q => q.kind === "match" ? { group: q.words } : q)).length, 10, "10 words in all");
+  set.filter(q => q.kind === "vocab").forEach(q => assert.equal(new Set(q.opts).size, 4));
+  const now = new Date("2026-10-20T08:00:00Z");
   const history = [{ created_at: "2026-10-20T00:00:00Z", answers: [
     { skill: "Vocabulary", word: "anger", unit: 2, first_try: false }, { skill: "Vocabulary", word: "obesity", unit: 2, first_try: true }] }];
-  assert.deepEqual(P.wordsToReview(history).map(x => x.w), ["anger"]);
+  assert.deepEqual(P.wordsToReview(history, now).map(x => x.w), ["anger"]);
   assert.equal(P.vocabMastery(2, history).mastered, 1);
-  const review = P.vocabSet({ review: true, history });
+  const review = P.vocabSet({ review: true, history, now });
   assert.equal(review.length, 1);
   assert.equal(review[0].word, "anger");
+});
+
+test("spaced review: words come back after 1, 3, 7 and 14 days", () => {
+  const at = d => new Date(Date.parse("2026-10-05T03:00:00Z") + d * 86400e3);
+  const right = d => ({ created_at: at(d).toISOString(), answers: [{ skill: "Vocabulary", word: "obesity", unit: 2, first_try: true }] });
+  const due = (h, d) => P.wordsToReview(h, at(d)).some(x => x.w === "obesity");
+  let h = [right(0)];
+  assert.equal(due(h, 0), false); assert.equal(due(h, 1), true);
+  h = [right(0), right(1)];
+  assert.equal(due(h, 3), false); assert.equal(due(h, 4), true);
+  h = [right(0), right(1), right(4), right(11)];
+  assert.equal(P.wordSchedule(h)["2:obesity"].box, 4);
+  assert.equal(due(h, 24), false); assert.equal(due(h, 25), true);
+  h.push({ created_at: at(25).toISOString(), answers: [{ skill: "Vocabulary", word: "obesity", unit: 2, first_try: false }] });
+  assert.equal(P.wordSchedule(h)["2:obesity"].box, 0);
+  assert.equal(due(h, 25), true);
+});
+
+test("question types follow how well a word is known", () => {
+  const at = "2026-10-01T00:00:00Z", ans = (w, ok) => ({ skill: "Vocabulary", word: w, unit: 3, first_try: ok });
+  const h = [{ created_at: at, answers: [ans("eco", true), ans("arch", true)] }, { created_at: at, answers: [ans("eco", true)] }];
+  const qs = P.vocabSet({ unit: 3, history: h, n: 25 });
+  const typeOf = w => qs.find(q => q.word === w);
+  assert.equal(typeOf("eco").type, "type");
+  assert.equal(typeOf("arch").type, "context");
+  assert.ok(P.markTyped({ answer: "first-aid" }, " First aid "));
+  assert.ok(!P.markTyped({ answer: "arch" }, "arches"));
+  assert.equal(P.letterBlanks("look up to"), "l___ __ __");
+});
+
+test("matching scores each word on its own", () => {
+  const s = P.newSet(P.vocabSet({ unit: 4 }));
+  assert.equal(s.qs[0].kind, "match");
+  assert.equal(P.submitMatch(s, [true, false, true, false]), "hint");
+  assert.equal(P.submitMatch(s, [true, true, true, false]), "reveal");
+  assert.deepEqual(s.results[0].group.map(g => g.support), ["none", "hint", "none", "explained"]);
+  assert.equal(P.smallXP(s.results), 2 * P.XP_SMALL.first + P.XP_SMALL.hint + P.XP_SMALL.finish);
+});
+
+test("word cards: unrated words first, then not sure", () => {
+  const h = [{ created_at: "2026-10-01", answers: P.unitWords(3).slice(1).map(x => ({ skill: "Word card", word: x.w, unit: 3, known: x.w !== "arch" })) }];
+  const cards = P.cardSet(3, h, 2);
+  assert.deepEqual(cards.map(x => x.w), ["eco", "arch"]);
+});
+
+test("reading texts give example sentences for unit words", () => {
+  const w = P.unitWords(3).find(x => x.w === "sightseeing");
+  assert.match(P.textExample(w).sentence, /sightseeing/i);
+  assert.ok(P.wordPattern("consume").test("People consumed more"));
+  assert.ok(P.wordPattern("theme park").test("two theme parks"));
+  assert.ok(!P.wordPattern("arch").test("research"));
+});
+
+test("every wrong grammar option has its own feedback", () => {
+  GRAMMAR.forEach(g => g.items.forEach((it, i) => [1, 2, 3].forEach(k => {
+    const note = wrongNote(g.id, i, k);
+    assert.ok(note && note.length > 10, `note for ${g.id} item ${i + 1} option ${k}`);
+  })));
+});
+
+test("grammar sets mix choose, tap the mistake and word tiles", () => {
+  const qs = P.grammarSet({ point: "3.3" });
+  assert.deepEqual(new Set(qs.map(q => q.variant)), new Set(["choose", "tap", "tiles"]));
+  GRAMMAR.forEach(g => g.items.forEach((it, i) => {
+    if (P.canTap(it)) {
+      let r = 11; const q = P.grammarSet({ point: g.id, rnd: () => (r = (r * 9301 + 49297) % 233280) / 233280 }).find(x => x.item === i && x.variant === "tap");
+      if (q) { assert.equal(q.chunks.filter(c => c.bad).length, 1); assert.ok(q.note); }
+    }
+  }));
+  const tiles = qs.find(q => q.variant === "tiles");
+  assert.ok(tiles.answer.length >= 2);
+  assert.ok(tiles.answer.every(w => tiles.tiles.includes(w)));
+  const n = P.noticeTask("3.3");
+  assert.equal(n.examples.length, 3);
+  assert.equal(n.opts.length, 3);
+  assert.equal(new Set(n.opts).size, 3);
+});
+
+test("word families: four forms, all different", () => {
+  Object.entries(FAMILIES).forEach(([u, items]) => {
+    assert.equal(items.length, 6, `unit ${u}`);
+    items.forEach(it => { assert.equal(new Set(it.slice(1, 5)).size, 4, it[0]); assert.equal(it[0].split("___").length, 2, it[0]); });
+  });
+});
+
+test("missions: steps from history, final challenge unlocks, badge at 70%", () => {
+  let m = P.mission(3, []);
+  assert.deepEqual(m.steps.map(s => s.key), ["cards", "read", "vocab", "family", "grammar", "boss"]);
+  assert.ok(m.steps.at(-1).locked);
+  const h = [{ text_id: "cards-u3", created_at: "2026-10-22", answers: [] }, { mode: "practice", text_id: "crowds", created_at: "2026-10-22", answers: [] },
+    { text_id: "family-u3", created_at: "2026-10-22", answers: [] },
+    { text_id: "vocab-u3", created_at: "2026-10-23", answers: P.unitWords(3).slice(0, 13).map(x => ({ skill: "Vocabulary", word: x.w, unit: 3, first_try: true })) },
+    { text_id: "grammar-u3", created_at: "2026-10-23", answers: P.unitGrammar(3).map(g => ({ skill: "Grammar", point: g.id, first_try: true })) }];
+  m = P.mission(3, h);
+  assert.ok(m.steps.slice(0, 5).every(s => s.done));
+  assert.equal(m.next.key, "boss");
+  assert.equal(P.bossSet(3).length, 12);
+  h.push({ text_id: "boss-u3", score: 9, max_score: 12, created_at: "2026-10-24", answers: [] });
+  assert.ok(P.mission(3, h).complete);
+  assert.deepEqual(P.missionBadges(h).map(b => b.name), ["Responsible traveller"]);
+  assert.ok(!P.mission(5, []).steps.some(s => s.key === "read"), "no reading step without texts");
 });
 
 test("small sets: hint, then reveal; XP for first try and after a hint", () => {
