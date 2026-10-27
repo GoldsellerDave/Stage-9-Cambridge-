@@ -3,6 +3,9 @@ import { api, LIVE, getSession, setSession, resetDemo } from "./api.js";
 import { PRACTICE_TEXTS, BASELINE, STRATEGY } from "./content.js";
 import * as E from "./engine.js";
 import * as U from "./ui.js";
+import * as P from "./practice.js";
+import { SEQUENCE, UNITS } from "./curriculum.js";
+import { VOCAB } from "./vocab.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -33,8 +36,9 @@ function header() {
 function tick() {
   const el = document.getElementById("clock"); if (!el || !run) return;
   const s = Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
-  el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${run.kind === "baseline" ? "15" : "20"}:00`;
-  el.classList.toggle("over", s > (run.kind === "baseline" ? 15 : 20) * 60);
+  const target = { baseline: 15, practice: 20, small: 10 }[run.kind];
+  el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${target}:00`;
+  el.classList.toggle("over", s > target * 60);
 }
 setInterval(tick, 1000);
 
@@ -47,7 +51,7 @@ async function signOut() {
 function loginView(msg) {
   header();
   $app.innerHTML = `<div class="narrow pop">
-    <div class="hero"><p class="eyebrow">Stage 9 · Checkpoint reading</p><h1>Read, level up, and get ready for Checkpoint</h1>
+    <div class="hero"><p class="eyebrow">Stage 9 · Checkpoint English</p><h1>Read, learn words, practise grammar and level up</h1>
     <p class="lede">Sign in with the username and PIN your teacher gave you.</p></div>
     ${LIVE ? "" : `<div class="demo"><b>Demo mode.</b> Try username <b>demo</b> with PIN <b>1234</b>. The sample class and your progress are saved only in this browser.</div>`}
     <form class="panel" id="f" novalidate>
@@ -86,6 +90,7 @@ async function route() {
   header();
   if (view === "progress") return progressView();
   if (view === "leaderboard") return leaderboardView();
+  if (/^unit-\d$/.test(view)) return unitView(+view.slice(5));
   return homeView();
 }
 window.addEventListener("hashchange", () => { if (!run) route(); });
@@ -95,28 +100,29 @@ function homeView() {
   const { streak, thisWeek } = E.weeklyStreak(history);
   const lastBase = [...history].reverse().find(h => h.mode === "baseline");
   const canRetake = lastBase && Date.now() - new Date(lastBase.created_at) > 28 * 86400e3;
-  const done = new Set(history.filter(h => h.mode === "practice").map(h => h.text_id));
   const first = me.name.split(" ").pop();
+  const review = P.wordsToReview(history);
   let h = `<div class="narrow pop">
     <div class="hero"><p class="eyebrow">Class ${U.esc(me.class_code)}</p><h1>Hi, ${U.esc(first)}</h1></div>`;
   if (!me.baseline_done) {
     h += `<div class="tcard"><span class="tag gold">Start here</span><h3>Baseline reading</h3>
-      <p class="note" style="font-size:1rem">Three short texts, from easier to harder, with 12 questions and no hints. Your score sets your starting level. It takes about 15 minutes.</p>
+      <p class="note" style="font-size:1rem">Three short texts, from easier to harder, with 12 questions and no hints. Your score sets your starting reading level. It takes about 15 minutes.</p>
       <div class="row"><button class="btn" id="base">Start the baseline</button></div></div>`;
   } else {
     h += `<div class="stats">
       <div class="stat gold"><b>${me.xp_week}</b><span>XP this week</span></div>
-      <div class="stat"><b>${U.levelName(me.level)}</b><span>your level</span></div>
-      <div class="stat"><b>${streak} wk</b><span>reading streak</span></div>
-      <div class="stat"><b>${me.xp_total}</b><span>XP in total</span></div></div>
-      <div class="panel goal"><b>This week: ${Math.min(thisWeek, 2)} of 2 texts</b><div class="bar"><i style="width:${Math.min(thisWeek, 2) * 50}%"></i></div>
-      <p class="note">Finish 2 texts a week to keep your streak and earn a ${E.XP.streakWeek} XP bonus.</p></div>
-      <h2>Practise</h2><div class="cards">${PRACTICE_TEXTS.map(t => `<div class="tcard"><span class="tag">${U.esc(t.unit)}</span>
-        <h3>${U.esc(t.topic)}</h3><p class="note">${U.esc(t.blurb)}</p>
-        <p class="note">${done.has(t.id) ? "Done before: half XP this time." : `Up to ${8 * E.XP.first[2] + E.XP.finish + E.XP.levelUp * 2} XP`}</p>
-        <div class="row"><button class="btn" data-text="${t.id}">${done.has(t.id) ? "Read again" : "Start reading"}</button></div></div>`).join("")}
-        <div class="tcard"><span class="tag">Coming soon</span><h3>More texts</h3><p class="note">Your teacher adds new texts during the term.</p></div></div>`;
+      <div class="stat"><b>${U.levelName(me.level)}</b><span>reading level</span></div>
+      <div class="stat"><b>${streak} wk</b><span>streak</span></div>
+      <div class="stat"><b>${me.xp_total}</b><span>XP in total</span></div></div>`;
   }
+  h += `<div class="panel goal"><b>This week: ${Math.min(thisWeek, 2)} of 2 activities</b><div class="bar"><i style="width:${Math.min(thisWeek, 2) * 50}%"></i></div>
+      <p class="note">Finish 2 activities a week (a reading text, a vocabulary set or a grammar set) to keep your streak and earn a ${E.XP.streakWeek} XP bonus.</p></div>`;
+  const fu = P.focusUnit();
+  h += `<h2>This week in class</h2>${unitCard(fu)}`;
+  if (review.length) h += `<div class="tcard"><span class="tag gold">Review</span><h3>Words to review</h3>
+      <p class="note">${review.length} word${review.length > 1 ? "s" : ""} you got wrong last time: ${U.esc(review.slice(0, 6).map(x => x.w).join(", "))}${review.length > 6 ? "…" : ""}</p>
+      <div class="row"><button class="btn" data-review="1">Review ${Math.min(review.length, 10)} words</button></div></div>`;
+  h += `<h2>The school year</h2>${pathHTML(fu)}`;
   h += `<div class="row"><a class="btn alt" href="#progress">My progress</a><a class="btn alt" href="#leaderboard">Class leaderboard</a>
     ${canRetake ? `<button class="btn alt" id="rebase">Retake the baseline</button>` : ""}</div>
     ${LIVE ? "" : `<p class="note">Demo mode: <button class="linkbtn" style="color:var(--teal)" id="reset">reset the demo data</button></p>`}</div>`;
@@ -124,7 +130,110 @@ function homeView() {
   const b = document.getElementById("base"); if (b) b.onclick = startBaseline;
   const rb = document.getElementById("rebase"); if (rb) rb.onclick = startBaseline;
   const rs = document.getElementById("reset"); if (rs) rs.onclick = () => { resetDemo(); setSession(null); session = null; me = null; route(); };
+  bindActivities();
+}
+
+/* ---------------- units ---------------- */
+const STATUS = { done: ["Done", "none"], now: ["Now", "hint"], upcoming: ["Coming up", "rescue"] };
+function unitCard(u) {
+  const texts = PRACTICE_TEXTS.filter(t => t.unitNo === u);
+  const done = new Set(history.filter(h => h.mode === "practice").map(h => h.text_id));
+  const vm = P.vocabMastery(u, history), st = P.unitStatus(u);
+  const lists = VOCAB[u].map((l, i) => `List ${i + 1}: ${l.length} words`).join(" · ");
+  return `<div class="tcard unit">
+    <div class="row" style="justify-content:space-between"><h3>${U.esc(P.unitTitle(u))}</h3><span class="chip ${STATUS[st][1]}">${STATUS[st][0]}</span></div>
+    <div class="usec"><p class="eyebrow">Reading</p>${texts.length ? texts.map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${done.has(t.id) ? "Done before: half XP this time." : U.esc(t.blurb)}</span></div>
+        ${me.baseline_done ? `<button class="btn small" data-text="${t.id}">${done.has(t.id) ? "Read again" : "Read"}</button>` : `<span class="note">Take the baseline first</span>`}</div>`).join("")
+      : `<p class="note">A reading text for this unit is coming soon.</p>`}</div>
+    <div class="usec"><p class="eyebrow">Vocabulary</p><div class="urow"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
+        <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
+      <button class="btn small" data-vocab="${u}">Practise 10 words</button></div></div>
+    <div class="usec"><p class="eyebrow">Grammar</p>${P.unitGrammar(u).map(g => { const m = P.grammarMastery(g.id, history);
+        return `<div class="urow"><div><b>${g.id} ${U.esc(g.title)}</b><br><span class="note">${g.code ? g.code + " · " : ""}${m == null ? "Not tried yet" : m + "% right first time"}</span></div>
+          <button class="btn small alt" data-gram="${g.id}">Practise</button></div>`; }).join("")}
+      <div class="row"><button class="btn small" data-gramunit="${u}">Mixed quiz: all of Unit ${u}</button></div></div></div>`;
+}
+function pathHTML(fu) {
+  const cur = P.currentEntry();
+  return `<div class="path">${SEQUENCE.map(e => {
+    const isNow = e === cur;
+    if (e.kind !== "unit") return `<div class="pstep minor${isNow ? " now" : ""}"><span class="dot"></span><div><b>${U.esc(e.title)}</b> <span class="note">${e.weeks}</span></div></div>`;
+    const vm = P.vocabMastery(e.unit, history), st = P.unitStatus(e.unit);
+    return `<a class="pstep ${st}${e.unit === fu ? " focus" : ""}" href="#unit-${e.unit}"><span class="dot">${e.unit}</span><div><b>${U.esc(UNITS[e.unit].title)}</b> <span class="note">${e.weeks}${isNow ? " · now" : ""}</span>
+      <br><span class="note">${vm.mastered}/${vm.total} words · ${P.unitGrammar(e.unit).length} grammar points</span></div></a>`;
+  }).join("")}</div>`;
+}
+function unitView(u) {
+  if (!UNITS[u]) return homeView();
+  $app.innerHTML = `<div class="narrow pop"><div class="row"><a href="#home">← Home</a></div>${unitCard(u)}</div>`;
+  bindActivities();
+}
+function bindActivities() {
   $app.querySelectorAll("[data-text]").forEach(btn => btn.onclick = () => startPractice(btn.dataset.text));
+  $app.querySelectorAll("[data-vocab]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.vocab;
+    startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history })); });
+  $app.querySelectorAll("[data-review]").forEach(btn => btn.onclick = () =>
+    startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history })));
+  $app.querySelectorAll("[data-gram]").forEach(btn => btn.onclick = () => { const g = P.grammarPoint(btn.dataset.gram);
+    startSmall("grammar", `grammar-${g.id}`, `${g.id} ${g.title}`, P.grammarSet({ point: g.id })); });
+  $app.querySelectorAll("[data-gramunit]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.gramunit;
+    startSmall("grammar", `grammar-u${u}`, `Unit ${u} grammar quiz`, P.grammarSet({ unit: u })); });
+}
+
+/* ---------------- vocabulary and grammar sets ---------------- */
+function startSmall(sub, textId, label, qs) {
+  run = { kind: "small", sub, textId, label, set: P.newSet(qs), phase: "q", t0: Date.now(), orders: {}, pick: null, fb: null, xpSoFar: 0 };
+  saveRun(); route(); top();
+}
+function stemHTML(stem) { return U.esc(stem).replaceAll("___", '<span class="gap">______</span>'); }
+function smallView() {
+  const set = run.set, q = set.qs[set.i], fb = run.fb, locked = !!(fb && (fb.kind === "ok" || fb.kind === "reveal"));
+  const tag = q.kind === "vocab" ? "Vocabulary" : `Grammar ${q.point}${q.code ? " · " + q.code : ""}`;
+  let h = `<div class="narrow pop"><p class="eyebrow">${U.esc(run.label)}</p>
+    <div class="progress">${set.qs.map((_, i) => { const r = set.results[i]; return `<i class="${i === set.i ? "cur" : r ? (r.first_try ? "ok" : "help") : ""}"></i>`; }).join("")}</div>
+    <div class="qcard"><div class="qhead"><span class="tag">${U.esc(tag)}</span><span class="qnum">Question ${set.i + 1} of ${set.qs.length}</span></div>
+    <p class="stem">${stemHTML(q.stem)}</p>
+    ${optsHTML(q, order("s" + set.i, q.opts.length), fb ? { right: fb.kind === "ok", wrong: fb.wrong, reveal: fb.kind === "reveal", locked } : null)}`;
+  if (fb && fb.kind === "ok") h += `<div class="fb ok pop"><p><strong>Correct.</strong> <span class="xpgain">+${fb.xp} XP</span></p></div>`;
+  if (fb && fb.kind === "hint") h += q.kind === "grammar"
+    ? `<div class="fb bad pop"><p><strong>Not quite.</strong> Read the rule, then try again.</p></div><div class="strat"><b>Rule</b><p style="margin:6px 0 0">${U.esc(q.hint)}</p></div>`
+    : `<div class="fb bad pop"><p><strong>Not quite.</strong> ${q.type === "meaning" ? "See the word in a sentence:" : "Hint:"} ${U.esc(q.hint)}</p></div>`;
+  if (fb && fb.kind === "reveal") h += `<div class="fb info pop"><p><strong>The answer is "${U.esc(q.opts[0])}".</strong></p><p>${U.esc(q.explain)}</p><p class="note">No XP for this one. It will come back in your review.</p></div>`;
+  h += `<div class="row">${locked ? `<button class="btn" id="next">${set.i === set.qs.length - 1 ? "See my results" : "Next question"}</button>` : `<button class="btn" id="check" ${run.pick === null ? "disabled" : ""}>Check answer</button>`}</div></div></div>`;
+  $app.innerHTML = h;
+  bindOpts(smallView);
+  const c = document.getElementById("check"); if (c) c.onclick = () => {
+    const out = P.submitSmall(set, run.pick === 0);
+    if (out === "correct") { const xp = set.results[set.i].support === "none" ? P.XP_SMALL.first : P.XP_SMALL.hint; run.xpSoFar += xp; run.fb = { kind: "ok", xp }; }
+    else if (out === "hint") run.fb = { kind: "hint", wrong: run.pick };
+    else run.fb = { kind: "reveal" };
+    saveRun(); header(); smallView();
+  };
+  const n = document.getElementById("next"); if (n) n.onclick = () => {
+    run.pick = null; run.fb = null;
+    if (P.nextSmall(set) === "done") {
+      const bonus = E.streakBonus(history);
+      run.result = { xp: P.smallXP(set.results) + bonus, bonus, score: set.results.filter(r => r.first_try).length, seconds: Math.round((Date.now() - run.t0) / 1000) };
+      run.phase = "done"; run.xpSoFar = 0;
+    }
+    saveRun(); runView(); top();
+  };
+}
+function smallDone() {
+  const set = run.set, R = run.result;
+  const rows = set.results.map((r, i) => { const q = set.qs[i];
+    const what = q.kind === "vocab" ? q.word : `${q.point} ${P.grammarPoint(q.point).title}`;
+    return `<tr><td>${i + 1}</td><td>${U.esc(what)}</td><td><span class="chip ${r.support}">${E.SUPPORT_LABEL[r.support] || "After a hint"}</span></td></tr>`; }).join("");
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished · ${U.esc(run.label)}</p><h1>${R.score} of ${set.qs.length} right first time</h1>
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${set.qs.length}</b><span>right first time</span></div>
+      <div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div><div class="stat"><b>${set.results.filter(r => r.support === "explained").length}</b><span>to review</span></div></div>
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 activities this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    <div class="tbl"><table><thead><tr><th>#</th><th>${run.sub === "vocab" ? "Word" : "Grammar point"}</th><th>Result</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row"><button class="btn" id="home">Back to home</button></div></div>`;
+  document.getElementById("home").onclick = () => { run = null; saveRun(); location.hash = "#home"; route(); };
+  saveAttempt({ mode: run.sub, text_id: run.textId, level_start: null, level_end: null, score: R.score, max_score: set.qs.length,
+                xp: R.xp, seconds: R.seconds, answers: set.results });
 }
 
 /* ---------------- progress & leaderboard ---------------- */
@@ -161,8 +270,9 @@ function startPractice(id) {
 }
 function runView() {
   header();
-  if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : practiceDone();
+  if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "small" ? smallDone() : practiceDone();
   if (run.kind === "baseline") return baselineView();
+  if (run.kind === "small") return smallView();
   return practiceView();
 }
 function readGate(paras, onGo, label) {

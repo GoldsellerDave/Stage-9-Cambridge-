@@ -91,8 +91,9 @@ const demo = {
   async history(t) { const db = load(), s = auth(db, t); return later(hist(db, s.id)); },
   async save(t, a) {
     const db = load(), s = auth(db, t);
-    const xp = Math.max(0, Math.min(400, a.xp | 0)), lvl = Math.max(0, Math.min(2, a.level_end | 0));
-    db.attempts.push({ ...a, xp, level_end: lvl, id: db.attempts.length + 1, student_id: s.id, created_at: new Date().toISOString() });
+    const reading = a.mode === "baseline" || a.mode === "practice";
+    const xp = Math.max(0, Math.min(400, a.xp | 0)), lvl = reading ? Math.max(0, Math.min(2, a.level_end | 0)) : s.level;
+    db.attempts.push({ ...a, xp, level_end: reading ? lvl : null, id: db.attempts.length + 1, student_id: s.id, created_at: new Date().toISOString() });
     s.xp_total += xp; s.level = lvl; store(db);
     return later({ xp_total: s.xp_total, level: s.level });
   },

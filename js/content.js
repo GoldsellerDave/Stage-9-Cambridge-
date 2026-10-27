@@ -119,7 +119,7 @@ const SLEEP_SLOTS = [
 ];
 
 export const PRACTICE_TEXTS = [
-  { id: "sleep", unit: "Unit 2 · Well-being", topic: "Teenagers and sleep",
+  { id: "sleep", unitNo: 2, unit: "Unit 2 · Well-being", topic: "Teenagers and sleep",
     blurb: "Why do teenagers find it so hard to get up in the morning?",
     levels: SLEEP_LEVELS, slots: SLEEP_SLOTS }
 ];
