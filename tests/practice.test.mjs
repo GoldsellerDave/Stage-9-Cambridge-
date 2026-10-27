@@ -5,6 +5,8 @@ import { VOCAB } from "../js/vocab.js";
 import { GRAMMAR, OBJECTIVES, SEQUENCE, UNITS } from "../js/curriculum.js";
 import { FAMILIES } from "../js/families.js";
 import { wrongNote } from "../js/feedback.js";
+import { LISTENING } from "../js/listening.js";
+import { TIMES } from "../js/listening-times.js";
 
 test("every unit in the sequence has words and grammar", () => {
   SEQUENCE.filter(e => e.kind === "unit").forEach(e => {
@@ -135,14 +137,14 @@ test("word families: four forms, all different", () => {
 
 test("missions: steps from history, final challenge unlocks, badge at 70%", () => {
   let m = P.mission(3, []);
-  assert.deepEqual(m.steps.map(s => s.key), ["cards", "read", "vocab", "family", "grammar", "boss"]);
+  assert.deepEqual(m.steps.map(s => s.key), ["cards", "read", "listen", "vocab", "family", "grammar", "boss"]);
   assert.ok(m.steps.at(-1).locked);
   const h = [{ text_id: "cards-u3", created_at: "2026-10-22", answers: [] }, { mode: "practice", text_id: "crowds", created_at: "2026-10-22", answers: [] },
-    { text_id: "family-u3", created_at: "2026-10-22", answers: [] },
+    { text_id: "family-u3", created_at: "2026-10-22", answers: [] }, { mode: "listening", text_id: "l3-ranger", created_at: "2026-10-22", answers: [] },
     { text_id: "vocab-u3", created_at: "2026-10-23", answers: P.unitWords(3).slice(0, 13).map(x => ({ skill: "Vocabulary", word: x.w, unit: 3, first_try: true })) },
     { text_id: "grammar-u3", created_at: "2026-10-23", answers: P.unitGrammar(3).map(g => ({ skill: "Grammar", point: g.id, first_try: true })) }];
   m = P.mission(3, h);
-  assert.ok(m.steps.slice(0, 5).every(s => s.done));
+  assert.ok(m.steps.slice(0, 6).every(s => s.done));
   assert.equal(m.next.key, "boss");
   assert.equal(P.bossSet(3).length, 12);
   h.push({ text_id: "boss-u3", score: 9, max_score: 12, created_at: "2026-10-24", answers: [] });
@@ -177,4 +179,28 @@ test("a word in two units keeps a separate state per unit", () => {
   assert.deepEqual(review.map(x => x.unit), [1]);
   assert.equal(P.vocabMastery(6, [{ created_at: "2026-10-02", answers: [{ skill: "Vocabulary", word: "encourage", unit: 6, first_try: true }] }]).mastered, 1);
   assert.equal(P.vocabMastery(1, [{ created_at: "2026-10-02", answers: [{ skill: "Vocabulary", word: "encourage", unit: 6, first_try: true }] }]).mastered, 0);
+});
+
+test("listening tasks: cues, answers, audio timings", () => {
+  assert.equal(LISTENING.filter(t => t.unitNo === 2).length, 4);
+  assert.equal(LISTENING.filter(t => t.unitNo === 3).length, 4);
+  LISTENING.forEach(t => {
+    assert.equal(new Set(LISTENING.map(x => x.id)).size, LISTENING.length);
+    t.lines.forEach(([who]) => assert.ok(t.voices[who], `voice for ${who} in ${t.id}`));
+    assert.equal((TIMES[t.id] || []).length, t.lines.length, `timings for ${t.id}`);
+    t.qs.forEach((q, i) => {
+      const [a, b] = P.cueLines(t, q);
+      assert.ok(a >= 0 && b >= a, `cue for ${t.id} q${i + 1}`);
+      if (q.type === "gap") { assert.equal(q.stem.split("___").length, 2); q.answers.forEach(x => assert.ok(P.listenCorrect(q, x))); }
+      else if (t.statements) assert.ok(q.answer >= 0 && q.answer < t.statements.length);
+      else assert.equal(new Set(q.opts).size, q.opts.length);
+    });
+    if (t.statements) assert.equal(new Set(t.qs.map(q => q.answer)).size, t.qs.length, `each statement used once in ${t.id}`);
+  });
+  const gap = { type: "gap", answers: ["5.30", "half past five"] };
+  assert.ok(P.listenCorrect(gap, "5:30"));
+  assert.ok(P.listenCorrect(gap, "Half past five."));
+  assert.equal(P.markGap({ answers: ["conservation"] }, "conservaton"), "spelling");
+  assert.equal(P.markGap({ answers: ["paths"] }, "pats"), false);
+  assert.ok(!P.listenCorrect(gap, "6"));
 });

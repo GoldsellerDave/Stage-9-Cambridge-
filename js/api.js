@@ -16,6 +16,7 @@ async function rpc(fn, args) {
   } catch (e) { throw new Error(`No connection to the database (${e.message}). Check your internet and try again.`); }
   const body = await res.json().catch(() => null);
   if (body && body.code === "PGRST202") throw new Error("The database is not set up yet. Your teacher needs to run supabase/schema.sql.");
+  if (body && /Unknown attempt type/.test(body.message || "")) throw new Error("The database needs an update before this can be saved. Your teacher needs to run supabase/schema.sql again.");
   if (!res.ok) throw new Error((body && body.message) || "Server error " + res.status);
   if (body && body.error) throw new Error(body.error);
   return body;
