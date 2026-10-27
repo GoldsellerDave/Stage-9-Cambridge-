@@ -178,29 +178,33 @@ const fmt = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":
 
 /* ---------------- Word Train ---------------- */
 const SVGNS = "http://www.w3.org/2000/svg";
-const VB = { w: 400, h: 260, mainY: 130, jx: 140, sx: 318 };
+// The track winds across the top (a long run-up to think), turns at the junction, and branches down to the stations on the left.
+const VB = { w: 400, h: 400, jx: 215, jy: 140, sx: 84 };
+const APPROACH = `M-60 45 H315 C372 45 372 ${VB.jy} 315 ${VB.jy} H${VB.jx}`;
 export function playTrain(el, { unit, onEnd }) {
   const pool = trainPool(unit), st = trainStations(pool), cards = deck(pool);
-  const ys = st.map((_, k) => Math.round(VB.h * (k + 0.5) / st.length));
-  const branch = y => `M-60 ${VB.mainY} H${VB.jx} C${VB.jx + 60} ${VB.mainY} ${VB.jx + 60} ${y} ${VB.jx + 120} ${y} H${VB.sx}`;
-  const fromJ = y => `M${VB.jx} ${VB.mainY} C${VB.jx + 60} ${VB.mainY} ${VB.jx + 60} ${y} ${VB.jx + 120} ${y} H${VB.sx}`;
+  const ys = st.map((_, k) => Math.round(200 + k * 170 / (st.length - 1)));
+  const fromJ = y => `M${VB.jx} ${VB.jy} C${VB.jx - 75} ${VB.jy} ${VB.jx - 75} ${y} ${VB.jx - 130} ${y} H${VB.sx}`;
+  const branch = y => APPROACH + fromJ(y).replace(/^M[\d.]+ [\d.]+/, "");
   el.innerHTML = `<div class="game train">${hud(0)}
     <div class="arena tarena"><svg viewBox="0 0 ${VB.w} ${VB.h}" role="img" aria-label="Railway with ${st.length} stations: ${st.join(", ")}">
+      <path class="rail" d="${APPROACH}"/><path id="tapp" d="${APPROACH}" fill="none" stroke="none"/>
       ${ys.map((y, k) => `<path class="rail" d="${fromJ(y)}"/><path id="tb${k}" d="${branch(y)}" fill="none" stroke="none"/>`).join("")}
-      <path class="rail" d="M0 ${VB.mainY} H${VB.jx}"/><path class="rail on" id="tsw" d="${fromJ(ys[0])}"/>
-      <circle class="junction" cx="${VB.jx}" cy="${VB.mainY}" r="6"/>
-      ${st.map((s, k) => `<g class="station s-${s}" data-k="${k}" id="ts${k}"><rect x="${VB.sx}" y="${ys[k] - 20}" width="${VB.w - VB.sx - 4}" height="40" rx="8"/>
-        <text x="${(VB.sx + VB.w - 4) / 2}" y="${ys[k] + 5}" text-anchor="middle">${s}</text></g>`).join("")}
+      <path class="rail on" id="tsw" d="${fromJ(ys[0])}"/>
+      <circle class="junction" cx="${VB.jx}" cy="${VB.jy}" r="7"/>
+      ${st.map((s, k) => `<g class="station s-${s}" data-k="${k}" id="ts${k}"><rect x="4" y="${ys[k] - 20}" width="${VB.sx - 4}" height="40" rx="8"/>
+        <text x="${(VB.sx + 4) / 2}" y="${ys[k] + 5}" text-anchor="middle">${s}</text></g>`).join("")}
       <g id="trains"></g></svg><div class="gbanner"></div></div>
     <div class="gbtns tbtns">${st.map((s, k) => `<button class="gbtn s-${s}" data-k="${k}"><span class="gk">${k + 1}</span><span class="gword">${s[0].toUpperCase() + s.slice(1)}</span></button>`).join("")}</div>
     <p class="note" id="gtell" aria-live="polite">Set the points before each train reaches the junction. Tap a station, or press 1 to ${st.length}.</p></div>`;
   const layer = el.querySelector("#trains"), sw = el.querySelector("#tsw");
-  const paths = st.map((_, k) => el.querySelector("#tb" + k)), lens = paths.map(p => p.getTotalLength()), common = VB.jx + 60;
+  const paths = st.map((_, k) => el.querySelector("#tb" + k)), lens = paths.map(p => p.getTotalLength());
+  const common = el.querySelector("#tapp").getTotalLength();
   const btns = [...el.querySelectorAll(".gbtn")];
   let trains = [], cur = 0, t = 0, sinceSpawn = 99, sent = 0, done = 0, points = 0, hits = 0, streak = 0, level = 1, over = false;
   const words = [];
-  const speed = () => 34 + 7 * level;                              // svg units per second
-  const gap = () => Math.max(2.4, 6.5 - 0.6 * level);              // seconds between trains
+  const speed = () => 30 + 6 * level;                              // svg units per second: about 17 s to the junction at level 1
+  const gap = () => Math.max(3, 7.5 - 0.6 * level);                // seconds between trains
 
   function setSwitch(k) {
     if (over || k < 0 || k >= st.length) return;
@@ -212,10 +216,10 @@ export function playTrain(el, { unit, onEnd }) {
     const x = cards.next(trains.map(o => o.x.w)), g = document.createElementNS(SVGNS, "g");
     const len = Math.max(54, x.w.length * 7.4 + 18);
     g.setAttribute("class", "tcar");
-    g.innerHTML = `<rect x="${-len}" y="-12" width="${len}" height="24" rx="7"/><circle cx="${-len + 10}" cy="13" r="3.5"/><circle cx="-10" cy="13" r="3.5"/>
-      <text x="${-len / 2}" y="5" text-anchor="middle">${esc(x.w)}</text>`;
+    g.innerHTML = `<rect x="${-len}" y="-12" width="${len}" height="24" rx="7"/><rect class="nose" x="-7" y="-12" width="7" height="24" rx="3"/>
+      <text x="${-len / 2}" y="0" dominant-baseline="central" text-anchor="middle">${esc(x.w)}</text>`;
     layer.appendChild(g);
-    trains.push({ x, g, s: 0, k: null }); sent++; sinceSpawn = 0;
+    trains.push({ x, g, s: 0, k: null, len, flip: false, label: g.querySelector("text") }); sent++; sinceSpawn = 0;
   }
   function arrive(o) {
     trains = trains.filter(q => q !== o); done++;
@@ -246,7 +250,10 @@ export function playTrain(el, { unit, onEnd }) {
       const k = o.k == null ? cur : o.k, L = lens[k];
       if (o.s >= L) return arrive(o);
       const a = paths[k].getPointAtLength(o.s), b = paths[k].getPointAtLength(Math.max(0, o.s - 4));
-      o.g.setAttribute("transform", `translate(${a.x.toFixed(1)} ${a.y.toFixed(1)}) rotate(${(Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI).toFixed(1)})`);
+      const ang = Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI, flip = Math.abs(ang) > 95;
+      o.g.setAttribute("transform", `translate(${a.x.toFixed(1)} ${a.y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
+      // keep the word the right way up when the train runs right to left
+      if (flip !== o.flip) { o.flip = flip; o.label.setAttribute("transform", flip ? `rotate(180 ${-o.len / 2} 0)` : ""); }
     });
     el.querySelector("#gpts").textContent = points; el.querySelector("#glv").textContent = level;
     el.querySelector("#gleft").textContent = `Train ${Math.min(sent, TRAIN_COUNT)} of ${TRAIN_COUNT}`;
