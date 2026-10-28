@@ -2,8 +2,10 @@
 import { LEVELS, BANDS, readingBand, currentBand, steadyBand, textLevel, skillStats, badges, weeklyStreak, SKILL_BADGES, STEP_BADGES, STEADY_OF, SUPPORT_LABEL } from "./engine.js";
 import { CHECKS } from "./checks.js";
 import { PRACTICE_TEXTS } from "./content.js";
-import { unitWords, wordPattern, missionBadges, MISSION_BADGES } from "./practice.js";
+import { unitWords, wordPattern } from "./practice.js";
 import { LISTENING } from "./listening.js";
+import { trailStops, trailHere } from "./trail.js";
+import { icon } from "./icons.js";
 
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
                        "Cause and effect", "Writer's purpose", "Writer's view", "Vocabulary", "Grammar", "Listening"];
@@ -112,16 +114,60 @@ export function skillBars(history) {
   }).join("")}</div><p class="note">Right first time, from the last 20 questions on each skill.</p>`;
 }
 
-export function badgeShelf(history) {
-  const got = [...badges(history), ...missionBadges(history)], names = new Set(got.map(b => b.name));
-  const all = [{ name: "First steps", why: "Finish the baseline" }, { name: "Off the mark", why: "Finish a practice text" },
-               { name: "Bookworm", why: "Finish 5 practice texts" }, { name: "Top level", why: "Reach the Harder text" }, { name: "Challenger", why: "Reach a Challenge (C1) text" },
-               ...STEP_BADGES.map(b => ({ name: b.name, why: `Reach a steady ${BANDS[b.band]} reading level` })),
-               { name: "On a roll", why: "Keep a 3-week streak" },
-               ...Object.entries(SKILL_BADGES).map(([s, n]) => ({ name: n, why: "10 " + s.toLowerCase() + " questions right first time" })),
-               ...Object.entries(MISSION_BADGES).map(([u, n]) => ({ name: n, why: `Complete the Unit ${u} mission` }))];
-  return `<div class="badges">${all.map(b => { const on = names.has(b.name); const why = on ? got.find(g => g.name === b.name).why : b.why;
-    return `<div class="badge${on ? "" : " locked"}">${medalSVG(on)}<div><b>${esc(b.name)}</b>${esc(why)}</div></div>`; }).join("")}</div>`;
+// The Road to Checkpoint: a winding road down the left, with a label beside each stop.
+const ROAD_GAP = { start: 74, unit: 78, gate: 66, check: 62, finish: 84 };
+export function roadSVG(history, { links = true } = {}) {
+  const stops = trailStops(history), here = trailHere(stops), W = 340;
+  let y = 34; const pts = stops.map((s, i) => { if (i) y += ROAD_GAP[s.kind]; return { s, i, x: Math.round(52 + 22 * Math.sin(y / 70)), y }; });
+  const H = y + 46;
+  const seg = (a, b) => `C${a.x},${(a.y + b.y) / 2} ${b.x},${(a.y + b.y) / 2} ${b.x},${b.y}`;
+  const path = to => pts.slice(0, to + 1).map((p, k) => k ? seg(pts[k - 1], p) : `M${p.x},${p.y}`).join(" ");
+  const ic = (name, cx, cy, sz, col) => icon(name, sz).replace("<svg ", `<svg x="${cx - sz / 2}" y="${cy - sz / 2}" style="color:${col}" `);
+  const node = ({ s, x, y }) => {
+    if (s.kind === "start") return `<circle cx="${x}" cy="${y}" r="19" fill="${s.done ? "var(--teal)" : "var(--surface)"}" stroke="var(--teal)" stroke-width="3"/>
+      <text x="${x}" y="${y + 5}" text-anchor="middle" class="rd-go" fill="${s.done ? "#fff" : "var(--teal)"}">GO</text>`;
+    if (s.kind === "unit") { const C = 2 * Math.PI * 21;
+      return `<circle cx="${x}" cy="${y}" r="21" fill="${s.done ? "var(--teal)" : "var(--surface)"}" stroke="var(--line)" stroke-width="5"/>
+        ${s.progress > 0 && !s.done ? `<circle cx="${x}" cy="${y}" r="21" fill="none" stroke="var(--teal)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(C * s.progress).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 ${x} ${y})"/>` : ""}
+        <text x="${x}" y="${y + 6}" text-anchor="middle" class="rd-num" fill="${s.done ? "#fff" : "var(--ink)"}">${s.unit}</text>`; }
+    if (s.kind === "gate") return `<path d="M${x - 15},${y - 13} h30 v12 c0,9 -8,15 -15,18 c-7,-3 -15,-9 -15,-18z" fill="${s.done ? "var(--gold)" : "var(--card)"}" stroke="${s.done ? "var(--gold)" : "var(--line)"}" stroke-width="2"/>
+      ${ic(s.done ? "check" : "lock", x, y + 1, 16, s.done ? "#1A1205" : "var(--muted)")}`;
+    if (s.kind === "check") return `<path d="M${x - 8},${y + 14} V${y - 14}" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M${x - 7},${y - 14} h17 l-4,6 4,6 h-17z" fill="${s.done ? "var(--orange)" : "var(--card)"}" stroke="var(--orange)" stroke-width="1.5"/>`;
+    const sq = 7, cells = []; // finish post: a chequered flag on a pole, gold when reached
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) if ((r + c) % 2 === 0) cells.push(`<rect x="${x - 10 + c * sq}" y="${y - 22 + r * sq}" width="${sq}" height="${sq}" fill="var(--ink)"/>`);
+    return `<circle cx="${x}" cy="${y}" r="27" fill="${s.done ? "var(--gold)" : "var(--gold-bg)"}" stroke="var(--gold)" stroke-width="3"/>
+      <path d="M${x - 11},${y + 18} V${y - 22}" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>
+      <rect x="${x - 10}" y="${y - 22}" width="${4 * sq}" height="${3 * sq}" fill="var(--surface)" stroke="var(--ink)" stroke-width="1"/>${cells.join("")}`;
+  };
+  const label = ({ s, i, x, y }) => {
+    const lx = x + (s.kind === "finish" ? 40 : 34), you = i === here;
+    return `${you ? `<text x="${lx}" y="${y - 21}" class="rd-you">YOU ARE HERE</text>` : ""}
+      <text x="${lx}" y="${y - 2}" class="rd-t${s.done ? " done" : ""}">${esc(s.title)}</text><text x="${lx}" y="${y + 15}" class="rd-s">${esc(s.sub)}</text>`;
+  };
+  const href = s => !links ? null : s.unit ? `#unit-${s.unit}/mission` : s.kind === "start" || s.kind === "check" ? "#home" : null;
+  const body = pts.map(p => { const h = href(p.s), g = `<g class="rd-stop${p.s.done ? " done" : ""}">${p.i === here ? `<circle cx="${p.x}" cy="${p.y}" r="31" class="rd-here"/>` : ""}${node(p)}${label(p)}</g>`;
+    return h ? `<a href="${h}" aria-label="${esc(p.s.title + ". " + p.s.sub)}">${g}</a>` : g; }).join("");
+  const reached = Math.max(0, here - (stops[here].done ? 0 : 1));
+  return `<div class="road"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Road to Checkpoint: ${stops.filter(s => s.done).length} of ${stops.length} stops reached">
+    <path d="${path(stops.length - 1)}" fill="none" stroke="var(--line)" stroke-width="16" stroke-linecap="round"/>
+    <path d="${path(stops.length - 1)}" fill="none" stroke="var(--surface)" stroke-width="2" stroke-dasharray="6 8"/>
+    ${reached > 0 ? `<path d="${path(reached)}" fill="none" stroke="var(--gold)" stroke-width="16" stroke-linecap="round" opacity=".85"/>` : ""}
+    ${body}</svg></div>`;
+}
+
+// Every badge that is not on the road, grouped on shelves.
+export function trophyCabinet(history) {
+  const got = new Map(badges(history).map(b => [b.name, b.why]));
+  const shelves = [
+    ["Reading", [{ name: "Off the mark", why: "Finish a practice text" }, { name: "Bookworm", why: "Finish 5 practice texts" },
+                 { name: "Top level", why: "Reach the Harder text" }, { name: "Challenger", why: "Reach a Challenge (C1) text" }]],
+    ["Reading level", STEP_BADGES.map(b => ({ name: b.name, why: `Reach a steady ${BANDS[b.band]} level` }))],
+    ["Skills", Object.entries(SKILL_BADGES).map(([sk, n]) => ({ name: n, why: "10 " + sk.toLowerCase() + " right first time" }))],
+    ["Streaks", [{ name: "On a roll", why: "Keep a 3-week streak" }]]];
+  return shelves.map(([title, list]) => { const n = list.filter(b => got.has(b.name)).length;
+    return `<div class="shelf"><div class="shelf-h"><b>${title}</b><span>${n} of ${list.length}</span></div><div class="shelf-row">${list.map(b => { const on = got.has(b.name);
+      return `<div class="trophy${on ? "" : " locked"}" title="${esc(on ? got.get(b.name) : b.why)}">${medalSVG(on)}<b>${esc(b.name)}</b><span>${esc(on ? got.get(b.name) : b.why)}</span></div>`; }).join("")}</div></div>`; }).join("");
 }
 
 export function historyTable(history) {
@@ -131,7 +177,7 @@ export function historyTable(history) {
   }</tbody></table></div>`;
 }
 
-export function trackerHTML(history, who) {
+export function trackerHTML(history, who, opts = {}) {
   const { streak, thisWeek } = weeklyStreak(history);
   const practice = history.filter(h => h.mode === "practice").length;
   return `<div class="stats">
@@ -141,7 +187,8 @@ export function trackerHTML(history, who) {
       <div class="stat"><b>${practice}</b><span>texts finished</span></div></div>
     <div class="panel"><h3>Skills</h3>${skillBars(history)}</div>
     <div class="panel"><h3>Reading level over time</h3>${levelChart(history)}</div>
-    <div class="panel"><h3>Badges</h3>${badgeShelf(history)}</div>
+    <div class="panel"><h3>Road to Checkpoint</h3><p class="note">Each unit ends with a checkpoint. Pass all nine to reach the finish post.</p>${roadSVG(history, opts)}</div>
+    <div class="panel"><h3>Trophy cabinet</h3>${trophyCabinet(history)}</div>
     <div class="panel"><h3>History</h3>${historyTable(history)}</div>`;
 }
 

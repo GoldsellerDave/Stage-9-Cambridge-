@@ -143,7 +143,7 @@ async function studentView(id) {
   const s = d.student;
   $app.innerHTML = `<div class="narrow pop"><div class="row"><button class="linkbtn" style="color:var(--teal)" id="back">← Class ${U.esc(s.class_code)}</button></div>
     <div class="hero"><p class="eyebrow">${U.esc(s.username)}</p><h1>${U.esc(s.name)}</h1></div>
-    ${U.trackerHTML(d.history, s)}
+    ${U.trackerHTML(d.history, s, { links: false })}
     <form class="panel" id="pin"><h3>Reset PIN</h3><p class="note">Use this if the student forgets their PIN. They will be signed out on their devices.</p>
       <div class="row"><input type="tel" id="np" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN" style="max-width:12em"><button class="btn small" type="submit">Set PIN</button></div>
       <p class="note" id="pm" aria-live="polite"></p></form></div>`;
