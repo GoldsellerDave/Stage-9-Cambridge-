@@ -8,20 +8,22 @@
 // Don't rename ids once students have used them: saved results are keyed by id.
 
 const NARRATOR = "bm_george";
-// Teenagers: the voice library has only adult voices, so boys blend a male and a female voice and both are raised a little.
-const BOY_UK = { mix: [["bm_lewis", 0.6], ["bf_lily", 0.4]], pitch: 2 };
-const BOY_US = { mix: [["am_liam", 0.6], ["af_bella", 0.4]], pitch: 2 };
-const GIRL_UK = { mix: [["bf_lily", 1]], pitch: 2 };
-const GIRL_UK2 = { mix: [["bf_alice", 1]], pitch: 2 };
-const GIRL_UK3 = { mix: [["bf_isabella", 1]], pitch: 2 };
-const GIRL_US = { mix: [["af_bella", 1]], pitch: 2 };
+// Teenagers and their families use the most natural (American) voices, with no blending or pitch change (David, 2026-10-28);
+// other adults (narrator, guides, presenters) keep British voices.
+const BOY_UK = "am_puck";
+const BOY_US = "am_liam";
+const GIRL_UK = "af_heart";
+const GIRL_UK2 = "af_bella";
+const GIRL_UK3 = "af_nicole";
+const GIRL_US = "af_jessica";
+const MUM = "af_sarah", DAD = "am_michael";
 
 export const LISTENING = [
 /* ================= Unit 3: Tourism ================= */
 { id: "l3-short", unitNo: 3, part: "Part 1: Short conversations", topic: "Holiday conversations",
   blurb: "Five short conversations about holidays. Choose the right answer.",
   instructions: "You will hear five short conversations. For each one, choose the correct answer. Read the questions before you listen.",
-  voices: { NARRATOR, GIRL: GIRL_UK, DAD: "bm_daniel", BOY: BOY_UK, MUM: "bf_emma", FRIEND: GIRL_UK3, SARA: GIRL_UK2, MAN: "am_michael", WOMAN: "bf_emma" },
+  voices: { NARRATOR, GIRL: GIRL_UK, DAD, BOY: BOY_UK, MUM, FRIEND: GIRL_UK3, SARA: GIRL_UK2, MAN: "am_michael", WOMAN: "bf_emma" },
   lines: [
    ["NARRATOR", "Conversation one. A girl is talking to her dad about a day trip."],
    ["GIRL", "Dad, the day trip to the islands leaves at nine, doesn't it?"],
@@ -143,7 +145,7 @@ export const LISTENING = [
 { id: "l2-short", unitNo: 2, part: "Part 1: Short conversations", topic: "Health and food conversations",
   blurb: "Five short conversations about health and food. Choose the right answer.",
   instructions: "You will hear five short conversations. For each one, choose the correct answer. Read the questions before you listen.",
-  voices: { NARRATOR, NURSE: "bf_emma", BOY: BOY_UK, WAITER: "am_michael", GIRL: GIRL_UK, MUM: "bf_emma", COACH: "bm_daniel", PLAYER: GIRL_UK2, FRIEND: GIRL_UK3, KHOA: BOY_US },
+  voices: { NARRATOR, NURSE: "bf_emma", BOY: BOY_UK, WAITER: "am_michael", GIRL: GIRL_UK, MUM, COACH: "bm_daniel", PLAYER: GIRL_UK2, FRIEND: GIRL_UK3, KHOA: BOY_US },
   lines: [
    ["NARRATOR", "Conversation one. A boy is talking to the school nurse."],
    ["NURSE", "So, what seems to be the problem? Is it your stomach again?"],
