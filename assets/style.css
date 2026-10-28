@@ -642,6 +642,8 @@ tr.flagged td{background:var(--bad-bg)}
 .escobj.done{border-color:var(--ok-line);background:var(--ok-bg)} .escobj.done svg{color:var(--ok)}
 .escpuz .esctext{font-size:1.1em;font-family:var(--f-text);margin:0}
 .escopts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.escopts .opt{background:var(--surface);border:2px solid var(--line);border-radius:12px;font-weight:600;cursor:pointer;justify-content:center;text-align:center}
+.escopts .opt:hover{border-color:var(--teal)}
 .escopts .opt:disabled{opacity:.45;text-decoration:line-through}
 .escdoc p{font-family:var(--f-text);margin:.4em 0} .escdoc summary{cursor:pointer}
 .esclock h3{display:flex;align-items:center;gap:6px;margin:0}

@@ -70,7 +70,7 @@ function vocabPuzzles(unit, tier, rnd) {
   return picks.map(w => {
     const pool = (w.extra ? [...st, ...ch] : core).filter(x => x.w !== w.w);
     const opts = shuffle([w.w, ...shuffle(pool, rnd).slice(0, 3).map(x => x.w)], rnd);
-    return { kind: "vocab", word: w.w, unit, tier: w.tier || 0, prompt: "Which word means…", text: w.def, opts, answer: w.w,
+    return { kind: "vocab", word: w.w, unit, tier: w.tier || 0, prompt: "Tap the word that means…", text: w.def, opts, answer: w.w,
              hint: `It starts with "${w.w[0]}" and has ${w.w.replace(/[^a-z]/gi, "").length} letters.` };
   });
 }
@@ -80,7 +80,7 @@ function readingPuzzles(E, tier, rnd) {
   shuffle(ok.filter(r => !pick.includes(r)), rnd).forEach(r => { if (pick.length < 3) pick.push(r); });
   return shuffle(pick, rnd).map(r => {
     const others = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9].filter(n => n !== r.a), rnd).slice(0, 3);
-    return { kind: "reading", prompt: "Visitor leaflet", text: r.q, opts: shuffle([r.a, ...others], rnd).map(String), answer: String(r.a),
+    return { kind: "reading", prompt: "Read the leaflet, then tap the answer.", text: r.q, opts: shuffle([r.a, ...others], rnd).map(String), answer: String(r.a),
              hint: `Look at paragraph ${r.para}.`, para: r.para };
   });
 }
@@ -91,7 +91,7 @@ function grammarPuzzles(unit, tier, rnd) {
     const whole = g.items.filter(i => i[0] === ""), gaps = g.items.filter(i => i[0] !== "");
     const it = shuffle(tier >= 2 && whole.length ? whole : gaps.length ? gaps : whole, rnd)[0];
     const [stem, right, ...wrong] = it;
-    return { kind: "grammar", point: g.id, prompt: stem ? "Fix the note: choose the right words." : "Only one of these sentences is right. Which?",
+    return { kind: "grammar", point: g.id, prompt: stem ? "Fix the note: tap the right words." : "Only one of these sentences is right. Tap it.",
              text: stem, opts: shuffle([right, ...wrong], rnd), answer: right, hint: firstSentence(g.rule) };
   });
 }
