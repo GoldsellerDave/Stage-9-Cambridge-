@@ -211,7 +211,7 @@ function homeView() {
 
 /* ---------------- today's workout and quick tiles ---------------- */
 let workout = [];
-const AREA_ICON = { baseline: "read", review: "review", text: "read", listen: "listen", lab: "listen", vocab: "words", grammar: "grammar" };
+const AREA_ICON = { baseline: "read", review: "review", text: "read", listen: "listen", lab: "lab", vocab: "words", grammar: "grammar" };
 function workoutCard() {
   const fu = P.focusUnit();
   workout = W.workoutPlan(history, fu, { level: E.steadyLevel(history, me.level ?? 1), baselineDone: me.baseline_done });
@@ -264,7 +264,7 @@ function unitSections(u) {
   if (texts.length) secs.push({ key: "read", label: "Reading", html: `<div class="usec">${me.baseline_done ? "" : `<p class="note">Take the baseline on the Home page first. It sets your reading level.</p>`}
       <div class="tiles">${texts.map(t => aTile("read", `data-text="${t.id}" ${me.baseline_done ? "" : "disabled"}`, t.topic, done.has(t.id) ? "Done before: half XP this time" : t.blurb, done.has(t.id))).join("")}</div>
       </div>` });
-  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${aTile("listen", "data-labhub", "Listening Lab", "Learn the examiner's tricks: 6 short missions")}${listeningFor(u).map(t =>
+  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${aTile("lab", "data-labhub", "Listening Lab", "Learn the examiner's tricks: 6 short missions")}${listeningFor(u).map(t =>
       aTile("listen", `data-listen="${t.id}"`, t.topic, `${t.part} · ${done.has(t.id) ? "Done before" : t.blurb}`, done.has(t.id))).join("")}</div></div>` });
   secs.push({ key: "words", label: "Words", html: `<div class="usec"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
         <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
@@ -1231,7 +1231,7 @@ function labHubView() {
   $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Listening</p><h1>Listening Lab</h1>
       <p class="lede">Learn the tricks examiners use in listening questions, and how to beat them. Six short missions, about 10 minutes each.</p></div>
     <div class="tiles">${Lab.LAB.map(m => { const b = best(m.id);
-      return aTile("listen", `data-lab="${m.id}"`, `${m.n}. ${m.title}`, b != null ? `Best: ${b} of ${m.items.length} right first time` : m.blurb, b != null); }).join("")}</div>
+      return aTile("lab", `data-lab="${m.id}"`, `${m.n}. ${m.title}`, b != null ? `Best: ${b} of ${m.items.length} right first time` : m.blurb, b != null); }).join("")}</div>
     <div class="panel"><h3>Your trap tracker</h3>${U.trapsHTML(history)}</div></div>`;
   bindActivities();
 }
