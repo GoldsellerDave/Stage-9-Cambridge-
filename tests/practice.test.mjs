@@ -204,3 +204,50 @@ test("listening tasks: cues, answers, audio timings", () => {
   assert.equal(P.markGap({ answers: ["paths"] }, "pats"), false);
   assert.ok(!P.listenCorrect(gap, "6"));
 });
+
+test("vocab and grammar tiers: Core floor, harder tasks for B2 and C1, moving inside a set", () => {
+  const prac = (lv, n) => ({ mode: "practice", text_id: "sleep", level_end: lv, score: n, max_score: 8, created_at: "2026-10-01T00:00:00Z",
+    answers: Array.from({ length: 8 }, (_, i) => ({ skill: "Detail", level: lv, first_try: i < n })) });
+  assert.equal(P.tierFor([]), 0);
+  assert.equal(P.tierFor([prac(0, 1), prac(0, 1), prac(0, 1)]), 0, "lower A2 stays on Core");
+  assert.equal(P.tierFor([prac(2, 8), prac(2, 8), prac(2, 8)]), 1, "B2+ is Stretch");
+  assert.equal(P.tierFor([prac(3, 8), prac(3, 8), prac(3, 8)]), 2, "C1+ is Challenge");
+  let k = 0; const rnd = () => ((k = (k * 9301 + 49297) % 233280) / 233280);
+  const core = P.vocabSet({ unit: 2, n: 10, rnd, tier: 0 }), ch = P.vocabSet({ unit: 2, n: 10, rnd, tier: 2 });
+  assert.equal(core[0].kind, "match", "Core starts with matching for new words");
+  assert.ok(ch.every(q => q.kind === "vocab" && q.tier === 2 && (q.type === "paraphrase" || q.type === "type")), "Challenge: no matching, harder types");
+  ch.filter(q => q.type === "paraphrase").forEach(q => { assert.equal(new Set(q.opts).size, 4); assert.ok(q.stem.includes("[")); });
+  // Moving inside a set
+  const set = P.newSet(P.vocabSet({ unit: 2, n: 10, rnd, tier: 1 }));
+  assert.equal(set.tier, 1);
+  P.submitSmall(set, false); P.submitSmall(set, false); P.nextSmall(set);
+  P.submitSmall(set, false); P.submitSmall(set, false);
+  assert.equal(set.tier, 0, "two missed in a row moves down");
+  P.nextSmall(set); assert.equal(set.qs[set.i].tier, 0);
+  P.submitSmall(set, false); P.submitSmall(set, false); P.nextSmall(set); P.submitSmall(set, false); P.submitSmall(set, false);
+  assert.equal(set.tier, 0, "never below Core");
+  for (let j = 0; j < 3; j++) { P.nextSmall(set); P.submitSmall(set, true); }
+  assert.equal(set.tier, 1, "three right first time moves up");
+  assert.ok(P.smallXP([{ support: "none", tier: 2 }]) > P.smallXP([{ support: "none" }]), "more XP on harder tiers");
+  // Grammar
+  const g = P.grammarSet({ unit: 3, rnd, tier: 2 });
+  assert.ok(g.some(q => q.variant === "fix" || q.variant === "type"));
+  g.filter(q => q.type === "type").forEach(q => { assert.ok(P.markTyped(q, q.answer)); assert.ok(q.stem.includes("___")); });
+  assert.ok(P.bossSet(2, rnd).every(q => !q.tier), "final challenge stays Core");
+});
+
+import { EXTRA, extraWords } from "../js/vocab-extra.js";
+import { VOCAB as CORE } from "../js/vocab.js";
+test("extra Stretch and Challenge words: on the unit theme lists, 8 + 8, one gap, not already core", () => {
+  for (const u of [2, 3, 4]) {
+    assert.equal(EXTRA[u].stretch.length, 8); assert.equal(EXTRA[u].challenge.length, 8);
+    const core = new Set(CORE[u].flat().map(x => x[0]));
+    [...EXTRA[u].stretch, ...EXTRA[u].challenge].forEach(([w, d, ex]) => { assert.ok(!core.has(w), w); assert.equal(ex.split("___").length, 2, w); assert.ok(d.length > 5); });
+    let k = 1; const rnd = () => ((k = (k * 9301 + 49297) % 233280) / 233280);
+    assert.equal(P.vocabSet({ unit: u, n: 10, rnd, tier: 0 }).filter(q => q.extra).length, 0, "Core has no extra words");
+    assert.equal(P.vocabSet({ unit: u, n: 10, rnd, tier: 1 }).filter(q => q.extra).length, 3);
+    const ch = P.vocabSet({ unit: u, n: 10, rnd, tier: 2 });
+    assert.equal(ch.filter(q => q.extra).length, 4); assert.equal(ch.length, 10);
+  }
+  assert.equal(extraWords(2, 1).length, 8);
+});

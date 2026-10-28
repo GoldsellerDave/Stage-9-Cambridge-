@@ -601,3 +601,12 @@ tr.flagged td{background:var(--bad-bg)}
 .part span{font-size:.8rem;color:var(--muted)}
 .part .bar i.low{background:var(--orange)}
 @media (max-width:640px){ .player{flex-wrap:wrap} .player .btn{white-space:normal} }
+
+/* Vocabulary and grammar tiers */
+.qhead .chip.tier{margin-left:6px}
+.chip.tier.t1{background:#DCE8F7;color:#2F6FB5}
+.chip.tier.t2{background:#EBE2F8;color:#7B4FC4}
+@media (prefers-color-scheme:dark){:root:not([data-mode=light]) .chip.tier.t1{background:#1E3350;color:#9CC3F0} :root:not([data-mode=light]) .chip.tier.t2{background:#33264D;color:#C9B2F2}}
+:root[data-mode=dark] .chip.tier.t1{background:#1E3350;color:#9CC3F0}
+:root[data-mode=dark] .chip.tier.t2{background:#33264D;color:#C9B2F2}
+.tiermove{margin-bottom:10px}
