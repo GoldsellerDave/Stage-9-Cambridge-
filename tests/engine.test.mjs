@@ -170,11 +170,40 @@ test("Road to Checkpoint: start, a stop and gate per unit, two check flags, fini
   assert.equal(empty[0].kind, "start"); assert.equal(empty.at(-1).kind, "finish");
   assert.equal(trailHere(empty), 0, "starts at the start");
   const h = [{ mode: "baseline", text_id: "baseline", score: 6, max_score: 12, answers: [] },
-             { mode: "vocab", text_id: "boss-u2", score: 9, max_score: 12, answers: [] },
+             { mode: "vocab", text_id: "mini-u2", score: 12, max_score: 16, answers: [] },
              { mode: "vocab", text_id: "boss-u1", score: 5, max_score: 12, answers: [] }];
   const s = trailStops(h), g1 = s.find(x => x.kind === "gate" && x.unit === 1), g2 = s.find(x => x.kind === "gate" && x.unit === 2);
   assert.ok(!g1.done && /Best 42%/.test(g1.sub), "below 70% is not passed");
   assert.ok(g2.done, "75% passes the gate");
   assert.equal(trailHere(s), s.indexOf(g2) + 1, "stands just after the furthest stop reached");
   assert.ok(!s.at(-1).done);
+});
+
+import { MINI, MINI_LISTENING, miniQuestions, miniBest, miniXP, MINI_PASS } from "../js/minitests.js";
+import { VOCAB } from "../js/vocab.js";
+import { GRAMMAR } from "../js/curriculum.js";
+import { TIMES } from "../js/listening-times.js";
+import { gateFor } from "../js/trail.js";
+import { existsSync } from "node:fs";
+test("unit mini tests: 16 questions in 4 parts, real unit words and grammar points, recorded audio", () => {
+  for (const u of [2, 3]) {
+    const Q = miniQuestions(u);
+    assert.equal(Q.length, 16);
+    assert.deepEqual([...new Set(Q.map(q => q.part))], ["reading", "listening", "vocab", "grammar"]);
+    Q.forEach(q => { assert.equal(q.opts.length, 4); assert.equal(new Set(q.opts).size, 4, q.stem); });
+    const words = VOCAB[u].flat().map(x => x[0]);
+    MINI[u].vocab.forEach(v => { assert.ok(words.includes(v.word), v.word); assert.equal(v.opts[0], v.word); assert.equal(v.stem.split("___").length, 2); });
+    MINI[u].grammar.forEach(g => assert.ok(GRAMMAR.some(p => p.id === g.point && p.unit === u), g.point));
+    const L = MINI_LISTENING.find(l => l.id === MINI[u].listening.id);
+    L.lines.forEach(([who]) => assert.ok(L.voices[who]));
+    assert.equal((TIMES[L.id] || []).length, L.lines.length, "timings for " + L.id);
+    assert.ok(existsSync(new URL(`../audio/listening/${L.id}.mp3`, import.meta.url)));
+    assert.equal(gateFor(u).id, `mini-u${u}`);
+  }
+  assert.equal(gateFor(4).id, "boss-u4", "units without a mini test keep the final challenge");
+  const h = [{ text_id: "mini-u2", score: 10, max_score: 16 }];
+  assert.equal(miniBest(2, h), 10 / 16);
+  assert.equal(miniXP(12, 16, h, 2), 12 * 5 + 40, "first pass bonus");
+  assert.equal(miniXP(13, 16, [...h, { text_id: "mini-u2", score: 12, max_score: 16 }], 2), 13 * 5, "no bonus after passing");
+  assert.ok(11 / 16 < MINI_PASS && 12 / 16 >= MINI_PASS);
 });

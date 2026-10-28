@@ -589,3 +589,15 @@ tr.flagged td{background:var(--bad-bg)}
 .trophy b{font-size:.82rem;line-height:1.2}
 .trophy span{color:var(--muted);font-size:.7rem;line-height:1.25}
 .trophy.locked{background:var(--card);opacity:.55}
+
+/* Unit checkpoint mini tests */
+.minicard{display:flex;gap:12px;align-items:center;margin-top:12px;padding:12px 14px;border:2px dashed var(--teal);border-radius:12px;background:var(--surface)}
+.minicard.won{border-style:solid;background:var(--ok-bg);border-color:var(--ok-line)}
+.minicard>div{flex:1;min-width:0}
+.minicard p{margin:2px 0 0}
+.parts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.part{background:var(--card);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:4px}
+.part b{font-size:1.2rem}
+.part span{font-size:.8rem;color:var(--muted)}
+.part .bar i.low{background:var(--orange)}
+@media (max-width:640px){ .player{flex-wrap:wrap} .player .btn{white-space:normal} }
