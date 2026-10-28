@@ -104,10 +104,40 @@ function loop(step) {
   id = requestAnimationFrame(f);
   return () => { on = false; cancelAnimationFrame(id); };
 }
+const STAR = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.8-4.9 4.6 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.5 9.3l6.6-.8z" fill="currentColor"/></svg>`;
 function hud(lives) {
-  return `<div class="ghud"><span>Level <b id="glv">1</b></span><span><b id="gpts">0</b> points</span>
-    ${lives ? `<span class="glives" id="glives" aria-label="${lives} lives">${"<i></i>".repeat(lives)}</span>` : `<span id="gleft"></span>`}<span id="gtime"></span></div>`;
+  return `<div class="ghud"><span class="hchip lv">${STAR}<span class="hl">Level</span> <b id="glv">1</b></span><span class="hchip pts"><b id="gpts">0</b> pts</span>
+    <span class="hchip combo" id="gcombo" hidden></span>
+    ${lives ? `<span class="glives" id="glives" aria-label="${lives} lives">${"<i></i>".repeat(lives)}</span>` : `<span class="hchip" id="gleft"></span>`}<span class="hchip time" id="gtime" hidden></span></div>`;
 }
+// Score that bumps when it changes, and a streak chip (×2, ×3…) that appears after two in a row.
+function setPoints(el, n) { const b = el.querySelector("#gpts"); if (!b || b.textContent === String(n)) return; b.textContent = n; const c = b.parentNode; c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump"); }
+function setCombo(el, n) { const c = el.querySelector("#gcombo"); if (!c) return; c.hidden = n < 2; c.textContent = `🔥 ×${n}`; c.classList.remove("bump"); void c.offsetWidth; c.classList.add("bump"); }
+// "3, 2, 1, Go!" over the play area, then start.
+function countdown(box, go) {
+  const o = document.createElement("div"); o.className = "gcount"; box.appendChild(o);
+  let n = 3;
+  const step = () => {
+    o.innerHTML = `<span>${n || "Go!"}</span>`;
+    play(n ? "tap" : "level");
+    if (n-- > 0) setTimeout(step, 650); else setTimeout(() => { o.remove(); go(); }, 500);
+  };
+  step();
+}
+// Floating "+20" text and a burst of particles at (x, y) in the box's pixels.
+function floatText(box, x, y, text, cls = "") {
+  const f = document.createElement("b"); f.className = "gfloat " + cls; f.textContent = text;
+  f.style.left = x + "px"; f.style.top = y + "px"; box.appendChild(f); setTimeout(() => f.remove(), 950);
+}
+function burst(box, x, y, colors, n = 12) {
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("i"); p.className = "gpart";
+    const a = (i / n) * Math.PI * 2 + Math.random() * 0.4, d = 34 + Math.random() * 30;
+    p.style.cssText = `left:${x}px;top:${y}px;--dx:${(Math.cos(a) * d).toFixed(0)}px;--dy:${(Math.sin(a) * d).toFixed(0)}px;background:${colors[i % colors.length]}`;
+    box.appendChild(p); setTimeout(() => p.remove(), 700);
+  }
+}
+const CONFETTI = ["#F6C94A", "#4FC3F7", "#F06292", "#81C784", "#FF8A65"];
 function banner(el, text, cls = "") {
   const b = el.querySelector(".gbanner"); if (!b) return;
   b.textContent = text; b.className = "gbanner show " + cls;
@@ -118,11 +148,12 @@ function banner(el, text, cls = "") {
 export function playRain(el, { unit, onEnd }) {
   const pool = rainPool(unit), cards = deck(pool);
   el.innerHTML = `<div class="game rain">${hud(RAIN_LIVES)}
-    <div class="arena" id="arena"><div class="water" id="water"></div><div class="gbanner"></div></div>
+    <div class="arena" id="arena"><div class="sky" aria-hidden="true"><i class="sun"></i><i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i><i class="rainfx"></i></div>
+      <div class="water" id="water"><i class="wave w1"></i><i class="wave w2"></i></div><div class="gbanner"></div></div>
     <div class="gbtns" id="gbtns">${[0, 1, 2, 3].map(i => `<button class="gbtn" data-i="${i}"><span class="gk">${i + 1}</span><span class="gword"></span></button>`).join("")}</div>
     <p class="note" id="gtell" aria-live="polite">Tap the word that matches the falling meaning. On a keyboard, press 1 to 4.</p></div>`;
   const arena = el.querySelector("#arena"), water = el.querySelector("#water"), btns = [...el.querySelectorAll(".gbtn")];
-  let drops = [], slots = [null, null, null, null], t = 0, sinceSpawn = 99, points = 0, hits = 0, misses = 0, level = 1, over = false;
+  let drops = [], slots = [null, null, null, null], t = 0, sinceSpawn = 99, points = 0, hits = 0, misses = 0, level = 1, over = false, streak = 0, stop = () => {};
   const words = [];
   const fallTime = () => Math.max(5, 12 - level);                 // seconds from top to water
   const maxDrops = () => level >= 3 ? 2 : 1;
@@ -142,7 +173,7 @@ export function playRain(el, { unit, onEnd }) {
   }
   function spawn() {
     const x = cards.next(drops.map(d => d.x.w));
-    const d = document.createElement("div"); d.className = "drop"; d.innerHTML = `<span>${esc(x.def)}</span>`;
+    const d = document.createElement("div"); d.className = "drop"; d.innerHTML = `<i class="dtail"></i><span>${esc(x.def)}</span>`;
     arena.appendChild(d);
     const left = Math.random() * Math.max(0, arena.clientWidth - d.offsetWidth);
     drops.push({ x, el: d, y: -d.offsetHeight, left }); setButtons(); sinceSpawn = 0;
@@ -151,12 +182,14 @@ export function playRain(el, { unit, onEnd }) {
   function pop(d, k) {
     const ground = arena.clientHeight - waterH();
     const gain = 10 * level + Math.round(10 * Math.max(0, 1 - (d.y + d.el.offsetHeight) / ground));
-    points += gain; hits++; words.push({ w: d.x.w, hit: true });
-    d.el.classList.add("popped"); d.el.innerHTML += `<b class="gain">+${gain}</b>`;
-    setTimeout(() => d.el.remove(), 450); remove(d);
+    points += gain; hits++; streak++; words.push({ w: d.x.w, hit: true });
+    const cx = d.left + d.el.offsetWidth / 2, cy = d.y + d.el.offsetHeight / 2;
+    d.el.classList.add("popped"); setTimeout(() => d.el.remove(), 450); remove(d);
+    burst(arena, cx, cy, ["#BFE9FF", "#7FD3FF", "#FFFFFF", "#F6C94A"], 14); floatText(arena, cx, cy - 10, `+${gain}`);
+    setPoints(el, points); setCombo(el, streak);
     btns[k].classList.add("right"); setTimeout(() => btns[k].classList.remove("right"), 300);
     play("ok");
-    const nl = levelAfter(hits); if (nl > level) { level = nl; play("level"); banner(el, `Level ${level}: faster!`); }
+    const nl = levelAfter(hits); if (nl > level) { level = nl; play("level"); banner(el, `Level ${level}: faster!`); arena.classList.remove("flash"); void arena.offsetWidth; arena.classList.add("flash"); }
     swapOut(d.x.w);
   }
   // A word that has been answered leaves the buttons, so students read the next meaning instead of tapping the same place.
@@ -165,8 +198,10 @@ export function playRain(el, { unit, onEnd }) {
     const used = new Set(slots), d = shuffled(pool).find(x => !used.has(x.w)); slots[k] = d ? d.w : w; setButtons();
   }
   function land(d) {
-    misses++; words.push({ w: d.x.w, hit: false }); cards.again(d.x);
+    misses++; streak = 0; setCombo(el, 0); words.push({ w: d.x.w, hit: false }); cards.again(d.x);
     d.el.classList.add("splash"); setTimeout(() => d.el.remove(), 500); remove(d);
+    const sp = document.createElement("i"); sp.className = "ripple"; sp.style.left = (d.left + d.el.offsetWidth / 2) + "px"; sp.style.bottom = waterH() + "px";
+    arena.appendChild(sp); setTimeout(() => sp.remove(), 800); arena.classList.remove("hurt"); void arena.offsetWidth; arena.classList.add("hurt");
     el.querySelector("#gtell").innerHTML = `<b>${esc(d.x.w)}</b>: ${esc(d.x.def)}`;
     play("bad"); water.style.height = waterH() + "px";
     el.querySelectorAll("#glives i").forEach((i, k) => i.classList.toggle("lost", k >= RAIN_LIVES - misses));
@@ -176,7 +211,7 @@ export function playRain(el, { unit, onEnd }) {
     if (over) return;
     const w = slots[k], hit = drops.filter(d => d.x.w === w).sort((a, b) => b.y - a.y)[0];
     if (hit) return pop(hit, k);
-    points = Math.max(0, points - 5); play("bad");
+    points = Math.max(0, points - 5); streak = 0; setCombo(el, 0); setPoints(el, points); play("bad");
     btns[k].classList.remove("shake"); void btns[k].offsetWidth; btns[k].classList.add("shake");
   }
   function finish(msg) {
@@ -185,13 +220,13 @@ export function playRain(el, { unit, onEnd }) {
     banner(el, msg, "big"); btns.forEach(b => b.disabled = true);
     setTimeout(() => { cleanup(); onEnd({ points, hits, misses, level, words, seconds: Math.round(t) }); }, 1500);
   }
-  const stop = loop(dt => {
+  const run = () => loop(dt => {
     t += dt; sinceSpawn += dt;
     const H = arena.clientHeight, ground = H - waterH(), speed = H / fallTime();
     if (drops.length < maxDrops() && (drops.length === 0 || sinceSpawn > fallTime() * 0.45)) spawn();
     drops.slice().forEach(d => { d.y += speed * dt; d.el.style.transform = `translate(${d.left}px,${d.y}px)`; if (d.y + d.el.offsetHeight >= ground) land(d); });
-    el.querySelector("#gpts").textContent = points; el.querySelector("#glv").textContent = level;
-    el.querySelector("#gtime").textContent = fmt(RAIN_SECONDS - t);
+    el.querySelector("#glv").textContent = level;
+    const tm = el.querySelector("#gtime"); tm.hidden = false; tm.textContent = "⏱ " + fmt(RAIN_SECONDS - t); tm.classList.toggle("low", RAIN_SECONDS - t < 15);
     if (t >= RAIN_SECONDS) finish("Time's up!");
   });
   btns.forEach((b, k) => b.onclick = () => tap(k));
@@ -199,6 +234,7 @@ export function playRain(el, { unit, onEnd }) {
   document.addEventListener("keydown", key);
   function cleanup() { stop(); document.removeEventListener("keydown", key); }
   water.style.height = waterH() + "px";
+  setButtons(); countdown(arena, () => { if (!over) stop = run(); });
   return () => { over = true; cleanup(); };
 }
 const fmt = s => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
@@ -208,45 +244,75 @@ const SVGNS = "http://www.w3.org/2000/svg";
 // The track winds across the top (a long run-up to think), turns at the junction, and branches down to the stations on the left.
 const VB = { w: 400, h: 400, jx: 215, jy: 140, sx: 84 };
 const APPROACH = `M-60 45 H315 C372 45 372 ${VB.jy} 315 ${VB.jy} H${VB.jx}`;
+// The countryside seen from above: grass, a lake, a farmhouse, trees and drifting cloud shadows. All of it stays clear of the track.
+const tree = ([x, y, r]) => `<g class="tree"><circle class="tsh" cx="${x + 3}" cy="${y + 4}" r="${r}"/><circle class="t1" cx="${x}" cy="${y}" r="${r}"/><circle class="t2" cx="${x - r * .3}" cy="${y - r * .3}" r="${r * .55}"/></g>`;
+const TREES = [[25, 95, 14], [72, 78, 10], [132, 100, 13], [182, 82, 9], [100, 14, 8], [250, 14, 9], [385, 20, 10], [388, 96, 10],
+  [250, 200, 12], [385, 205, 13], [230, 378, 12], [395, 388, 14], [190, 320, 10], [205, 388, 9], [262, 250, 7]];
+const FLOWERS = [[60, 120], [160, 125], [290, 70], [340, 100], [240, 300], [372, 260], [280, 380], [175, 240], [355, 380], [120, 30]];
+const SCENE = `<defs><radialGradient id="tlake" cx=".4" cy=".35" r=".75"><stop offset="0" class="lk0"/><stop offset="1" class="lk1"/></radialGradient>
+    <pattern id="tgrass" width="26" height="26" patternUnits="userSpaceOnUse"><path class="blade" d="M4 10l2-5 2 5M16 22l2-5 2 5"/></pattern></defs>
+  <rect class="grass" width="400" height="400"/><rect width="400" height="400" fill="url(#tgrass)"/>
+  <ellipse class="meadow" cx="310" cy="320" rx="105" ry="78"/><ellipse class="meadow" cx="120" cy="60" rx="90" ry="40"/>
+  <ellipse class="shore" cx="318" cy="316" rx="68" ry="41"/><ellipse cx="318" cy="314" rx="62" ry="36" fill="url(#tlake)"/>
+  <path class="lkshine" d="M286 306q14-6 28 0M318 326q12-5 24 0M300 296q8-4 16 0"/>
+  <g class="duck"><ellipse cx="0" cy="0" rx="5" ry="3.5"/><circle cx="4" cy="-1.5" r="2.2"/></g>
+  <g class="house"><rect class="hsh" x="253" y="82" width="40" height="30" rx="2"/><rect class="roofa" x="250" y="78" width="40" height="15"/><rect class="roofb" x="250" y="93" width="40" height="15"/>
+    <rect class="chim" x="279" y="82" width="5" height="6"/></g>
+  ${FLOWERS.map(([x, y], k) => `<circle class="fl f${k % 3}" cx="${x}" cy="${y}" r="2.6"/>`).join("")}
+  ${TREES.map(tree).join("")}`;
 export function playTrain(el, { unit, onEnd }) {
   const pool = trainPool(unit), st = trainStations(pool), cards = deck(pool);
   const ys = st.map((_, k) => Math.round(200 + k * 170 / (st.length - 1)));
   const fromJ = y => `M${VB.jx} ${VB.jy} C${VB.jx - 75} ${VB.jy} ${VB.jx - 75} ${y} ${VB.jx - 130} ${y} H${VB.sx}`;
   const branch = y => APPROACH + fromJ(y).replace(/^M[\d.]+ [\d.]+/, "");
+  const all = [APPROACH, ...ys.map(fromJ)], track = cls => all.map(d => `<path class="${cls}" d="${d}"/>`).join("");
   el.innerHTML = `<div class="game train">${hud(0)}
     <div class="arena tarena"><svg viewBox="0 0 ${VB.w} ${VB.h}" role="img" aria-label="Railway with ${st.length} stations: ${st.join(", ")}">
-      <path class="rail" d="${APPROACH}"/><path id="tapp" d="${APPROACH}" fill="none" stroke="none"/>
-      ${ys.map((y, k) => `<path class="rail" d="${fromJ(y)}"/><path id="tb${k}" d="${branch(y)}" fill="none" stroke="none"/>`).join("")}
-      <path class="rail on" id="tsw" d="${fromJ(ys[0])}"/>
-      <circle class="junction" cx="${VB.jx}" cy="${VB.jy}" r="7"/>
-      ${st.map((s, k) => `<g class="station s-${s}" data-k="${k}" id="ts${k}"><rect x="4" y="${ys[k] - 20}" width="${VB.sx - 4}" height="40" rx="8"/>
-        <text x="${(VB.sx + 4) / 2}" y="${ys[k] + 5}" text-anchor="middle">${s}</text></g>`).join("")}
-      <g id="trains"></g></svg><div class="gbanner"></div></div>
+      ${SCENE}
+      ${track("ties")}<path class="rglow" id="tswg" d="${fromJ(ys[0])}"/>${track("rail")}${track("railin")}
+      <path id="tapp" d="${APPROACH}" fill="none" stroke="none"/>${ys.map((y, k) => `<path id="tb${k}" d="${branch(y)}" fill="none" stroke="none"/>`).join("")}
+      <path class="rflow" id="tsw" d="${fromJ(ys[0])}"/>
+      <g class="junction"><circle class="jring" cx="${VB.jx}" cy="${VB.jy}" r="9"/><circle class="jdot" cx="${VB.jx}" cy="${VB.jy}" r="6"/></g>
+      ${st.map((s, k) => `<g class="station s-${s}" data-k="${k}" id="ts${k}"><rect class="plat" x="0" y="${ys[k] - 23}" width="${VB.sx + 4}" height="46" rx="6"/>
+        <rect class="roof" x="4" y="${ys[k] - 18}" width="74" height="36" rx="5"/>
+        <text x="41" y="${ys[k] + 4.5}" text-anchor="middle">${s}</text></g>`).join("")}
+      <g id="trains"></g><g id="smoke"></g></svg><div class="gbanner"></div></div>
     <div class="gbtns tbtns">${st.map((s, k) => `<button class="gbtn s-${s}" data-k="${k}"><span class="gk">${k + 1}</span><span class="gword">${s[0].toUpperCase() + s.slice(1)}</span></button>`).join("")}</div>
     <p class="note" id="gtell" aria-live="polite">Set the points before each train reaches the junction. Tap a station, or press 1 to ${st.length}.</p></div>`;
-  const layer = el.querySelector("#trains"), sw = el.querySelector("#tsw");
+  const arena = el.querySelector(".tarena"), svg = arena.querySelector("svg"), layer = el.querySelector("#trains"), smoke = el.querySelector("#smoke");
+  const sw = el.querySelector("#tsw"), swg = el.querySelector("#tswg");
   const paths = st.map((_, k) => el.querySelector("#tb" + k)), lens = paths.map(p => p.getTotalLength());
   const common = el.querySelector("#tapp").getTotalLength();
   const btns = [...el.querySelectorAll(".gbtn")];
-  let trains = [], cur = 0, t = 0, sinceSpawn = 99, sent = 0, done = 0, points = 0, hits = 0, streak = 0, level = 1, over = false;
+  let trains = [], cur = 0, t = 0, sinceSpawn = 99, sent = 0, done = 0, points = 0, hits = 0, streak = 0, level = 1, over = false, stop = () => {};
   const words = [];
   const speed = () => 30 + 6 * level;                              // svg units per second: about 17 s to the junction at level 1
   const gap = () => Math.max(3, 7.5 - 0.6 * level);                // seconds between trains
 
   function setSwitch(k) {
     if (over || k < 0 || k >= st.length) return;
-    cur = k; sw.setAttribute("d", fromJ(ys[k])); play("tap");
+    cur = k; sw.setAttribute("d", fromJ(ys[k])); swg.setAttribute("d", fromJ(ys[k])); play("tap");
     btns.forEach((b, i) => b.classList.toggle("sel", i === k));
     el.querySelectorAll(".station").forEach((g, i) => g.classList.toggle("sel", i === k));
   }
+  // A steam engine pulling one wagon with the word on it, drawn from above and pointing along +x.
   function spawn() {
     const x = cards.next(trains.map(o => o.x.w)), g = document.createElementNS(SVGNS, "g");
-    const len = Math.max(54, x.w.length * 7.4 + 18);
+    const len = Math.max(54, x.w.length * 7.4 + 18), back = -24 - len;
     g.setAttribute("class", "tcar");
-    g.innerHTML = `<rect x="${-len}" y="-12" width="${len}" height="24" rx="7"/><rect class="nose" x="-7" y="-12" width="7" height="24" rx="3"/>
-      <text x="${-len / 2}" y="0" dominant-baseline="central" text-anchor="middle">${esc(x.w)}</text>`;
+    g.innerHTML = `<rect class="csh" x="${back + 2}" y="-9" width="${len + 26}" height="24" rx="7"/>
+      <rect class="wagon" x="${back}" y="-12" width="${len}" height="24" rx="6"/><rect class="wtop" x="${back + 3}" y="-9" width="${len - 6}" height="7" rx="3"/>
+      <rect class="coupler" x="-26" y="-2" width="4" height="4"/>
+      <rect class="cab" x="-23" y="-11" width="10" height="22" rx="3"/><rect class="boiler" x="-14" y="-8.5" width="16" height="17" rx="8"/>
+      <circle class="chimney" cx="-4" cy="0" r="3.6"/><rect class="buffer" x="1.5" y="-7" width="2.5" height="14" rx="1"/>
+      <text x="${back + len / 2}" y="1" dominant-baseline="central" text-anchor="middle">${esc(x.w)}</text>`;
     layer.appendChild(g);
-    trains.push({ x, g, s: 0, k: null, len, flip: false, label: g.querySelector("text") }); sent++; sinceSpawn = 0;
+    trains.push({ x, g, s: 0, k: null, len: len + 24, mid: back + len / 2, flip: false, puff: 0, label: g.querySelector("text") }); sent++; sinceSpawn = 0;
+  }
+  function puff(p) {
+    const c = document.createElementNS(SVGNS, "circle");
+    c.setAttribute("class", "puff"); c.setAttribute("cx", p.x.toFixed(1)); c.setAttribute("cy", p.y.toFixed(1)); c.setAttribute("r", "4");
+    smoke.appendChild(c); setTimeout(() => c.remove(), 1000);
   }
   function arrive(o) {
     trains = trains.filter(q => q !== o); done++;
@@ -254,21 +320,27 @@ export function playTrain(el, { unit, onEnd }) {
     words.push({ w: o.x.w, pos: o.x.pos, hit: ok });
     o.g.classList.add(ok ? "in" : "wrong"); setTimeout(() => o.g.remove(), 350);
     stn.classList.remove("good", "bad"); void stn.getBBox(); stn.classList.add(ok ? "good" : "bad");
-    setTimeout(() => stn.classList.remove("good", "bad"), 500);
+    setTimeout(() => stn.classList.remove("good", "bad"), 600);
+    const sc = svg.clientWidth / VB.w, px = 44 * sc, py = ys[o.k] * sc;
     if (ok) {
       hits++; streak++; const gain = 10 * level + (streak >= 3 ? 5 : 0); points += gain; play("ok");
-      const nl = levelAfter(hits); if (nl > level) { level = nl; play("level"); banner(el, `Level ${level}: faster trains!`); }
+      burst(arena, px, py, CONFETTI, 16); floatText(arena, px + 30, py - 18, `+${gain}`);
+      const nl = levelAfter(hits); if (nl > level) { level = nl; play("level"); banner(el, `Level ${level}: faster trains!`); arena.classList.remove("flash"); void arena.offsetWidth; arena.classList.add("flash"); }
     } else {
       streak = 0; play("bad");
+      burst(arena, px, py, ["#9AA4AE", "#C7CDD3", "#E05252"], 10); floatText(arena, px + 30, py - 18, "✗", "bad");
+      arena.classList.remove("hurt"); void arena.offsetWidth; arena.classList.add("hurt");
       el.querySelector("#gtell").innerHTML = `<b>${esc(o.x.w)}</b> is ${o.x.pos === "adjective" || o.x.pos === "adverb" ? "an" : "a"} <b>${o.x.pos}</b>.${o.x.family ? ` Family: ${esc(o.x.family)}` : ""}`;
     }
+    setPoints(el, points); setCombo(el, streak);
     if (done >= TRAIN_COUNT) finish();
   }
   function finish() {
     over = true; stop(); banner(el, `${hits} of ${TRAIN_COUNT} trains on time!`, "big"); btns.forEach(b => b.disabled = true);
+    if (hits >= TRAIN_COUNT * 0.75) burst(arena, arena.clientWidth / 2, arena.clientHeight * 0.38, CONFETTI, 28);
     setTimeout(() => { cleanup(); onEnd({ points, hits, misses: TRAIN_COUNT - hits, level, words, seconds: Math.round(t) }); }, 1500);
   }
-  const stop = loop(dt => {
+  const run = () => loop(dt => {
     t += dt; sinceSpawn += dt;
     if (sent < TRAIN_COUNT && sinceSpawn > gap() && !trains.some(o => o.s < 140)) spawn();
     trains.slice().forEach(o => {
@@ -280,44 +352,58 @@ export function playTrain(el, { unit, onEnd }) {
       const ang = Math.atan2(a.y - b.y, a.x - b.x) * 180 / Math.PI, flip = Math.abs(ang) > 95;
       o.g.setAttribute("transform", `translate(${a.x.toFixed(1)} ${a.y.toFixed(1)}) rotate(${ang.toFixed(1)})`);
       // keep the word the right way up when the train runs right to left
-      if (flip !== o.flip) { o.flip = flip; o.label.setAttribute("transform", flip ? `rotate(180 ${-o.len / 2} 0)` : ""); }
+      if (flip !== o.flip) { o.flip = flip; o.label.setAttribute("transform", flip ? `rotate(180 ${o.mid} 1)` : ""); }
+      o.puff -= dt; if (o.puff <= 0 && b.x > 0) { o.puff = 0.22; puff(b); }
     });
-    el.querySelector("#gpts").textContent = points; el.querySelector("#glv").textContent = level;
-    el.querySelector("#gleft").textContent = `Train ${Math.min(sent, TRAIN_COUNT)} of ${TRAIN_COUNT}`;
+    el.querySelector("#glv").textContent = level;
+    el.querySelector("#gleft").textContent = `🚂 ${Math.min(sent, TRAIN_COUNT)} / ${TRAIN_COUNT}`;
   });
   btns.forEach((b, k) => b.onclick = () => setSwitch(k));
   el.querySelectorAll(".station").forEach(g => g.addEventListener("click", () => setSwitch(+g.dataset.k)));
   const key = ev => { const k = "1234".indexOf(ev.key); if (k >= 0) { ev.preventDefault(); setSwitch(k); } };
   document.addEventListener("keydown", key);
   function cleanup() { stop(); document.removeEventListener("keydown", key); }
-  setSwitch(0);
+  setSwitch(0); el.querySelector("#gleft").textContent = `🚂 0 / ${TRAIN_COUNT}`;
+  countdown(arena, () => { if (!over) stop = run(); });
   return () => { over = true; cleanup(); };
 }
 
 /* ---------------- Speed Read ---------------- */
+// A speedometer: one coloured band for each speed, lit up to the current one, with a needle that swings.
+function gauge() {
+  const n = SPEEDS.length, r = 46, pt = a => `${(60 + r * Math.cos(a)).toFixed(1)} ${(58 - r * Math.sin(a)).toFixed(1)}`;
+  const bands = SPEEDS.map((_, k) => { const a0 = Math.PI * (1 - k / n) - 0.03, a1 = Math.PI * (1 - (k + 1) / n) + 0.03;
+    return `<path class="gb" data-k="${k}" style="--h:${130 - k * 20}" d="M${pt(a0)} A${r} ${r} 0 0 1 ${pt(a1)}"/>`; }).join("");
+  return `<svg viewBox="0 0 120 66" aria-hidden="true">${bands}<g class="needle" id="gneedle"><path d="M57.5 58 L60 18 L62.5 58z"/></g><circle class="hub" cx="60" cy="58" r="6"/></svg>`;
+}
 export function playSpeed(el, { unit, texts, level, wpm, onEnd }) {
   const items = speedItems(texts, level).slice(0, SPEED_ROUND);
-  let i = 0, si = Math.max(0, SPEEDS.indexOf(wpm)), streak = 0, points = 0, hits = 0, top = SPEEDS[si], timer = null, over = false;
+  let i = 0, si = Math.max(0, SPEEDS.indexOf(wpm)), streak = 0, run = 0, points = 0, hits = 0, top = SPEEDS[si], timer = null, over = false;
   const t0 = Date.now(), words = [];
-  el.innerHTML = `<div class="game speed">${hud(0)}<div class="sbox" id="sbox"></div><p class="note" id="gtell" aria-live="polite"></p></div>`;
-  const box = el.querySelector("#sbox");
+  el.innerHTML = `<div class="game speed">${hud(0)}<div class="sstage"><div class="sgauge">${gauge()}<b id="gwpm"></b><span>words a minute</span></div>
+    <div class="sbox" id="sbox"></div><div class="gbanner"></div></div><p class="note" id="gtell" aria-live="polite"></p></div>`;
+  const box = el.querySelector("#sbox"), stage = el.querySelector(".sstage");
   const head = () => {
-    el.querySelector("#glv").textContent = SPEEDS[si] + " wpm"; el.querySelector("#gpts").textContent = points;
-    el.querySelector("#gleft").textContent = `Question ${Math.min(i + 1, items.length)} of ${items.length}`;
+    el.querySelector("#glv").textContent = SPEEDS[si] + " wpm"; setPoints(el, points);
+    el.querySelector("#gleft").textContent = `📖 ${Math.min(i + 1, items.length)} / ${items.length}`;
+    el.querySelector("#gwpm").textContent = SPEEDS[si];
+    el.querySelector("#gneedle").style.transform = `rotate(${(-90 + 180 * (si + 0.5) / SPEEDS.length).toFixed(1)}deg)`;
+    el.querySelectorAll(".gb").forEach(b => b.classList.toggle("on", +b.dataset.k <= si));
   };
-  el.querySelector(".ghud span").firstChild.textContent = "Speed ";
+  el.querySelector(".hl").textContent = "Speed";
   function ready() {
     head();
     const x = items[i];
-    box.innerHTML = `<p class="eyebrow">${esc(x.topic)} · paragraph ${x.para}</p><div class="sflash" aria-live="off"><span>Get ready…</span></div>
-      <div class="sbar"><i id="sprog"></i></div>`;
+    box.innerHTML = `<p class="eyebrow">${esc(x.topic)} · paragraph ${x.para}</p><div class="sflash" aria-live="off"><span></span></div>
+      <div class="spbar"><i id="sprog"></i></div>`;
     el.querySelector("#gtell").textContent = `${SPEEDS[si]} words a minute. Read every word: the question comes after.`;
-    timer = setTimeout(() => flash(chunks(x.words), 0), 1200);
+    countdown(box.querySelector(".sflash"), () => flash(chunks(x.words), 0));
   }
   function flash(cs, k) {
     if (over) return;
     if (k >= cs.length) return ask();
-    box.querySelector(".sflash span").textContent = cs[k];
+    const sp = box.querySelector(".sflash span");
+    sp.textContent = cs[k]; sp.classList.remove("in"); void sp.offsetWidth; sp.classList.add("in");
     box.querySelector("#sprog").style.width = (100 * (k + 1) / cs.length) + "%";
     const n = cs[k].split(" ").length;
     timer = setTimeout(() => flash(cs, k + 1), n * 60000 / SPEEDS[si] + (/[.!?]["”]?$/.test(cs[k]) ? 150 : 0));
@@ -327,22 +413,26 @@ export function playSpeed(el, { unit, texts, level, wpm, onEnd }) {
     box.innerHTML = `<p class="eyebrow">${esc(x.skill)}</p><p class="stem">${esc(x.q.stem)}</p>
       <div class="opts">${order.map((k, n) => `<button class="opt" data-o="${k}"><span class="k">${"ABCD"[n]}</span><span>${esc(x.q.opts[k])}</span></button>`).join("")}</div>`;
     el.querySelector("#gtell").textContent = "";
-    box.querySelectorAll(".opt").forEach(b => b.onclick = () => answer(+b.dataset.o));
+    box.querySelectorAll(".opt").forEach(b => b.onclick = () => answer(+b.dataset.o, b));
   }
-  function answer(o) {
+  function answer(o, btn) {
     const x = items[i], right = o === 0, at = SPEEDS[si];
     words.push({ w: x.q.stem, answer: x.q.opts[0], hit: right, skill: x.skill, text: x.text, para: x.para, wpm: at, sentence: x.words.join(" "), focus: x.q.focus });
-    if (right) { hits++; streak++; const gain = 10 + Math.round(at / 10); points += gain; play("ok"); }
-    else { streak = 0; play("bad"); }
+    const gain = 10 + Math.round(at / 10);
+    const sr = stage.getBoundingClientRect(), br = btn.getBoundingClientRect(), bx = br.left - sr.left + br.width / 2, by = br.top - sr.top + br.height / 2;
+    if (right) { hits++; streak++; run++; points += gain; play("ok"); burst(stage, bx, by, CONFETTI, 16); floatText(stage, bx, by - 14, `+${gain}`); }
+    else { streak = 0; run = 0; play("bad"); }
+    setCombo(el, run);
     const was = si; si = nextSpeed(si, right, streak); if (si > was) { streak = 0; play("level"); } top = Math.max(top, SPEEDS[si]);
     box.querySelectorAll(".opt").forEach(b => { b.disabled = true; const k = +b.dataset.o; if (k === 0) b.classList.add("right"); else if (k === o) b.classList.add("wrong"); });
     const para = esc(x.words.join(" ")), f = x.q.focus && para.includes(esc(x.q.focus)) ? para.replace(esc(x.q.focus), `<mark>${esc(x.q.focus)}</mark>`) : para;
-    box.insertAdjacentHTML("beforeend", `<div class="fb ${right ? "ok" : "info"} pop"><p><strong>${right ? `Right! +${10 + Math.round(at / 10)} points.` : "Not this time."}</strong>
+    box.insertAdjacentHTML("beforeend", `<div class="fb ${right ? "ok" : "info"} pop"><p><strong>${right ? `Right! +${gain} points.` : "Not this time."}</strong>
       ${si > was ? ` Speeding up to ${SPEEDS[si]} words a minute.` : si < was ? ` Slowing down to ${SPEEDS[si]} words a minute.` : ""}</p>
       ${right ? "" : `<p class="spara">${f}</p>`}</div>
       <div class="row"><button class="btn" id="snext">${i + 1 >= items.length ? "Finish" : "Next paragraph"}</button></div>`);
     box.querySelector("#snext").onclick = () => { i++; if (i >= items.length) finish(); else ready(); };
     head();
+    if (si > was) banner(el, `Faster! ${SPEEDS[si]} wpm`);
   }
   function finish() {
     over = true; clearTimeout(timer);
