@@ -653,6 +653,49 @@ tr.flagged td{background:var(--bad-bg)}
 .dial b{font-size:2em;width:1.6em;text-align:center;padding:4px 0;border:2px solid var(--line);border-radius:10px;background:var(--surface)}
 .dial button{font:inherit;border:0;background:var(--card);color:var(--ink);border-radius:8px;width:48px;height:36px;cursor:pointer}
 @media (max-width:480px){ .escopts{grid-template-columns:1fr} .escobj{min-height:84px;font-size:.9em} }
+/* Escape room atmosphere: the guard's countdown, the dark closing in, events, the golden key, the exit door */
+.escpic{display:block;width:100%;height:auto;border-radius:14px;margin:8px 0}
+.eschud{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;margin:0 0 6px;border-radius:12px;background:var(--navy);color:var(--on-dark);font-size:.95em}
+.eschud .chip{background:var(--gold-bg);color:var(--ink);display:inline-flex;align-items:center;gap:4px}
+.eschud #guard b{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.1em}
+.eschud #guard.near{color:#FFB4A2;font-weight:700}
+#escdark{position:fixed;inset:0;pointer-events:none;z-index:5;background:radial-gradient(ellipse at 50% 45%,transparent 50%,rgba(0,0,0,.75) 100%);transition:opacity 1s}
+#escdark.caught{background:radial-gradient(ellipse at 50% 45%,transparent 45%,rgba(140,0,0,.55) 100%)}
+.chip.gold{background:var(--gold-bg);color:var(--ink)}
+.escobj.key{grid-column:1/-1;flex-direction:row;min-height:0;padding:10px 12px;border-style:dashed;border-color:var(--gold)}
+.escobj.key svg{color:var(--gold)}
+.escobj.key.lost{opacity:.55;border-color:var(--line)} .escobj.key.lost svg{color:var(--muted)}
+.goldkey{border:2px solid var(--gold);background:var(--gold-bg)}
+.escdoc.off{background:#0B0F15;color:#C9D3DC;border-color:#000}
+.escdoc.torch{background:radial-gradient(circle at 50% 30%,var(--gold-bg),var(--surface) 75%)}
+.escmodal{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(5,8,12,.78)}
+.escmodal .panel{max-width:440px;width:100%;border:3px solid var(--orange)}
+.escmodal h2{margin:2px 0 6px} .escmodal #evtime{font-size:1.4em;color:var(--orange)}
+.esctoast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);z-index:30;max-width:min(92vw,440px);padding:10px 16px;border-radius:12px;background:var(--navy);color:var(--on-dark);font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.35);text-align:center}
+.esctoast.bad{background:#8E2C1B} .esctoast.gold{background:var(--gold);color:#1A1205}
+.esclock.open{border-color:var(--ok);background:var(--ok-bg)}
+.ftimer{display:flex;flex-direction:column;align-items:center;margin:4px auto;width:7em;padding:6px;border-radius:14px;background:var(--navy);color:var(--on-dark)}
+.ftimer b{font-size:2.4em;line-height:1;font-family:ui-monospace,Menlo,Consolas,monospace} .ftimer span{font-size:.8em;opacity:.85}
+.ftimer.near{background:#8E2C1B}
+.fword{display:flex;justify-content:center;gap:6px;flex-wrap:wrap;margin:10px 0}
+.fword b{width:2em;height:2.3em;display:flex;align-items:center;justify-content:center;font-size:1.3em;border-bottom:3px solid var(--teal);background:var(--card);border-radius:6px 6px 0 0}
+.ftiles{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.ftiles .opt{width:2.6em;height:2.6em;font-size:1.3em;font-weight:800;border:2px solid var(--gold);border-radius:10px;background:var(--gold-bg);color:var(--ink);cursor:pointer}
+.ftiles .opt:disabled{opacity:.25}
+.escstars{display:flex;justify-content:center;gap:10px;font-size:3em;line-height:1;margin:6px 0 0;color:var(--line)}
+.escstars .on{color:var(--gold)}
+.note.center{text-align:center}
+@media (prefers-reduced-motion:no-preference){
+  .esclock.shake,.fword.shake{animation:hurt .45s ease-out}
+  .esclock.open h3 svg{animation:spring .6s ease-out}
+  @keyframes spring{30%{transform:translateY(-8px) rotate(-18deg)}60%{transform:translateY(-4px) rotate(-12deg)}100%{transform:translateY(-6px) rotate(-14deg)}}
+  .escobj.key.glint{animation:glint 2.4s ease-in-out infinite}
+  @keyframes glint{0%,70%,100%{box-shadow:none}80%{box-shadow:0 0 0 4px var(--gold-bg),0 0 18px var(--gold)}}
+  .eschud #guard.near b{display:inline-block;animation:tick 1s infinite}
+  .ftimer.near b{animation:tick 1s infinite}
+  .escstars .on{display:inline-block;animation:count .5s ease-out both}
+  .escmodal .panel{animation:hurt .4s ease-out}
+}
 /* Team escape room board (teacher, for the projector) */
 .liveboard{display:flex;flex-direction:column;gap:14px}
 .lvhead{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
@@ -666,4 +709,6 @@ tr.flagged td{background:var(--bad-bg)}
 .lvrooms{display:flex;align-items:center;gap:6px;flex-wrap:wrap} .lvrooms .note{font-size:.75em;margin-left:6px}
 .lvrooms i{width:34px;height:14px;border-radius:7px;background:var(--line)} .lvrooms i.done{background:var(--ok)} .lvrooms i.now{background:var(--gold)}
 .lvtime{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.1em}
+.lvguard{align-self:flex-start;padding:8px 16px;border-radius:12px;background:var(--navy);color:var(--on-dark);font-size:1.3em}
+.lvguard b{font-family:ui-monospace,Menlo,Consolas,monospace} .lvguard.near{background:#8E2C1B}
 @media (max-width:600px){ .lvteam{grid-template-columns:2.2em 1fr auto;font-size:1em} .lvrooms{grid-column:2/4} }

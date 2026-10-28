@@ -55,7 +55,8 @@ const live = {
   liveControl: (t, code, action) => rpc("ck_live_control", { p_token: t, p_code: code, p_action: action }),
   liveBoard: (t, code) => rpc("ck_live_board", { p_token: t, p_code: code }),
   liveJoin: (t, code, team) => rpc("ck_live_join", { p_token: t, p_code: code, p_team: team }),
-  liveProgress: (t, code, team, p) => rpc("ck_live_progress", { p_token: t, p_code: code, p_team: team, p_room: p.room, p_solved: p.solved, p_penalty: p.penalty, p_out: p.out })
+  liveProgress: (t, code, team, p) => rpc("ck_live_progress", { p_token: t, p_code: code, p_team: team, p_room: p.room, p_solved: p.solved, p_penalty: p.penalty, p_out: p.out }),
+  liveFeed: (t, code) => rpc("ck_live_feed", { p_token: t, p_code: code })
 };
 
 // AI marking of a short answer by the "grade" Edge Function. Returns { ok, hits, feedback },
@@ -270,10 +271,14 @@ const demo = {
     return later({ code: l.code, unit: l.unit, seed: l.seed, status: l.status, elapsed: l.started_at ? (Date.now() - l.started_at) / 1000 : 0 }); },
   async liveProgress(t, code, team, p) { const db = load(), s = auth(db, t), l = (db.live || []).find(x => x.code === code && x.status === "playing");
     if (!l) return later({ status: "ended" });
-    const secs = Math.round((Date.now() - l.started_at) / 1000) + Math.max(0, p.penalty | 0), x = l.teams.find(y => y.team === team && y.student_id === s.id);
+    const secs = Math.round((Date.now() - l.started_at) / 1000) + Math.max(-90, p.penalty | 0), x = l.teams.find(y => y.team === team && y.student_id === s.id);
     if (x) { Object.assign(x, { room: p.room, solved: p.solved, penalty: p.penalty }); if (p.out && !x.finished) { x.finished = new Date().toISOString(); x.seconds = secs; } }
     store(db);
     return later({ status: l.status, seconds: secs, place: 1 + l.teams.filter(y => y.finished && x && y.seconds < x.seconds).length }); },
+  async liveFeed(t, code) { const db = load(), s = auth(db, t), l = [...(db.live || [])].reverse().find(x => x.code === code);
+    if (!l) throw new Error("Game not found.");
+    if (s.role === "student" && s.class_code !== l.class_code) throw new Error("That game is for another class.");
+    return later({ status: l.status, teams: l.teams.map(x => ({ team: x.team, room: x.room, solved: x.solved, out: !!x.finished })) }); },
   reset() { try { localStorage.removeItem(KEY); } catch (e) {} }
 };
 
