@@ -44,7 +44,7 @@ async function start() {
   if (!session) return loginView();
   header();
   $app.innerHTML = `<p class="note">Loading…</p>`;
-  try { me = await api.me(session.token); if (me.must_change) { header(); return passwordView(true); } classes = await api.teacherClasses(session.token); }
+  try { me = await api.me(session.token); if (me.must_change) { header(); return passwordView(true); } await refreshClasses(); }
   catch (e) { setSession(null, "teacher"); session = null; me = null; return loginView(e.message); }
   header();
   cls = cls && codes().includes(cls) ? cls : (classes.find(c => c.mine) || classes[0] || {}).code || null;
@@ -178,7 +178,8 @@ async function studentView(id) {
 }
 
 /* ---------------- classes: add, manage, login sheets ---------------- */
-async function refreshClasses() { classes = await api.teacherClasses(session.token); }
+// Before schema.sql is re-run, the database sends plain class codes: treat them as the admin's own classes.
+async function refreshClasses() { classes = (await api.teacherClasses(session.token)).map(c => typeof c === "string" ? { code: c, mine: true } : c); }
 // One name per line, as copied from a register or spreadsheet. A number in front ("1.", "12 ", "3)") is dropped.
 const parseNames = t => t.split(/\r?\n/).map(l => l.split("\t").find(x => /\p{L}/u.test(x)) || "")
   .map(l => l.replace(/^\s*\d+[\s.,)\-]*/, "").trim()).filter(Boolean);
