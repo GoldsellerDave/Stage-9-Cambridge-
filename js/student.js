@@ -206,10 +206,10 @@ function startWorkoutItem(it) {
   if (!it) return;
   const u = P.focusUnit();
   if (it.kind === "baseline") return startBaseline();
-  if (it.kind === "review") return startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history }));
+  if (it.kind === "review") return startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history, tier: P.tierFor(history) }));
   if (it.kind === "text") return startPractice(it.id);
   if (it.kind === "listen") return startListening(it.id);
-  if (it.kind === "vocab") return startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history }));
+  if (it.kind === "vocab") return startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history, tier: P.tierFor(history) }));
   if (it.kind === "grammar") return startPoint(it.point);
   if (it.kind === "game") return startGame(it.game, u);
 }
@@ -298,7 +298,7 @@ function miniCard(u, missionDone) {
 }
 function missionStep(key, u) {
   if (key === "cards") return startCards(u);
-  if (key === "vocab") return startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history }));
+  if (key === "vocab") return startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history, tier: P.tierFor(history) }));
   if (key === "family") return startSmall("vocab", `family-u${u}`, `Unit ${u} word families`, P.familySet(u));
   if (key === "boss") return startBoss(u);
   if (key === "listen") { const done = new Set(history.map(h => h.text_id)), ts = listeningFor(u); return startListening((ts.find(t => !done.has(t.id)) || ts[0]).id); }
@@ -353,9 +353,9 @@ let gamesUnit = null;
 function bindActivities() {
   $app.querySelectorAll("[data-text]").forEach(btn => btn.onclick = () => startPractice(btn.dataset.text));
   $app.querySelectorAll("[data-vocab]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.vocab;
-    startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history })); });
+    startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history, tier: P.tierFor(history) })); });
   $app.querySelectorAll("[data-review]").forEach(btn => btn.onclick = () =>
-    startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history })));
+    startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history, tier: P.tierFor(history) })));
   $app.querySelectorAll("[data-gram]").forEach(btn => btn.onclick = () => startPoint(btn.dataset.gram));
   $app.querySelectorAll("[data-listen]").forEach(btn => btn.onclick = () => startListening(btn.dataset.listen));
   $app.querySelectorAll("[data-cards]").forEach(btn => btn.onclick = () => startCards(+btn.dataset.cards));
@@ -365,7 +365,7 @@ function bindActivities() {
   $app.querySelectorAll("[data-step]").forEach(btn => btn.onclick = () => missionStep(btn.dataset.step, +btn.dataset.unit));
   $app.querySelectorAll("[data-mini]").forEach(btn => btn.onclick = () => startMini(+btn.dataset.mini));
   $app.querySelectorAll("[data-gramunit]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.gramunit;
-    startSmall("grammar", `grammar-u${u}`, `Unit ${u} grammar quiz`, P.grammarSet({ unit: u })); });
+    startSmall("grammar", `grammar-u${u}`, `Unit ${u} grammar quiz`, P.grammarSet({ unit: u, tier: P.tierFor(history) })); });
 }
 
 /* ---------------- vocabulary and grammar sets ---------------- */
@@ -376,7 +376,7 @@ function startSmall(sub, textId, label, qs, extra = {}) {
 }
 function startPoint(id) {
   const g = P.grammarPoint(id);
-  startSmall("grammar", `grammar-${g.id}`, `${g.id} ${g.title}`, P.grammarSet({ point: g.id }), { notice: { ...P.noticeTask(g.id), result: null } });
+  startSmall("grammar", `grammar-${g.id}`, `${g.id} ${g.title}`, P.grammarSet({ point: g.id, tier: P.tierFor(history) }), { notice: { ...P.noticeTask(g.id), result: null } });
 }
 function startBoss(u) {
   startSmall("vocab", `boss-u${u}`, `Unit ${u} final challenge`, P.bossSet(u), { boss: u });
@@ -386,9 +386,9 @@ const SPEAKER = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="tr
 const listenBtn = (text, label = "Listen") => S.canSpeak ? `<button class="btn small alt say" type="button" data-say="${U.esc(text)}">${SPEAKER} ${label}</button>` : "";
 function tagOf(q) {
   if (q.kind === "match") return "Vocabulary · match";
-  if (q.kind === "vocab") return q.type === "type" ? "Vocabulary · type the word" : "Vocabulary";
+  if (q.kind === "vocab") return q.type === "type" ? "Vocabulary · type the word" : q.type === "paraphrase" ? "Vocabulary · same meaning" : "Vocabulary";
   if (q.kind === "family") return "Word family";
-  const v = { tap: " · find the mistake", tiles: " · build it" }[q.variant] || "";
+  const v = { tap: " · find the mistake", tiles: " · build it", type: " · type it", fix: " · correct it" }[q.variant] || "";
   return `Grammar ${q.point}${v}`;
 }
 const answerText = q => q.variant === "tiles" ? q.answer.join(" ") : q.variant === "tap" ? q.fixed : q.opts[0];
@@ -397,7 +397,8 @@ function smallView() {
   const set = run.set, q = set.qs[set.i], fb = run.fb, locked = !!(fb && (fb.kind === "ok" || fb.kind === "reveal"));
   let h = `<div class="narrow pop"><p class="eyebrow">${U.esc(run.label)}</p>
     <div class="progress">${set.qs.map((_, i) => { const r = set.results[i]; return `<i class="${i === set.i ? "cur" : r ? (r.first_try ? "ok" : "help") : ""}"></i>`; }).join("")}</div>
-    <div class="qcard"><div class="qhead"><span class="tag">${U.esc(tagOf(q))}</span><span class="qnum">Question ${set.i + 1} of ${set.qs.length}</span></div>`;
+    ${set.moved && set.moved.at === set.i ? `<div class="fb ${set.moved.up ? "ok" : "info"} pop tiermove"><p><strong>${set.moved.up ? `Level up: ${P.TIERS[set.moved.tier]} questions!` : `Let's try some ${P.TIERS[set.moved.tier]} questions`}</strong> ${set.moved.up ? `${P.TIER_UP} right first time in a row. The next questions are harder, with more XP.` : "These give you a little more help. Get 3 right in a row to move back up."}</p></div>` : ""}
+    <div class="qcard"><div class="qhead"><span class="tag">${U.esc(tagOf(q))}</span>${q.extra ? `<span class="chip tier t${q.extra}">New ${q.extra === 2 ? "C1" : "B2"} word</span>` : q.tier ? `<span class="chip tier t${q.tier}">${P.TIERS[q.tier]}</span>` : ""}<span class="qnum">Question ${set.i + 1} of ${set.qs.length}</span></div>`;
   h += q.kind === "match" ? matchHTML(q, fb, locked) : q.type === "type" ? typeHTML(q, locked) : q.variant === "tap" ? tapHTML(q, fb, locked)
      : q.variant === "tiles" ? tilesHTML(q, locked)
      : `<p class="stem">${stemHTML(q.stem)}</p>${optsHTML(q, order("s" + set.i, q.opts.length), fb ? { right: fb.kind === "ok", wrong: fb.wrong, reveal: fb.kind === "reveal", locked } : null)}`;
@@ -414,11 +415,12 @@ function canCheck(q) {
   return run.pick !== null;
 }
 function typeHTML(q, locked) {
-  const n = q.answer.replace(/[^a-z]/gi, "").length;
+  const n = q.answer.replace(/[^a-z]/gi, "").length, letters = q.letters || "full", gram = q.kind === "grammar";
   return `<p class="stem">${stemHTML(q.stem)}</p>
-    <p class="clue"><b>Meaning:</b> ${U.esc(q.clue)}</p>
-    <p class="letters"><span aria-hidden="true">${U.esc(P.letterBlanks(q.answer))}</span> <span class="note">(${n} letters, starts with "${U.esc(q.answer[0])}")</span></p>
-    <label class="fld" for="typed"><span class="note">Type the missing word.</span>
+    ${q.clue ? `<p class="clue"><b>${U.esc(q.clueLabel || "Meaning")}:</b> ${U.esc(q.clue)}</p>` : ""}
+    ${letters === "full" ? `<p class="letters"><span aria-hidden="true">${U.esc(P.letterBlanks(q.answer))}</span> <span class="note">(${n} letters, starts with "${U.esc(q.answer[0])}")</span></p>`
+      : letters === "first" ? `<p class="letters"><span class="note">Starts with "${U.esc(q.answer[0])}"</span></p>` : ""}
+    <label class="fld" for="typed"><span class="note">${gram ? "Type the missing words." : "Type the missing word."}</span>
     <input type="text" id="typed" autocomplete="off" autocapitalize="none" spellcheck="false" value="${U.esc(run.draft)}" ${locked ? "disabled" : ""}></label>`;
 }
 function matchHTML(q, fb, locked) {
@@ -616,7 +618,7 @@ function cardsDone() {
     <div class="row"><button class="btn" id="practise">Practise these words</button><button class="btn alt" id="home">Back to home</button></div></div>`;
   const u = run.unit;
   document.getElementById("home").onclick = () => { run = null; saveRun(); location.hash = "#home"; route(); };
-  document.getElementById("practise").onclick = () => { run = null; saveRun(); startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history })); };
+  document.getElementById("practise").onclick = () => { run = null; saveRun(); startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history, tier: P.tierFor(history) })); };
   saveAttempt({ mode: "vocab", text_id: `cards-u${u}`, level_start: null, level_end: null, score: run.words.length - unsure.length, max_score: run.words.length,
                 xp: R.xp, seconds: R.seconds, answers: run.words.map((w, i) => ({ skill: "Word card", word: w, unit: u, known: !!run.known[i] })) });
 }

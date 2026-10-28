@@ -1,13 +1,23 @@
 // Vocabulary and grammar practice: building question sets and tracking mastery. Pure functions, no DOM.
 import { VOCAB } from "./vocab.js";
+import { extraWords, allExtraWords } from "./vocab-extra.js";
 import { GRAMMAR, SEQUENCE, UNITS } from "./curriculum.js";
 import { FAMILIES } from "./families.js";
 import { wrongNote } from "./feedback.js";
 import { PRACTICE_TEXTS } from "./content.js";
 import { LISTENING } from "./listening.js";
-import { shuffle } from "./engine.js";
+import { shuffle, steadyBand } from "./engine.js";
 
-export const XP_SMALL = { first: 5, hint: 2, reveal: 0, finish: 10 };
+export const XP_SMALL = { first: 5, hint: 2, reveal: 0, finish: 10, tier: 2 };
+
+/* ---------------- vocabulary and grammar tiers ---------------- */
+// The syllabus words and grammar points are the same for everyone; the tasks get harder for stronger readers.
+// 0 Core (reading A2 to B1+, the floor), 1 Stretch (B2 to B2+), 2 Challenge (C1 to C1+).
+// Inside a set: 3 right first time in a row moves the next questions up a tier, 2 missed in a row moves them down,
+// never below Core.
+export const TIERS = ["Core", "Stretch", "Challenge"];
+export const TIER_UP = 3, TIER_DOWN = 2;
+export function tierFor(history) { const b = steadyBand(history); return b == null ? 0 : b >= 6 ? 2 : b >= 4 ? 1 : 0; }
 
 /* ---------------- school calendar ---------------- */
 // The sequence entry running on a date (the last one that has started).
@@ -66,7 +76,7 @@ export function wordSchedule(history) {
 // Words due today: missed words first, then the ones waiting longest.
 export function wordsToReview(history, now = new Date()) {
   const sc = wordSchedule(history), today = dayNo(now.getTime());
-  const due = allWords().filter(x => { const s = sc[wordKey(x)]; return s && dayNo(s.last) + REVIEW_DAYS[s.box] <= today; });
+  const due = [...allWords(), ...allExtraWords()].filter(x => { const s = sc[wordKey(x)]; return s && dayNo(s.last) + REVIEW_DAYS[s.box] <= today; });
   return due.sort((a, b) => sc[wordKey(a)].box - sc[wordKey(b)].box || sc[wordKey(a)].last - sc[wordKey(b)].last);
 }
 
@@ -119,9 +129,23 @@ function vocabQuestion(word, pool, type, rnd) {
 }
 const contextPool = w => allWords().filter(x => x.unit !== w.unit || x.w === w.w);
 // Type the word: the sentence with a gap, the meaning and the first letter.
-function typeQuestion(word) {
-  return { kind: "vocab", type: "type", word: word.w, unit: word.unit, stem: word.ex, clue: word.def, answer: word.w, opts: [word.w],
+// letters: "full" shows every letter as a blank, "first" only the first letter, "none" no letter clue at all.
+function typeQuestion(word, letters = "full") {
+  return { kind: "vocab", type: "type", word: word.w, unit: word.unit, stem: word.ex, clue: word.def, answer: word.w, opts: [word.w], letters,
     hint: `It starts with "${word.w.slice(0, Math.ceil(word.w.length / 2))}".`, explain: word.ex.replace("___", word.w) };
+}
+// Paraphrase: the meaning sits in the sentence; choose the word that could replace it. Distractors from the same unit.
+function paraphraseQuestion(word, rnd) {
+  const d = pickDistractors(unitWords(word.unit), word, "w", 3, rnd);
+  return { kind: "vocab", type: "paraphrase", word: word.w, unit: word.unit,
+    stem: `Which word could replace the words in brackets? ${word.ex.replace("___", `[${word.def}]`)}`, opts: [word.w, ...d.map(x => x.w)],
+    hint: "Try each word in the sentence. Which one has exactly this meaning?", explain: word.ex.replace("___", word.w) };
+}
+// The question for one word at a tier, given how well the word is known (its review box).
+function tierQuestion(w, b, tier, i, rnd) {
+  if (tier === 0) return b >= 2 ? typeQuestion(w) : b === 1 || i % 2 ? vocabQuestion(w, contextPool(w), "context", rnd) : vocabQuestion(w, unitWords(w.unit), "meaning", rnd);
+  if (tier === 1) return b >= 2 ? typeQuestion(w, "first") : b === 1 ? paraphraseQuestion(w, rnd) : vocabQuestion(w, unitWords(w.unit), "context", rnd);
+  return b >= 2 ? typeQuestion(w, "none") : b === 1 ? typeQuestion(w, "first") : paraphraseQuestion(w, rnd);
 }
 const norm = s => String(s).toLowerCase().replace(/[-‐–—_]/g, " ").replace(/[^a-z ]/g, "").replace(/\s+/g, " ").trim();
 export function markTyped(q, text) { return norm(text) === norm(q.answer); }
@@ -135,7 +159,7 @@ function matchQuestion(words, rnd) {
 // A set of up to n words. Words missed last time come first, then "not sure" cards, then new words.
 // The question type follows how well the word is known: a new or missed word is matched or chosen from meanings,
 // a word right once fills a gap from a word bank, and a word right twice in a row is typed.
-export function vocabSet({ unit = null, review = false, history = [], n = 10, rnd = Math.random, now = new Date() } = {}) {
+export function vocabSet({ unit = null, review = false, history = [], n = 10, rnd = Math.random, now = new Date(), tier = 0 } = {}) {
   const st = wordState(history), sc = wordSchedule(history), cs = cardState(history);
   const words = review ? wordsToReview(history, now) : unit ? unitWords(unit) : allWords();
   let order = review ? words.slice() : shuffle(words.length, rnd).map(i => words[i]);
@@ -144,17 +168,26 @@ export function vocabSet({ unit = null, review = false, history = [], n = 10, rn
     order.sort((a, b) => rank(a) - rank(b));
   }
   order = order.slice(0, n);
+  // Stronger readers also meet the unit's extra words: 3 Stretch words, or 4 Stretch and Challenge words.
+  if (unit && !review && tier > 0) {
+    const ex = extraWords(unit, tier), rank = x => { const k = wordKey(x); return st[k] === false ? 0 : st[k] === undefined ? 1 : 2; };
+    const pick = shuffle(ex.length, rnd).map(i => ex[i]).sort((a, b) => rank(a) - rank(b)).slice(0, tier === 1 ? 3 : 4);
+    order = [...order.slice(0, n - pick.length), ...pick];
+    order = shuffle(order.length, rnd).map(i => order[i]);
+  }
   const box = x => (sc[wordKey(x)] || { box: 0 }).box;
-  const qs = [];
+  const qs = [], alts = [];
   let rest = order;
   const low = order.filter(x => box(x) === 0).slice(0, 4);
-  if (order.length >= 6 && low.length === 4) { qs.push(matchQuestion(low, rnd)); rest = order.filter(x => !low.includes(x)); }
+  if (tier === 0 && order.length >= 6 && low.length === 4) { qs.push(matchQuestion(low, rnd)); alts.push(null); rest = order.filter(x => !low.includes(x)); }
   rest.forEach((w, i) => {
-    const b = box(w);
-    qs.push(b >= 2 ? typeQuestion(w) : b === 1 || i % 2 ? vocabQuestion(w, contextPool(w), "context", rnd) : vocabQuestion(w, unitWords(w.unit), "meaning", rnd));
+    const v = TIERS.map((_, t) => ({ ...tierQuestion(w, box(w), t, i, rnd), tier: t, ...(w.extra ? { extra: w.tier } : {}) }));
+    qs.push(v[tier]); alts.push(v);
   });
-  return qs;
+  return withTiers(qs, alts, tier);
 }
+// A set remembers every question at every tier, so it can move up or down as the student answers.
+function withTiers(qs, alts, tier) { qs.alts = alts; qs.tier = tier; return qs; }
 export function vocabMastery(unit, history) {
   const st = wordState(history), ws = unitWords(unit);
   return { mastered: ws.filter(x => st[wordKey(x)] === true).length, total: ws.length };
@@ -206,15 +239,26 @@ function grammarQuestion(g, i, variant = "choose", rnd = Math.random) {
     return { ...base, variant: "tiles", tiles: ord.map(k => tiles[k]), answer,
       hint: `Look at the words around the gap. ${g.rule}`, explain: stem.replace("___", opts[0]) };
   }
+  if ((variant === "type" || variant === "fix") && oneGap(item) && opts[0].length <= 30) {
+    const wrong = 1 + Math.floor(rnd() * 3), fix = variant === "fix";
+    return { ...base, variant, type: "type", answer: opts[0], letters: fix ? "none" : "first",
+      clueLabel: fix ? "Correct this" : null, clue: fix ? `Someone wrote "${opts[wrong]}" in the gap. What should it be?` : null,
+      hint: g.rule, explain: stem.replace("___", opts[0]) };
+  }
+  if (variant === "type" || variant === "fix") return grammarQuestion(g, i, "tap", rnd);
   return base;
 }
-const VARIANTS = ["choose", "tap", "tiles"];
-const mix = (pairs, rnd) => pairs.map(([g, i], k) => grammarQuestion(g, i, VARIANTS[k % 3], rnd));
-// One point: all its items. A whole unit: two items from each point. Each set mixes choose, tap and tiles.
-export function grammarSet({ point = null, unit = null, rnd = Math.random } = {}) {
-  if (point) { const g = grammarPoint(point); return mix(shuffle(g.items.length, rnd).map(i => [g, i]), rnd); }
+// Core mixes choose, tap and tiles; Stretch adds typing the form; Challenge corrects a wrong form by typing.
+const VARIANTS = [["choose", "tap", "tiles"], ["tap", "type", "tiles"], ["fix", "type", "tap"]];
+const mix = (pairs, rnd, tier) => {
+  const alts = pairs.map(([g, i], k) => VARIANTS.map((vs, t) => ({ ...grammarQuestion(g, i, vs[k % 3], rnd), tier: t })));
+  return withTiers(alts.map(v => v[tier]), alts, tier);
+};
+// One point: all its items. A whole unit: two items from each point.
+export function grammarSet({ point = null, unit = null, rnd = Math.random, tier = 0 } = {}) {
+  if (point) { const g = grammarPoint(point); return mix(shuffle(g.items.length, rnd).map(i => [g, i]), rnd, tier); }
   const pairs = unitGrammar(unit).flatMap(g => shuffle(g.items.length, rnd).slice(0, 2).map(i => [g, i]));
-  return mix(shuffle(pairs.length, rnd).map(i => pairs[i]), rnd);
+  return mix(shuffle(pairs.length, rnd).map(i => pairs[i]), rnd, tier);
 }
 // Before practising one point: three examples with the form highlighted, then "which rule explains them?"
 // The options are the first sentence of this point's rule and of two other points in the same unit.
@@ -246,7 +290,7 @@ export function bossSet(unit, rnd = Math.random) {
   const vq = pick.map((w, i) => i < 3 ? typeQuestion(w) : vocabQuestion(w, contextPool(w), "context", rnd));
   const gs = unitGrammar(unit), pairs = gs.map(g => [g, Math.floor(rnd() * g.items.length)]);
   while (pairs.length < 5) { const g = gs[Math.floor(rnd() * gs.length)], i = Math.floor(rnd() * g.items.length); if (!pairs.some(p => p[0] === g && p[1] === i)) pairs.push([g, i]); }
-  const all = [...vq, ...familySet(unit, rnd).slice(0, 2), ...mix(pairs.slice(0, 5), rnd)];
+  const all = [...vq, ...familySet(unit, rnd).slice(0, 2), ...mix(pairs.slice(0, 5), rnd, 0)];
   return shuffle(all.length, rnd).map(i => all[i]);
 }
 const passed = (h, unit) => h.text_id === `boss-u${unit}` && h.max_score > 0 && h.score / h.max_score >= BOSS_PASS;
@@ -274,7 +318,20 @@ export function mission(unit, history) {
 }
 
 /* ---------------- a run through a set ---------------- */
-export function newSet(questions) { return { qs: questions, i: 0, stage: 0, results: [] }; }
+export function newSet(questions) {
+  const set = { qs: questions.slice(), i: 0, stage: 0, results: [] };
+  if (questions.alts) Object.assign(set, { alts: questions.alts, tier: questions.tier, row: 0, miss: 0, moved: null });
+  return set;
+}
+// After each answer in a tiered set: move the tier for the questions still to come.
+function moveTier(set, firstTry) {
+  if (!set.alts) return;
+  if (firstTry) { set.row++; set.miss = 0; } else { set.miss++; set.row = 0; }
+  const was = set.tier;
+  if (set.row >= TIER_UP && set.tier < TIERS.length - 1) set.tier++;
+  else if (set.miss >= TIER_DOWN && set.tier > 0) set.tier--;
+  if (set.tier !== was) { set.row = 0; set.miss = 0; set.moved = { at: set.i + 1, up: set.tier > was, tier: set.tier }; }
+}
 function answerOf(q) {
   if (q.kind === "vocab") return { skill: "Vocabulary", word: q.word, unit: q.unit };
   if (q.kind === "family") return { skill: "Word family", word: q.opts[0], unit: q.unit };
@@ -283,7 +340,7 @@ function answerOf(q) {
 // Returns "correct" | "hint" | "reveal".
 export function submitSmall(set, correct) {
   const q = set.qs[set.i];
-  const rec = support => { set.results[set.i] = { ...answerOf(q), first_try: support === "none", support }; };
+  const rec = support => { set.results[set.i] = { ...answerOf(q), first_try: support === "none", support, ...(q.tier ? { tier: q.tier } : {}) }; moveTier(set, support === "none"); };
   if (correct) { rec(set.stage === 0 ? "none" : "hint"); return "correct"; }
   if (set.stage === 0) { set.stage = 1; return "hint"; }
   rec("explained"); return "reveal";
@@ -301,11 +358,16 @@ export function submitMatch(set, right) {
   delete set.first;
   return all ? "correct" : "reveal";
 }
-export function nextSmall(set) { set.i++; set.stage = 0; return set.i >= set.qs.length ? "done" : "next"; }
+export function nextSmall(set) {
+  set.i++; set.stage = 0;
+  if (set.alts && set.alts[set.i]) set.qs[set.i] = set.alts[set.i][set.tier];
+  return set.i >= set.qs.length ? "done" : "next";
+}
 // Results with each matched word as its own answer: what is saved and scored.
 export const flatResults = results => results.flatMap(r => r.group || [r]);
 export function smallXP(results) {
-  return flatResults(results).reduce((t, r) => t + (r.support === "none" ? XP_SMALL.first : r.support === "hint" ? XP_SMALL.hint : 0), 0) + XP_SMALL.finish;
+  return flatResults(results).reduce((t, r) => t + (r.support === "none" ? XP_SMALL.first + XP_SMALL.tier * (r.tier || 0)
+    : r.support === "hint" ? XP_SMALL.hint + (r.tier || 0) : 0), 0) + XP_SMALL.finish;
 }
 
 /* ---------------- listening ---------------- */
