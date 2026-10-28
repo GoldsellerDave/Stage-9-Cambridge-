@@ -1,4 +1,4 @@
-"""Make the listening MP3s and line timings from js/listening.js and js/minitests.js with Kokoro TTS (kokoro-onnx).
+"""Make the listening MP3s and line timings from js/listening.js, js/minitests.js and js/lab.js (Listening Lab clips) with Kokoro TTS (kokoro-onnx).
 
 Usage: python3 tools/make_listening_audio.py MODEL_DIR [task_id ...]
 MODEL_DIR holds kokoro-v1.0.onnx and voices-v1.0.bin
@@ -14,8 +14,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GAP, SECTION_GAP, SR = 0.55, 1.2, 24000
 
 def tasks():
-    # The unit listening tasks and the listening parts of the unit mini tests.
-    js = 'Promise.all([import("./js/listening.js"), import("./js/minitests.js")]).then(([a, b]) => console.log(JSON.stringify([...a.LISTENING, ...b.MINI_LISTENING])))'
+    # The unit listening tasks, the listening parts of the unit mini tests and the Listening Lab clips.
+    js = 'Promise.all([import("./js/listening.js"), import("./js/minitests.js"), import("./js/lab.js")]).then(([a, b, c]) => console.log(JSON.stringify([...a.LISTENING, ...b.MINI_LISTENING, ...c.LAB_CLIPS])))'
     return json.loads(subprocess.check_output(["node", "-e", js], cwd=ROOT))
 
 def shift(audio, semitones):

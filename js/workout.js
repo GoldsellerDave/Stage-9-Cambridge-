@@ -4,6 +4,7 @@ import { PRACTICE_TEXTS } from "./content.js";
 import { listeningFor } from "./listening.js";
 import { unitGrammar, grammarMastery, wordsToReview } from "./practice.js";
 import { speedTexts } from "./games.js";
+import { weakestTrap, missionForTrap } from "./lab.js";
 
 export const READING_SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
   "Cause and effect", "Writer's purpose", "Writer's view"];
@@ -47,7 +48,10 @@ export function workoutPlan(history, unit, { level = 1, baselineDone = true, now
   const pick = {
     Reading: () => { if (!baselineDone) return null; const ts = PRACTICE_TEXTS.filter(t => t.unitNo === unit); if (!ts.length) return null;
       const t = ts.find(x => !doneIds.has(x.id)) || ts[today % ts.length]; return { kind: "text", id: t.id, label: `Read: ${t.topic}` }; },
-    Listening: () => { const ts = listeningFor(unit); if (!ts.length) return null;
+    // The Listening Lab mission for the trap that catches the student most, if there is one; otherwise a unit task.
+    Listening: () => { const wt = weakestTrap(before), lm = wt && missionForTrap(wt);
+      if (lm) return { kind: "lab", id: lm.id, label: `Listening Lab: ${lm.title}` };
+      const ts = listeningFor(unit); if (!ts.length) return null;
       const t = ts.find(x => !doneIds.has(x.id)) || ts[today % ts.length]; return { kind: "listen", id: t.id, label: `Listen: ${t.topic}` }; },
     Vocabulary: () => ({ kind: "vocab", id: `vocab-u${unit}`, label: `Practise 10 Unit ${unit} words` }),
     Grammar: () => { const gs = unitGrammar(unit); if (!gs.length) return null;

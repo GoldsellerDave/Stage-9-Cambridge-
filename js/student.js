@@ -16,6 +16,7 @@ import * as I from "./icons.js";
 import * as W from "./workout.js";
 import * as M from "./minitests.js";
 import * as X from "./escape.js";
+import * as Lab from "./lab.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -60,7 +61,7 @@ function tick() {
   escTick();
   const el = document.getElementById("clock"); if (!el || !run) return;
   const s = run.kind === "escape" ? (run.play ? X.escapeSeconds(run.play) : 0) : Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
-  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 12 }[run.kind] || 15;
+  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 12, lab: 10 }[run.kind] || 15;
   el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${target}:00`;
   el.classList.toggle("over", s > target * 60);
 }
@@ -158,6 +159,7 @@ async function draw() {
   if (view === "units") return unitsView();
   if (view === "review") return reviewView();
   if (view === "games") return gamesView();
+  if (view === "lab") return labHubView();
   const m = /^unit-(\d)(?:\/(\w+))?$/.exec(view);
   if (m) return unitView(+m[1], m[2]);
   return homeView();
@@ -209,7 +211,7 @@ function homeView() {
 
 /* ---------------- today's workout and quick tiles ---------------- */
 let workout = [];
-const AREA_ICON = { baseline: "read", review: "review", text: "read", listen: "listen", vocab: "words", grammar: "grammar" };
+const AREA_ICON = { baseline: "read", review: "review", text: "read", listen: "listen", lab: "listen", vocab: "words", grammar: "grammar" };
 function workoutCard() {
   const fu = P.focusUnit();
   workout = W.workoutPlan(history, fu, { level: E.steadyLevel(history, me.level ?? 1), baselineDone: me.baseline_done });
@@ -235,6 +237,7 @@ function startWorkoutItem(it) {
   if (it.kind === "review") return startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history, tier: P.tierFor(history) }));
   if (it.kind === "text") return startPractice(it.id);
   if (it.kind === "listen") return startListening(it.id);
+  if (it.kind === "lab") return startLab(it.id);
   if (it.kind === "vocab") return startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history, tier: P.tierFor(history) }));
   if (it.kind === "grammar") return startPoint(it.point);
   if (it.kind === "game") return startGame(it.game, u);
@@ -261,7 +264,7 @@ function unitSections(u) {
   if (texts.length) secs.push({ key: "read", label: "Reading", html: `<div class="usec">${me.baseline_done ? "" : `<p class="note">Take the baseline on the Home page first. It sets your reading level.</p>`}
       <div class="tiles">${texts.map(t => aTile("read", `data-text="${t.id}" ${me.baseline_done ? "" : "disabled"}`, t.topic, done.has(t.id) ? "Done before: half XP this time" : t.blurb, done.has(t.id))).join("")}</div>
       </div>` });
-  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${listeningFor(u).map(t =>
+  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${aTile("listen", "data-labhub", "Listening Lab", "Learn the examiner's tricks: 6 short missions")}${listeningFor(u).map(t =>
       aTile("listen", `data-listen="${t.id}"`, t.topic, `${t.part} · ${done.has(t.id) ? "Done before" : t.blurb}`, done.has(t.id))).join("")}</div></div>` });
   secs.push({ key: "words", label: "Words", html: `<div class="usec"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
         <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
@@ -390,6 +393,8 @@ function bindActivities() {
     startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history, tier: P.tierFor(history) })));
   $app.querySelectorAll("[data-gram]").forEach(btn => btn.onclick = () => startPoint(btn.dataset.gram));
   $app.querySelectorAll("[data-listen]").forEach(btn => btn.onclick = () => startListening(btn.dataset.listen));
+  $app.querySelectorAll("[data-lab]").forEach(btn => btn.onclick = () => startLab(btn.dataset.lab));
+  $app.querySelectorAll("[data-labhub]").forEach(btn => btn.onclick = () => { location.hash = "#lab"; });
   $app.querySelectorAll("[data-cards]").forEach(btn => btn.onclick = () => startCards(+btn.dataset.cards));
   $app.querySelectorAll("[data-family]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.family;
     startSmall("vocab", `family-u${u}`, `Unit ${u} word families`, P.familySet(u)); });
@@ -1098,7 +1103,7 @@ function audio() {
   }
   return audioEl;
 }
-function stopAudio() { if (audioEl) { audioEl.pause(); segEnd = null; } if (miniAudio) miniAudio.pause(); }
+function stopAudio() { if (audioEl) { audioEl.pause(); segEnd = null; } if (miniAudio) miniAudio.pause(); if (labAudio) labAudio.pause(); }
 function playerUpdate() {
   const a = audioEl, btn = document.getElementById("lplay"); if (!a || !btn || !run || run.kind !== "listen") return;
   const playing = !a.paused && !a.seg, left = MAX_PLAYS - run.plays, full = !a.seg;
@@ -1166,8 +1171,13 @@ function listenQ(task, q, k) {
   if (locked && r.support !== "explained") fb = `<div class="fb ok"><p><strong>Correct.</strong> <span class="xpgain">+${r.support === "none" ? P.XP_LISTEN.first : P.XP_LISTEN.hint} XP</span>${run.notes[k] === "spelling" ? ` Check the spelling: <b>${U.esc(q.answers[0])}</b>.` : ""}</p></div>`;
   else if (locked) fb = `<div class="fb info"><p><strong>The answer is "${U.esc(q.type === "gap" ? q.answers[0] : task.statements ? task.statements[q.answer] : q.opts[0])}".</strong></p><p>${U.esc(q.explain)}</p>
     <div class="row">${partBtn(k, "Hear that part again")}</div></div>`;
-  else if (st === 1) fb = `<div class="fb bad"><p><strong>Not quite.</strong> ${U.esc(q.hint)}</p><div class="row">${partBtn(k, "Listen to that part again")}</div></div>`;
+  else if (st === 1) fb = `<div class="fb bad"><p><strong>Not quite.</strong> ${U.esc(q.hint)}</p>${trapTip(task.id, k)}<div class="row">${partBtn(k, "Listen to that part again")}</div></div>`;
   return `<div class="qcard lq${locked ? " done" : ""}"><div class="qhead"><span class="tag">${U.esc(q.skill)}</span><span class="qnum">${k + 1} of ${task.qs.length}</span></div>${q.type === "gap" || task.statements ? (task.statements ? body : `${body}`) : body}${fb}</div>`;
+}
+// Which examiner's trick a unit question uses, with a link to its Listening Lab mission.
+function trapTip(taskId, k) {
+  const t = Lab.unitTrap(taskId, k); if (!t) return "";
+  return `<p class="note traptip">🪤 <b>Watch out: ${U.esc(Lab.TRAPS[t].name.toLowerCase())}.</b> ${U.esc(Lab.TRAPS[t].tip)}</p>`;
 }
 const partBtn = (k, label) => TIMES[run.id] ? `<button class="btn small alt" data-part="${k}">${PLAY} ${label}</button>` : "";
 function checkListen(task) {
@@ -1177,9 +1187,9 @@ function checkListen(task) {
     const ok = P.listenCorrect(q, run.resp[k]), st = run.stage[k] || 0;
     if (ok) {
       if (q.type === "gap" && P.markGap(q, run.resp[k]) === "spelling") run.notes[k] = "spelling";
-      run.results[k] = { skill: "Listening", sub: q.skill, first_try: st === 0, support: st === 0 ? "none" : "hint" }; right++;
+      run.results[k] = { skill: "Listening", sub: q.skill, trap: Lab.unitTrap(task.id, k), first_try: st === 0, support: st === 0 ? "none" : "hint" }; right++;
     } else if (st === 0) { run.stage[k] = 1; run.notes[k] = "wrong"; wrong++; }
-    else { run.results[k] = { skill: "Listening", sub: q.skill, first_try: false, support: "explained" }; wrong++; }
+    else { run.results[k] = { skill: "Listening", sub: q.skill, trap: Lab.unitTrap(task.id, k), first_try: false, support: "explained" }; wrong++; }
   });
   run.xpSoFar = P.listenXP(Object.values(run.results)) - P.XP_LISTEN.finish;
   S.play(wrong ? (right ? "info" : "bad") : "ok");
@@ -1208,6 +1218,183 @@ function listenDone() {
   document.getElementById("home").onclick = () => { run = null; saveRun(); location.hash = "#home"; route(); };
   saveAttempt({ mode: "listening", text_id: task.id, level_start: null, level_end: null, score: R.score, max_score: task.qs.length,
                 xp: R.xp, seconds: R.seconds, answers: R.results });
+}
+
+/* ---------------- Listening Lab ---------------- */
+// Six missions on the examiner's tricks. Each: two teaching cards, then short clips with one question each. A clip can be
+// heard twice (once more after a wrong answer). After each answer the transcript lights up the words with the answer
+// (green) and the trap (orange). "Prime your brain" adds three steps before listening: key words, answer type, prediction.
+let labAudio = null, labFor = null;
+const LAB_PLAYS = 2;
+function labHubView() {
+  const best = id => { const s = history.filter(h => h.text_id === id).map(h => h.score); return s.length ? Math.max(...s) : null; };
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Listening</p><h1>Listening Lab</h1>
+      <p class="lede">Learn the tricks examiners use in listening questions, and how to beat them. Six short missions, about 10 minutes each.</p></div>
+    <div class="tiles">${Lab.LAB.map(m => { const b = best(m.id);
+      return aTile("listen", `data-lab="${m.id}"`, `${m.n}. ${m.title}`, b != null ? `Best: ${b} of ${m.items.length} right first time` : m.blurb, b != null); }).join("")}</div>
+    <div class="panel"><h3>Your trap tracker</h3>${U.trapsHTML(history)}</div></div>`;
+  bindActivities();
+}
+function startLab(id) {
+  run = { kind: "lab", id, phase: "teach", card: 0, i: 0, st: {}, results: [], t0: Date.now(), orders: {} };
+  saveRun(); route(); top();
+}
+const labM = () => Lab.labMission(run.id);
+function labClip() {
+  const it = labM().items[run.i];
+  if (!labAudio || labFor !== it.clip) {
+    if (labAudio) labAudio.pause();
+    labAudio = new Audio(`audio/listening/${it.clip}.mp3?v=${AUDIO_V}`); labFor = it.clip; labAudio.preload = "auto";
+    labAudio.addEventListener("ended", () => { const s = run && run.kind === "lab" && run.st[run.i]; if (s && labFor === labM().items[run.i].clip) { s.plays++; saveRun(); } labPlayer(); });
+    labAudio.addEventListener("play", labPlayer); labAudio.addEventListener("pause", labPlayer);
+  }
+  return labAudio;
+}
+const labPlaysLeft = s => LAB_PLAYS + (s.wrong || []).length - s.plays;
+function labPlayer() {
+  const btn = document.getElementById("labplay"); if (!btn || !run || run.kind !== "lab" || !labAudio) return;
+  const s = run.st[run.i], playing = !labAudio.paused && !labAudio.ended, left = labPlaysLeft(s);
+  btn.disabled = !playing && left <= 0;
+  btn.innerHTML = playing ? `${PAUSE} Pause` : left <= 0 ? "You've heard it twice" : `${PLAY} ${s.plays === 0 ? "Play" : "Play again"}${left < LAB_PLAYS + (s.wrong || []).length ? ` (${left} left)` : ""}`;
+  $app.querySelectorAll("[data-lo]").forEach(b => { if (!s.done && !(s.wrong || []).includes(+b.dataset.lo)) b.disabled = !(s.plays > 0 || playing); });
+}
+function labPlay() {
+  const a = labClip(), s = run.st[run.i];
+  if (!a.paused && !a.ended) return a.pause();
+  if (labPlaysLeft(s) <= 0) return;
+  if (a.ended || a.currentTime === 0 || a.currentTime >= (a.duration || 1e9) - 0.05) a.currentTime = 0;
+  s.heard = true; saveRun(); a.play().catch(() => {}); S.play("tap");
+}
+// One line of the transcript with the answer and the traps marked.
+function labLine(it, [who, text]) {
+  const name = who[0] + who.slice(1).toLowerCase();
+  return `<p><b>${U.esc(name)}:</b> ${Lab.markLine(text, it.key, it.traps).map(p => p.kind === "key" ? `<mark class="lkey">${U.esc(p.t)}</mark>`
+    : p.kind === "trap" ? `<mark class="ltrap" title="${U.esc(p.label)}">${U.esc(p.t)}</mark>` : U.esc(p.t)).join("")}</p>`;
+}
+function stemKeys(stem, keys, sel, done) {
+  const keyWords = new Set(keys.flatMap(k => k.toLowerCase().split(" ")));
+  return stem.split(" ").map((w, k) => { const norm = w.replace(/[?.,!]/g, "").toLowerCase(), isKey = keyWords.has(norm);
+    const cls = done ? (isKey ? " key" : sel.includes(k) ? " extra" : "") : sel.includes(k) ? " on" : "";
+    return `<button class="kw${cls}" data-kw="${k}" ${done ? "disabled" : ""}>${U.esc(w)}</button>`; }).join(" ");
+}
+function labRunView() {
+  const m = labM(), n = m.items.length;
+  if (run.phase === "teach") {
+    const c = m.teach[run.card], eg = c.eg, last = run.card === m.teach.length - 1;
+    const ex = eg.q ? `<p class="stem">${stemKeys(eg.q, eg.keys || [], [], true)}</p>${eg.note ? `<p class="note">${U.esc(eg.note)}</p>` : ""}`
+      : `${eg.opt ? `<p class="egrow"><span class="chip">Option</span> ${U.esc(eg.opt)}</p>` : ""}<p class="egrow"><span class="chip">You hear</span> “${U.esc(eg.said)}”</p>${eg.note ? `<p class="note">${U.esc(eg.note)}</p>` : ""}`;
+    $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Listening Lab · Mission ${m.n} of ${Lab.LAB.length}</p><h1>${U.esc(m.title)}</h1>
+      <div class="panel labteach"><p class="eyebrow">Tip ${run.card + 1} of ${m.teach.length}</p><h2>${U.esc(c.h)}</h2><p>${U.esc(c.p)}</p><div class="labeg">${ex}</div></div>
+      <div class="row">${run.card ? `<button class="btn alt" id="lprev">Back</button>` : ""}<button class="btn" id="lnext">${last ? `Start the ${n} questions` : "Next tip"}</button></div></div>`;
+    document.getElementById("lnext").onclick = () => { S.play("tap"); if (last) run.phase = "q"; else run.card++; saveRun(); labRunView(); backButton(); top(); };
+    const pv = document.getElementById("lprev"); if (pv) pv.onclick = () => { run.card--; saveRun(); labRunView(); backButton(); };
+    return;
+  }
+  const it = m.items[run.i], prime = m.trap === "prime";
+  const s = run.st[run.i] || (run.st[run.i] = { stage: prime ? "keys" : "listen", sel: [], plays: 0, wrong: [], done: false });
+  const tag = it.final ? "Checkpoint challenge" : prime ? "Get ready, then listen" : run.i < 2 ? "Spot the trap" : "Practice";
+  let h = `<div class="narrow pop"><p class="eyebrow">Listening Lab · ${U.esc(m.title)}</p>
+    <div class="labdots">${m.items.map((_, k) => `<i class="${k < run.i ? "done" : k === run.i ? "now" : ""}"></i>`).join("")}</div>
+    <div class="qcard"><div class="qhead"><span class="tag">${tag}</span><span class="qnum">${run.i + 1} of ${n}</span></div>`;
+  if (s.stage === "keys") {
+    h += `<p class="eyebrow">Step 1 of 3 · Before you listen</p><h3>Tap the key words in the question.</h3>
+      <p class="stem kws">${stemKeys(it.stem, it.keys, s.sel, !!s.keysChecked)}</p>`;
+    if (!s.keysChecked) h += `<div class="row"><button class="btn" id="lcheck" ${s.sel.length ? "" : "disabled"}>Check</button></div>`;
+    else h += `<div class="fb ${s.keysOk ? "ok" : "info"}"><p><strong>${s.keysOk ? "Good underlining!" : "Here are the key words."}</strong> The key words are <b>${it.keys.map(U.esc).join(", ")}</b>: the question word and the words that tell you the topic.</p></div>
+      <div class="row"><button class="btn" id="lnext">Next step</button></div>`;
+  } else if (s.stage === "type") {
+    h += `<p class="eyebrow">Step 2 of 3 · Before you listen</p><p class="stem">${stemKeys(it.stem, it.keys, [], true)}</p><h3>What type of answer do you need?</h3>
+      <div class="chips-row">${Lab.ANSWER_TYPES.map(t => `<button class="pick${s.type === t ? (t === it.type ? " right" : " wrong") : s.type && t === it.type ? " right" : ""}" data-type="${U.esc(t)}" ${s.type ? "disabled" : ""}>${U.esc(t)}</button>`).join("")}</div>`;
+    if (s.type) h += `<div class="fb ${s.type === it.type ? "ok" : "info"}"><p><strong>${s.type === it.type ? "Yes!" : "Not quite."}</strong> You need <b>${U.esc(it.type)}</b>. Now you know what to listen for.</p></div>
+      <div class="row"><button class="btn" id="lnext">Next step</button></div>`;
+  } else if (s.stage === "predict") {
+    h += `<p class="eyebrow">Step 3 of 3 · Predict</p><p class="stem">${stemKeys(it.stem, it.keys, [], true)}</p><h3>Which of these could be the answer? Tap all that fit.</h3>
+      <div class="chips-row">${it.predict.map(([t, fit], k) => { const on = s.sel.includes(k);
+        return `<button class="pick${s.predChecked ? (fit ? " right" : on ? " wrong" : "") : on ? " on" : ""}" data-pr="${k}" ${s.predChecked ? "disabled" : ""}>${U.esc(t)}</button>`; }).join("")}</div>`;
+    if (!s.predChecked) h += `<div class="row"><button class="btn" id="lcheck" ${s.sel.length ? "" : "disabled"}>Check</button></div>`;
+    else h += `<div class="fb ${s.predOk ? "ok" : "info"}"><p><strong>${s.predOk ? "Great prediction!" : "Here's what could fit."}</strong> The answer must be ${U.esc(it.type)}, so only the green ones could be right. Now listen for them!</p></div>
+      <div class="row"><button class="btn" id="lnext">Listen now</button></div>`;
+  } else {
+    const ord = order(`lab${run.i}`, it.opts.length), heard = s.plays > 0 || s.heard;
+    if (prime) h += `<p class="note">You need <b>${U.esc(it.type)}</b>. Key words: ${it.keys.map(k => `<u>${U.esc(k)}</u>`).join(", ")}.</p>`;
+    h += `<div class="player labplayer"><button class="btn" id="labplay">${PLAY} Play</button><span class="note">Read the question first. You can listen twice.</span></div>
+      <p class="stem">${U.esc(it.stem)}</p><div class="opts">${ord.map((oi, k) => {
+        let cls = "opt"; if (s.done && oi === 0) cls += " right"; else if (s.wrong.includes(oi)) cls += " wrong";
+        return `<button class="${cls}" data-lo="${oi}" ${s.done || s.wrong.includes(oi) || !heard ? "disabled" : ""}><span class="k">${"ABCD"[k]}</span><span>${U.esc(it.opts[oi].t)}</span></button>`; }).join("")}</div>`;
+    if (!s.done && s.wrong.length) { const w = it.opts[s.wrong[s.wrong.length - 1]];
+      h += `<div class="fb bad"><p><strong>Not quite.</strong> ${U.esc(w.why)}</p><p>${U.esc(it.hint)}</p><p class="note">You can listen once more.</p></div>`; }
+    if (s.done) {
+      const r = run.results.find(x => x.item === run.i && x.skill === "Listening"), first = r.first_try, got = r.support !== "explained";
+      h += `<div class="fb ${got ? "ok" : "info"}"><p><strong>${first ? "Correct, first time!" : got ? "Correct." : `The answer is "${U.esc(it.opts[0].t)}".`}</strong>
+          ${got ? `<span class="xpgain">+${first ? Lab.XP_LAB.first : Lab.XP_LAB.hint} XP</span>` : ""}</p>
+          ${s.wrong.length ? `<p>You chose "${U.esc(it.opts[s.wrong[0]].t)}": ${U.esc(it.opts[s.wrong[0]].why)}</p>` : ""}</div>
+        <div class="panel ltrans"><p class="eyebrow">What they said</p>${it.lines.map(l => labLine(it, l)).join("")}
+          <p class="note legend"><mark class="lkey">green</mark> gives the answer${it.traps.length ? ` · <mark class="ltrap">orange</mark> is the trap` : ""}</p>
+          ${it.traps.length ? `<ul class="trapnotes">${it.traps.map(([t, l]) => `<li>🪤 “${U.esc(t)}”: ${U.esc(l)}</li>`).join("")}</ul>` : ""}</div>
+        <div class="row"><button class="btn" id="lnext">${run.i === n - 1 ? "See my results" : "Next question"}</button></div>`;
+    }
+  }
+  h += `</div></div>`;
+  $app.innerHTML = h;
+  const redraw = () => { saveRun(); labRunView(); backButton(); };
+  const res = (sub, ok) => run.results.push({ item: run.i, skill: "Listening strategy", sub, first_try: ok, support: ok ? "none" : "explained" });
+  $app.querySelectorAll("[data-kw]").forEach(b => b.onclick = () => { const k = +b.dataset.kw; s.sel = s.sel.includes(k) ? s.sel.filter(x => x !== k) : [...s.sel, k]; S.play("tap"); redraw(); });
+  $app.querySelectorAll("[data-pr]").forEach(b => b.onclick = () => { const k = +b.dataset.pr; s.sel = s.sel.includes(k) ? s.sel.filter(x => x !== k) : [...s.sel, k]; S.play("tap"); redraw(); });
+  $app.querySelectorAll("[data-type]").forEach(b => b.onclick = () => { s.type = b.dataset.type; const ok = s.type === it.type; res("Answer type", ok); S.play(ok ? "ok" : "bad"); redraw(); });
+  const chk = document.getElementById("lcheck"); if (chk) chk.onclick = () => {
+    if (s.stage === "keys") {
+      const words = it.stem.split(" "), keyWords = new Set(it.keys.flatMap(k => k.toLowerCase().split(" ")));
+      const need = words.map((w, k) => keyWords.has(w.replace(/[?.,!]/g, "").toLowerCase()) ? k : -1).filter(k => k >= 0);
+      s.keysOk = need.every(k => s.sel.includes(k)) && s.sel.length - need.filter(k => s.sel.includes(k)).length <= 1;
+      s.keysChecked = true; res("Key words", s.keysOk); S.play(s.keysOk ? "ok" : "info");
+    } else {
+      const fit = it.predict.map((p, k) => p[1] ? k : -1).filter(k => k >= 0);
+      s.predOk = fit.length === s.sel.length && fit.every(k => s.sel.includes(k)); s.predChecked = true; res("Prediction", s.predOk); S.play(s.predOk ? "ok" : "info");
+    }
+    redraw();
+  };
+  $app.querySelectorAll("[data-lo]").forEach(b => b.onclick = () => {
+    const oi = +b.dataset.lo, trap = m.trap === "prime" ? null : m.trap;
+    if (labAudio) labAudio.pause();
+    if (oi === 0) { run.results.push({ item: run.i, skill: "Listening", sub: "Detail", trap, lab: it.clip, first_try: !s.wrong.length, support: s.wrong.length ? "hint" : "none" }); s.done = true; S.play("ok"); }
+    else { s.wrong.push(oi); S.play("bad");
+      if (s.wrong.length >= 2) { run.results.push({ item: run.i, skill: "Listening", sub: "Detail", trap, lab: it.clip, first_try: false, support: "explained" }); s.done = true; } }
+    redraw();
+    const fb = $app.querySelector(".fb"); if (fb) fb.scrollIntoView({ block: "center", behavior: "smooth" });
+  });
+  const nx = document.getElementById("lnext"); if (nx) nx.onclick = () => {
+    S.play("tap");
+    if (s.stage === "keys") { s.stage = "type"; s.sel = []; }
+    else if (s.stage === "type") s.stage = "predict";
+    else if (s.stage === "predict") { s.stage = "listen"; s.sel = []; }
+    else { if (labAudio) labAudio.pause(); if (run.i === n - 1) return finishLab(); run.i++; }
+    redraw(); top();
+  };
+  const pb = document.getElementById("labplay"); if (pb) { pb.onclick = labPlay; labClip(); labPlayer(); }
+}
+function finishLab() {
+  if (labAudio) labAudio.pause();
+  const m = labM(), main = run.results.filter(r => r.skill === "Listening"), bonus = E.streakBonus(history);
+  run.result = { score: main.filter(r => r.first_try).length, xp: Lab.labXP(run.results.map(r => ({ skill: r.skill, support: r.support, first_try: r.first_try }))) + bonus, bonus,
+                 seconds: Math.round((Date.now() - run.t0) / 1000) };
+  run.phase = "done"; S.play("done"); saveRun(); runView(); top();
+}
+function labDoneView() {
+  const m = labM(), R = run.result, main = run.results.filter(r => r.skill === "Listening"), next = Lab.LAB.find(x => x.n === m.n + 1);
+  const caught = main.filter(r => !r.first_try).map(r => m.items[r.item]);
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Listening Lab · Mission ${m.n} done</p><h1>${R.score} of ${m.items.length} right first time</h1>
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${m.items.length}</b><span>right first time</span></div>
+      <div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    <div class="panel"><h3>Remember</h3><p style="margin:0">${U.esc(Lab.TRAPS[m.trap].tip)}</p></div>
+    ${caught.length ? `<div class="panel"><h3>The traps that caught you</h3><ul>${caught.map(it => `<li>${U.esc(it.stem)} ${it.traps.length ? `<span class="note">(${it.traps.map(t => U.esc(t[1])).join(", ")})</span>` : ""}</li>`).join("")}</ul></div>`
+      : `<div class="fb ok winbox"><p class="big">No traps caught you!</p></div>`}
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row">${next ? `<button class="btn" id="lnextm">Next mission: ${U.esc(next.title)}</button>` : ""}<button class="btn alt" id="lhub">Back to the Lab</button></div></div>`;
+  const nm = document.getElementById("lnextm"); if (nm) nm.onclick = () => { run = null; saveRun(); startLab(next.id); };
+  document.getElementById("lhub").onclick = () => { run = null; saveRun(); location.hash = "#lab"; route(); top(); };
+  saveAttempt({ mode: "listening", text_id: m.id, level_start: null, level_end: null, score: R.score, max_score: m.items.length,
+                xp: R.xp, seconds: R.seconds, answers: run.results.map(({ item, ...r }) => r) });
 }
 
 /* ---------------- progress & leaderboard ---------------- */
@@ -1243,7 +1430,7 @@ function statsCard() {
     if (a.score == null) return `<p class="note">Answer at least ${W.MIN_ANSWERS} ${a.name === "Speed" ? "Speed Read questions" : "questions in this area"} to get a score.</p>${practise(a.name)}`;
     const how = a.name === "Speed" ? `From your last ${a.n} Speed Read questions: ${a.right} right. Reading faster and getting them right raises this score.`
       : `From your last ${a.n} answers: ${a.right} right first time.${a.name === "Reading" ? ` Your reading level (${U.bandName(history, me.level)}) counts too: moving up a level raises your score.` : ""}`;
-    return `<p class="note">${how}</p>${practise(a.name)}`;
+    return `<p class="note">${how}</p>${practise(a.name)}${a.name === "Listening" ? ` <a class="btn small alt" href="#lab">Listening Lab</a>` : ""}`;
   };
   const practise = name => (name === "Listening" && !listeningFor(fu).length) || (name === "Reading" && !PRACTICE_TEXTS.some(t => t.unitNo === fu)) ? ""
     : `<a class="btn small alt" href="#unit-${fu}/${AREA_LINK[name]}">Practise ${name === "Speed" ? "with games" : name.toLowerCase()}</a>`;
@@ -1255,6 +1442,7 @@ function progressView() {
   $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Me</p><h1>${U.esc(me.name)}</h1></div>
     ${meTabs("me")}${statsCard()}
     <h2>My progress</h2>${U.trackerHTML(history, me)}</div>`;
+  bindActivities();
 }
 async function leaderboardView() {
   $app.innerHTML = `<div class="narrow"><p class="note">Loading the leaderboard…</p></div>`;
@@ -1289,9 +1477,10 @@ function startPractice(id) {
 function runView() {
   header(); nav(null);
   if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "mini" ? miniDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone()
-    : run.kind === "listen" ? listenDone() : run.kind === "game" ? gameDone() : run.kind === "escape" ? escapeDone() : practiceDone();
+    : run.kind === "listen" ? listenDone() : run.kind === "lab" ? labDoneView() : run.kind === "game" ? gameDone() : run.kind === "escape" ? escapeDone() : practiceDone();
   if (run.kind === "game") return gameView();
   if (run.kind === "escape") return escapeView();
+  if (run.kind === "lab") { labRunView(); return backButton(); }
   if (run.kind === "baseline") baselineView();
   else if (run.kind === "mini") miniView();
   else if (run.kind === "small") smallView();
@@ -1315,6 +1504,7 @@ function runName(r) {
   if (r.kind === "small") return `${r.label} (question ${r.set.i + 1} of ${r.set.qs.length})`;
   if (r.kind === "mini") return `${M.MINI[r.unit].title} (question ${r.qi + 1} of ${M.miniQuestions(r.unit).length})`;
   if (r.kind === "listen") return `Listening: ${LISTENING.find(t => t.id === r.id).topic}`;
+  if (r.kind === "lab") return `Listening Lab: ${Lab.labMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.labMission(r.id).items.length})` : ""}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
   if (r.kind === "escape") return `Unit ${r.unit} escape room${r.play ? ` (room ${r.play.room + 1} of ${r.game.rooms.length})` : ""}`;
   return U.textTitle(r.textId);

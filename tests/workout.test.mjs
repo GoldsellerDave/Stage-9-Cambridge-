@@ -33,3 +33,13 @@ test("workout: three items, weakest area first, a game last, done when played to
   assert.equal(base[0].kind, "baseline");
   assert.ok(!base.some(i => i.kind === "text"));
 });
+
+test("a trap that keeps catching the student puts its Listening Lab mission in the workout", async () => {
+  const { workoutPlan } = await import("../js/workout.js");
+  const day = "2026-10-20T03:00:00Z", now = new Date("2026-10-28T03:00:00Z");
+  const ans = (skill, n, ok, extra = {}) => Array.from({ length: n }, () => ({ skill, first_try: ok, ...extra }));
+  const history = [{ mode: "practice", text_id: "x", created_at: day, answers: [...ans("Detail", 10, true), ...ans("Vocabulary", 10, true), ...ans("Grammar", 10, true),
+    ...ans("Listening", 4, false, { trap: "distractor" }), ...ans("Listening", 1, true, { trap: "distractor" })] }];
+  const plan = workoutPlan(history, 3, { now });
+  assert.ok(plan.some(i => i.kind === "lab" && i.id === "lab-distractor"), JSON.stringify(plan));
+});
