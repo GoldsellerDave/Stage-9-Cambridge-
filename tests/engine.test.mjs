@@ -162,3 +162,19 @@ test("Checkpoint checks: two new 16-question tests, due six weeks after the last
   assert.equal(E.testBand("baseline", 12), 5);
   assert.equal(E.readingBand(c1), 5);
 });
+
+import { trailStops, trailHere, TRAIL_UNITS } from "../js/trail.js";
+test("Road to Checkpoint: start, a stop and gate per unit, two check flags, finish", () => {
+  const empty = trailStops([]);
+  assert.equal(empty.length, 1 + 2 * TRAIL_UNITS.length + 2 + 1);
+  assert.equal(empty[0].kind, "start"); assert.equal(empty.at(-1).kind, "finish");
+  assert.equal(trailHere(empty), 0, "starts at the start");
+  const h = [{ mode: "baseline", text_id: "baseline", score: 6, max_score: 12, answers: [] },
+             { mode: "vocab", text_id: "boss-u2", score: 9, max_score: 12, answers: [] },
+             { mode: "vocab", text_id: "boss-u1", score: 5, max_score: 12, answers: [] }];
+  const s = trailStops(h), g1 = s.find(x => x.kind === "gate" && x.unit === 1), g2 = s.find(x => x.kind === "gate" && x.unit === 2);
+  assert.ok(!g1.done && /Best 42%/.test(g1.sub), "below 70% is not passed");
+  assert.ok(g2.done, "75% passes the gate");
+  assert.equal(trailHere(s), s.indexOf(g2) + 1, "stands just after the furthest stop reached");
+  assert.ok(!s.at(-1).done);
+});
