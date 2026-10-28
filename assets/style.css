@@ -610,3 +610,26 @@ tr.flagged td{background:var(--bad-bg)}
 :root[data-mode=dark] .chip.tier.t1{background:#1E3350;color:#9CC3F0}
 :root[data-mode=dark] .chip.tier.t2{background:#33264D;color:#C9B2F2}
 .tiermove{margin-bottom:10px}
+
+/* Teacher: managing classes and colleagues, printable login sheets */
+.btn.danger{color:var(--bad);border-color:var(--bad-line)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+.pass pre{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;white-space:pre-wrap;word-break:break-all;font-size:.95em}
+.printonly{display:none}
+.slips{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin-top:18px}
+.slip{border:1.5px dashed var(--line);border-radius:8px;padding:10px 14px;break-inside:avoid}
+.sl-t{font-size:.72em;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.sl-n{font-weight:700;font-size:1.1em;margin:2px 0 6px}
+.sl-l{font-size:.75em;color:var(--muted)}
+.sl-u{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85em;word-break:break-all;margin-bottom:6px}
+.sl-g{display:grid;grid-template-columns:1fr 1fr;margin-bottom:4px} .sl-g b{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.35em}
+@media print{
+  @page{size:A4;margin:12mm}
+  html,body{background:#fff!important;color:#000!important}
+  header.top,.noprint,.hero{display:none!important}
+  .printonly{display:block}
+  .lsheet{color:#000} .lsheet .tbl{overflow:visible}
+  .slips{display:grid;grid-template-columns:1fr 1fr;gap:0;break-before:page}
+  .slip{border:1.2px dashed #777;border-radius:0;height:49mm;box-sizing:border-box;padding:3.5mm 5mm}
+  .sl-t,.sl-l{color:#555}
+}

@@ -9,6 +9,7 @@ Adaptive reading practice for Cambridge Lower Secondary Checkpoint English, Stag
 - **Class leaderboard:** this week, all time, and most improved (first vs latest baseline).
 - **Progress tracker:** skill bars, level over time, badges and history for each student.
 - **Teacher dashboard** (`teacher.html`): class table, skills heat map, each student's tracker, leaderboard view, PIN resets.
+- **Teachers and classes:** each teacher adds their own classes (class code + pasted names) and prints a login sheet; they see only their own classes. The admin (the first teacher from `seed.sql`) sees every class, adds colleagues on the **Teachers** page with a one-time password, and can move a class to another teacher.
 
 Plain HTML, CSS and JavaScript modules: no build step. Data lives in Supabase.
 
