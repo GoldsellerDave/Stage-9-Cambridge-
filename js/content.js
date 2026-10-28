@@ -1,4 +1,4 @@
-// Reading content. Each practice text has three levels (Easier, Core, Harder) with the same
+// Reading content. Each practice text has three levels (Easier, Core, Harder), plus Challenge for Units 2–3, with the same
 // paragraph letters, and eight question slots that test the same skill at every level.
 // MCQ: the first option is the correct one (options are shuffled on screen).
 // Short answer: groups of keyword stems; "need" = how many different groups the answer must hit.
@@ -6,6 +6,7 @@
 import { UNIT2_TEXTS } from "./texts-u2.js";
 import { UNIT3_TEXTS } from "./texts-u3.js";
 import { UNIT4_TEXTS } from "./texts-u4.js";
+import { CHALLENGE } from "./texts-challenge.js";
 
 export const STRATEGY = {
  "Main idea":{name:"Finding the main idea",steps:["Read the first paragraph and the last paragraph again.","Ask: what does almost every paragraph talk about?","Cross out answers that only match one paragraph or one detail.","Choose the answer that covers the whole text."]},
@@ -130,6 +131,17 @@ export const PRACTICE_TEXTS = [
   ...UNIT3_TEXTS,
   ...UNIT4_TEXTS
 ];
+// Texts with a Challenge version get it as a fourth level, and each slot gets its Challenge question.
+for (const t of PRACTICE_TEXTS) {
+  const c = CHALLENGE[t.id];
+  if (!c) continue;
+  t.levels = [...t.levels, c.level];
+  t.slots = t.slots.map((s, i) => {
+    const { extra = [], ...q } = c.q[i];
+    if (q.type === "short" && !q.groups) q.groups = [...s.q[2].groups, ...extra];
+    return { ...s, q: [...s.q, q] };
+  });
+}
 
 /* ---------- Baseline: three short passages, Easier to Harder, 4 MCQs each, no hints ---------- */
 export const BASELINE = [

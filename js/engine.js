@@ -1,10 +1,11 @@
 // Adaptive reading engine: pure functions, no DOM. Shared by the student app and the tests.
 import { PLACEMENT } from "./content.js";
 
-export const LEVELS = ["Easier", "Core", "Harder"];
+export const LEVELS = ["Easier", "Core", "Harder", "Challenge"];
+export const TOP_START = 2;            // Challenge is reached only inside a text, never as a starting level
 export const UP_AFTER = 3;             // right first time in a row before moving up
 export const MISSES_FOR_REREAD = 2;    // questions missed in a row before the reread appears
-export const XP = { first: [10, 15, 20], hint: 5, rescue: 3, easier: 3, explained: 0,
+export const XP = { first: [10, 15, 20, 25], hint: 5, rescue: 3, easier: 3, explained: 0,
                     finish: 20, levelUp: 25, streakWeek: 10, replayFactor: 0.5 };
 export const SUPPORT_LABEL = { none: "Right first time", hint: "After a hint", rescue: "After reread + strategy",
                                easier: "After easier text", explained: "Explained" };
@@ -29,6 +30,7 @@ export function mark(q, response) {
 
 /* ---------------- practice run ---------------- */
 export function newRun(text, startLevel) {
+  startLevel = Math.max(0, Math.min(startLevel ?? 1, TOP_START, text.levels.length - 1));
   return { textId: text.id, level: startLevel, levelStart: startLevel, slot: 0, stage: 0,
            missedRow: 0, rightRow: 0, dropped: false, results: [], path: [{ level: startLevel, at: 0 }],
            levelUps: 0, done: false };
@@ -66,7 +68,7 @@ export function submit(text, run, correct) {
 export function advance(text, run) {
   run.slot++; run.stage = 0; run.dropped = false;
   if (run.slot >= text.slots.length) { run.done = true; return "done"; }
-  if (run.rightRow >= UP_AFTER && run.level < LEVELS.length - 1) {
+  if (run.rightRow >= UP_AFTER && run.level < text.levels.length - 1) {
     run.level++; run.rightRow = 0; run.levelUps++; run.path.push({ level: run.level, at: run.slot });
     return "up";
   }
@@ -138,6 +140,7 @@ export function badges(history) {
   if (practice.length >= 1) out.push({ name: "Off the mark", why: "Finished a practice text" });
   if (practice.length >= 5) out.push({ name: "Bookworm", why: "Finished 5 practice texts" });
   if (history.some(h => h.level_end === 2)) out.push({ name: "Top level", why: "Reached the Harder text" });
+  if (practice.some(h => textLevel(h) === 3)) out.push({ name: "Challenger", why: "Reached a Challenge (C1) text" });
   if (weeklyStreak(history).streak >= 3) out.push({ name: "On a roll", why: "3-week reading streak" });
   const right = {};
   history.forEach(h => (h.answers || []).forEach(a => { if (a.first_try) right[a.skill] = (right[a.skill] || 0) + 1; }));
@@ -155,4 +158,34 @@ export function shuffle(n, rnd = Math.random) {
 export function minReadSeconds(paras) {
   const words = paras.map(p => p[1]).join(" ").split(/\s+/).length;
   return Math.max(20, Math.min(60, Math.round(words / 6)));
+}
+
+/* ---------------- reading level on the CEFR scale ---------------- */
+// Eight steps: each text level covers a lower and an upper half of one CEFR band. These are our own estimates
+// from the texts' length and language, not an official calibration.
+export const BANDS = ["A2", "A2+", "B1", "B1+", "B2", "B2+", "C1", "C1+"];
+const DEEP = ["Inference", "Writer's purpose", "Writer's view"];   // these count one and a half times
+export const UPPER = 0.75;
+// The text level a reading finished on. The server keeps level_end at most Harder, so Challenge is read from the answers.
+export function textLevel(h) {
+  if (h.level_end == null) return null;
+  if (h.mode !== "practice") return h.level_end;
+  const last = (h.answers || []).filter(a => a && a.level != null).pop();
+  return last && last.level > h.level_end ? last.level : h.level_end;
+}
+// Upper half of the band when about 75% is right first time on the level the student finished on.
+// The baseline uses its score: the same bands as placement, split in two.
+export function readingBand(h) {
+  const L = textLevel(h);
+  if (L == null) return null;
+  if (h.mode === "baseline") { const s = h.score | 0; return s >= 12 ? 5 : s >= 10 ? 4 : s >= 8 ? 3 : s >= 6 ? 2 : s >= 3 ? 1 : 0; }
+  const all = (h.answers || []).filter(a => a && a.skill), here = all.filter(a => a.level === L), use = here.length >= 3 ? here : all;
+  if (!use.length) return 2 * L;
+  let got = 0, max = 0;
+  use.forEach(a => { const w = DEEP.includes(a.skill) ? 1.5 : 1; max += w; if (a.first_try) got += w; });
+  return 2 * L + (got / max >= UPPER ? 1 : 0);
+}
+export function currentBand(history) {
+  const r = history.filter(h => h.mode === "practice" || h.mode === "baseline").filter(h => h.level_end != null);
+  return r.length ? readingBand(r[r.length - 1]) : null;
 }

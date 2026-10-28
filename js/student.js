@@ -32,7 +32,7 @@ function header() {
   if (!session || !me) { $meta.innerHTML = ""; return; }
   let h = "";
   if (run && run.kind === "practice" && run.phase !== "done") {
-    h += `<div class="meter" aria-label="Text level">${E.LEVELS.map((l, i) => `<span class="${i === run.r.level ? "on" : ""}">${l}</span>`).join("")}</div>`;
+    h += `<div class="meter" aria-label="Text level">${E.LEVELS.slice(0, (PRACTICE_TEXTS.find(t => t.id === run.textId) || { levels: [0, 1, 2] }).levels.length).map((l, i) => `<span class="${i === run.r.level ? "on" : ""}">${l}</span>`).join("")}</div>`;
   }
   if (run && run.phase !== "done" && run.kind !== "game") h += `<span class="pill" id="clock">00:00</span>`;
   h += `<span class="pill xp" title="Your XP">${me.xp_total + (run && run.xpSoFar ? run.xpSoFar : 0)} XP</span>`;
@@ -158,7 +158,7 @@ function homeView() {
   if (me.baseline_done) {
     h += `<div class="stats">
       <div class="stat gold"><b>${me.xp_week}</b><span>XP this week</span></div>
-      <div class="stat"><b>${U.levelName(me.level)}</b><span>reading level</span></div>
+      <div class="stat"><b>${U.bandName(history, me.level)}</b><span>reading level</span></div>
       <div class="stat"><b>${streak} wk</b><span>streak</span></div>
       <div class="stat"><b>${me.xp_total}</b><span>XP in total</span></div></div>`;
   }
@@ -860,7 +860,7 @@ function statsCard() {
   const det = a => {
     if (a.score == null) return `<p class="note">Answer at least ${W.MIN_ANSWERS} ${a.name === "Speed" ? "Speed Read questions" : "questions in this area"} to get a score.</p>${practise(a.name)}`;
     const how = a.name === "Speed" ? `From your last ${a.n} Speed Read questions: ${a.right} right. Reading faster and getting them right raises this score.`
-      : `From your last ${a.n} answers: ${a.right} right first time.${a.name === "Reading" ? ` Your level (${U.levelName(me.level)}) counts too: moving up a level raises your score.` : ""}`;
+      : `From your last ${a.n} answers: ${a.right} right first time.${a.name === "Reading" ? ` Your text level (${U.levelName(me.level)}) counts too: moving up a level raises your score.` : ""}`;
     return `<p class="note">${how}</p>${practise(a.name)}`;
   };
   const practise = name => (name === "Listening" && !listeningFor(fu).length) || (name === "Reading" && !PRACTICE_TEXTS.some(t => t.unitNo === fu)) ? ""
@@ -1028,8 +1028,8 @@ function practiceView() {
   if (run.phase === "read" || run.phase === "shift") {
     const up = run.shift === "up";
     $app.innerHTML = `<div class="narrow pop">
-      ${run.phase === "shift" ? `<div class="fb ${up ? "ok" : "info"}"><p class="big">${up ? "Level up!" : "Let's try a different version"}</p>
-        <p>${up ? `You got ${E.UP_AFTER} questions right first time in a row: <span class="xpgain">+${E.XP.levelUp} XP</span>. The next questions use the <b>Harder</b> text, with the same ideas in more difficult language.`
+      ${run.phase === "shift" ? `<div class="fb ${up ? "ok" : "info"}"><p class="big">${up ? (r.level === 3 ? "Challenge unlocked!" : "Level up!") : "Let's try a different version"}</p>
+        <p>${up ? `You got ${E.UP_AFTER} questions right first time in a row: <span class="xpgain">+${E.XP.levelUp} XP</span>. The next questions use the <b>${E.LEVELS[r.level]}</b> text, with the same ideas in more difficult language.${r.level === 3 ? " This is C1 level, a real stretch: take your time." : ""}`
                 : `This question is tricky in the ${E.LEVELS[r.level + 1]} text. Here is the <b>${E.LEVELS[r.level]}</b> version, with the same ideas in simpler words. Read it, then try question ${r.slot + 1} again.`}</p></div>`
         : `<p class="eyebrow">${E.LEVELS[r.level]} text · read it all first</p>`}
       ${U.textHTML(T, { unit })}<div class="row"><button class="btn" id="go">Go</button></div></div>`;
@@ -1051,7 +1051,7 @@ function practiceView() {
   h += `<div class="row">${locked ? `<button class="btn" id="next">${r.slot === text.slots.length - 1 ? "See my results" : "Next question"}</button>`
                                   : `<button class="btn" id="check">Check answer</button>`}</div>`;
   if (!locked && r.missedRow === 1 && r.stage === 0) h += `<p class="note">Take care: one more wrong answer and you will get extra support.</p>`;
-  if (!fb && r.rightRow > 0 && r.level < 2) h += `<p class="note">Right first time in a row: ${r.rightRow} of ${E.UP_AFTER} to move up.</p>`;
+  if (!fb && r.rightRow > 0 && r.level < text.levels.length - 1) h += `<p class="note">Right first time in a row: ${r.rightRow} of ${E.UP_AFTER} to move up.</p>`;
   h += `</div></div><div class="textcol"><details id="tx"><summary>Read the text again</summary>${U.textHTML(T, r.stage >= 1 && !locked ? { para: p, unit } : { unit })}</details></div></div>`;
   $app.innerHTML = h;
   if (matchMedia("(min-width:900px)").matches) document.getElementById("tx").open = true;
@@ -1120,7 +1120,7 @@ function practiceDone() {
     ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 texts this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     ${R.replay ? `<p class="note">You have read this text before, so this time earns half XP.</p>` : ""}
     <div class="panel"><p style="margin:0"><b>Strong:</b> ${strong.length ? U.esc(strong.join(", ")) : "Keep going, you will get there."}</p>
-      <p style="margin:0"><b>Practise next:</b> ${practise.length ? U.esc(practise.join(", ")) : "Nothing. Try to finish on the Harder text next time."}</p></div>
+      <p style="margin:0"><b>Practise next:</b> ${practise.length ? U.esc(practise.join(", ")) : (r.level < text.levels.length - 1 ? `Nothing. Try to finish on the ${E.LEVELS[r.level + 1]} text next time.` : "Nothing. Brilliant work!")}</p></div>
     ${U.resultRows(text.slots, r.results)}<p class="note">Text path: ${U.esc(path)}</p>
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="home">Back to home</button><a class="btn alt" href="#leaderboard" id="lb">See the leaderboard</a></div></div>`;
