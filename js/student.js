@@ -197,7 +197,7 @@ function homeView() {
   h += `${!check && checkIn != null ? `<p class="note">Your next Checkpoint check opens in ${checkIn} day${checkIn === 1 ? "" : "s"}.</p>` : ""}
     ${LIVE ? "" : `<p class="note">Demo mode: <button class="linkbtn" style="color:var(--teal)" id="reset">reset the demo data</button></p>`}</div>`;
   $app.innerHTML = h;
-  const b = document.getElementById("base"); if (b) b.onclick = startBaseline;
+  const b = document.getElementById("base"); if (b) b.onclick = () => startBaseline();
   const rr = document.getElementById("resume"); if (rr) rr.onclick = resumeRun;
   const ck = document.getElementById("check"); if (ck) ck.onclick = () => startBaseline(check.id);
   const rs = document.getElementById("reset"); if (rs) rs.onclick = () => { resetDemo(); setSession(null); session = null; me = null; route(); };
@@ -936,7 +936,8 @@ async function leaderboardView() {
 
 /* ---------------- reading runs ---------------- */
 // The baseline and the half-term checks run the same way: passages in order, MCQs with no hints.
-const testOf = id => id && id !== "baseline" ? C.CHECKS.find(c => c.id === id) : { id: "baseline", title: "Baseline", passages: BASELINE };
+// Anything that is not a check id (an old saved run, for example) is the baseline.
+const testOf = id => C.CHECKS.find(c => c.id === id) || { id: "baseline", title: "Baseline", passages: BASELINE };
 function startBaseline(test = "baseline") {
   run = { kind: "baseline", test, phase: "read", part: 0, qi: 0, answers: [], t0: Date.now(), readStart: Date.now(), orders: {}, pick: null };
   saveRun(); route(); top();
