@@ -9,7 +9,7 @@ import * as S from "./sound.js";
 import { SEQUENCE, UNITS } from "./curriculum.js";
 import { VOCAB } from "./vocab.js";
 import { LISTENING, listeningFor } from "./listening.js";
-import { TIMES } from "./listening-times.js";
+import { TIMES, AUDIO_V } from "./listening-times.js";
 import * as G from "./games.js";
 import * as L from "./look.js";
 import * as I from "./icons.js";
@@ -1085,7 +1085,7 @@ function startListening(id) {
 function audio() {
   if (!audioEl || audioFor !== run.id) {
     if (audioEl) audioEl.pause();
-    audioEl = new Audio(`audio/listening/${run.id}.mp3`); audioFor = run.id; audioEl.preload = "auto";
+    audioEl = new Audio(`audio/listening/${run.id}.mp3?v=${AUDIO_V}`); audioFor = run.id; audioEl.preload = "auto";
     audioEl.addEventListener("timeupdate", () => {
       if (segEnd != null && audioEl.currentTime >= segEnd) { audioEl.pause(); segEnd = null; }
       playerUpdate();
@@ -1473,7 +1473,7 @@ function miniPlayer() {
   const T = M.MINI[run.unit];
   if (!miniAudio || miniAudioFor !== T.listening.id) {
     if (miniAudio) miniAudio.pause();
-    miniAudio = new Audio(`audio/listening/${T.listening.id}.mp3`); miniAudioFor = T.listening.id; miniAudio.preload = "auto";
+    miniAudio = new Audio(`audio/listening/${T.listening.id}.mp3?v=${AUDIO_V}`); miniAudioFor = T.listening.id; miniAudio.preload = "auto";
     const upd = () => miniPlayerUpdate();
     miniAudio.addEventListener("timeupdate", upd); miniAudio.addEventListener("play", upd); miniAudio.addEventListener("pause", upd);
     miniAudio.addEventListener("ended", () => { if (run && run.kind === "mini") { run.plays++; saveRun(); } miniPlayerUpdate(); });
