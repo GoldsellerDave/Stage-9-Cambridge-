@@ -1084,7 +1084,7 @@ function practiceView() {
 }
 function feedbackHTML(text, q, p, T, unit) {
   const f = run.fb, r = run.r;
-  if (f.kind === "ok") return `<div class="fb ok pop"><p><strong>Correct.</strong> ${f.firstTry ? "Right first time." : "Well done for sticking with it."} <span class="xpgain">+${f.xp} XP</span></p></div>`;
+  if (f.kind === "ok") return `<div class="fb ok pop"><p><strong>Correct.</strong> ${f.firstTry ? "Right first time." : "Well done for sticking with it."} <span class="xpgain">+${f.xp} XP</span></p>${f.ai ? `<p class="note">Checked by AI: ${U.esc(f.ai)}</p>` : ""}</div>`;
   if (f.kind === "explained") return `<div class="fb info pop"><p><strong>Let's look at the answer together.</strong></p><p>${U.esc(q.explain)}</p><p class="note">No XP for this one. Remember the strategy for next time.</p></div>`;
   const msg = f.partial || (f.tooShort ? "Write at least a few words." : q.type === "short" ? "Your answer does not match the text yet." : "That is not the answer.");
   if (f.tooShort) return `<div class="fb bad pop"><p><strong>Too short.</strong> ${U.esc(msg)}</p></div>`;
@@ -1095,23 +1095,36 @@ function feedbackHTML(text, q, p, T, unit) {
     <div class="strat"><b>Strategy: ${U.esc(st.name)}</b><ol>${st.steps.map(s => `<li>${U.esc(s)}</li>`).join("")}</ol></div>
     <p class="note">${r.level > 0 ? `If this answer is wrong too, you will move to the ${E.LEVELS[r.level - 1]} text.` : "Try once more. The highlighted words will help."}</p></div>`;
 }
-function check(text) {
-  const r = run.r, q = E.question(text, r);
+async function check(text) {
+  const r = run.r, q = E.question(text, r), slotNow = r.slot, levelNow = r.level;
   const response = q.type === "short" ? (document.getElementById("ans").value || "") : run.pick;
   if (q.type !== "short" && response === null) return;
-  const m = E.mark(q, response);
+  let m = E.mark(q, response), ai = null;
   if (m.tooShort) { run.fb = { kind: "bad", tooShort: true }; saveRun(); return runView(); }
+  // The keyword marker missed it: ask the AI marker, which accepts the same points in other words.
+  // Any problem returns null and the keyword result stands.
+  if (q.type === "short" && !m.ok) {
+    const btn = document.getElementById("check"); if (btn) { btn.disabled = true; btn.textContent = "Checking your answer…"; }
+    const para = text.levels[r.level].paras.find(x => x[0] === (q.para || text.slots[r.slot].para));
+    ai = await api.aiMark(session.token, { text_id: text.id, slot: r.slot, level: r.level, stem: q.stem,
+      paragraph: para ? para[1] : text.levels[r.level].paras.map(x => x[1]).join("\n"),
+      points: q.groups.map(g => g.label), need: q.need, answer: response });
+    if (!run || run.r !== r || r.slot !== slotNow || r.level !== levelNow) return; // left the question while waiting
+    if (ai && ai.ok) m = { ok: true, hits: ai.hits };
+  }
   const res = E.submit(text, r, m.ok);
   if (res.outcome === "correct") {
     const xp = E.answerXP(r.results[r.slot]); run.xpSoFar += xp;
-    run.fb = { kind: "ok", firstTry: res.firstTry, xp }; S.play("ok");
+    if (ai && ai.ok) r.results[r.slot].ai = true;
+    run.fb = { kind: "ok", firstTry: res.firstTry, xp, ai: ai && ai.ok ? ai.feedback : null }; S.play("ok");
   } else if (res.outcome === "down") {
     run.pick = null; run.draft = ""; run.fb = null; run.phase = "shift"; run.shift = "down"; run.readStart = Date.now(); S.play("info");
     saveRun(); runView(); return top();
   } else if (res.outcome === "explained") {
     run.fb = { kind: "explained" }; S.play("info");
   } else {
-    const partial = q.type === "short" && m.hits.length ? `You have ${m.hits.length} good point${m.hits.length > 1 ? "s" : ""}. You need ${q.need} different points.` : null;
+    const partial = ai && ai.feedback ? ai.feedback
+      : q.type === "short" && m.hits.length ? `You have ${m.hits.length} good point${m.hits.length > 1 ? "s" : ""}. You need ${q.need} different points.` : null;
     run.fb = { kind: "bad", wrong: run.pick, partial }; S.play("bad");
   }
   saveRun(); runView();

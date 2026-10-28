@@ -32,6 +32,16 @@ Rosters are CSV files with `No,Name` columns. Usernames are class + register num
 
 Add an entry to `PRACTICE_TEXTS` in `js/content.js`: three levels with the same paragraph letters, and eight question slots. Each slot has a skill, a target paragraph and one question per level, with a hint, the sentence to highlight on reread, and an explanation for the Easier version. Short answers use keyword groups. Run `npm test` to check that every highlight sentence exists in its paragraph.
 
+## AI marking (optional)
+Reading short answers are marked by keywords first. When the keywords miss an answer, the site asks the `grade` Edge Function, which uses Claude to check whether the answer makes the same points in other words. If the function is not set up, or anything goes wrong, the keyword mark stands, so the site works without it.
+
+1. Create an API key at console.anthropic.com (with billing on).
+2. In Supabase, open **Edge Functions → Secrets** and add `ANTHROPIC_API_KEY`. Optional: `AI_MODEL` (default `claude-opus-5-5`; `claude-haiku-5-5` is much cheaper) and `AI_DAILY_LIMIT` (AI checks per student per day, default 60).
+3. Create a function called `grade` from `supabase/functions/grade/index.ts` (dashboard editor, or `supabase functions deploy grade --no-verify-jwt`). Turn **JWT verification off**: the function checks the site's own sign-in tokens.
+4. Run `supabase/schema.sql` again so the AI log table exists.
+
+Only the question, the paragraph, the mark scheme and the answer are sent, never names. Teachers see every AI decision in the **AI marking** tab and can flag one; a flag does not change XP.
+
 ## How the data is protected
 
 The website never reads tables directly. Every request goes through `ck_*` functions that check the sign-in token, so students only see their own history and their own class leaderboard. Five wrong PINs lock an account for 5 minutes.

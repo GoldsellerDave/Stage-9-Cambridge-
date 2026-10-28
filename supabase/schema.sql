@@ -225,9 +225,49 @@ begin
   delete from ck_tokens where student_id = p_student;
 end $$;
 
+/* ---------------- AI marking log ---------------- */
+-- The "grade" Edge Function (supabase/functions/grade) writes one row per AI check, using the service key.
+-- Teachers can read the log and flag a decision they disagree with. A flag does not change XP or scores.
+create table if not exists ck_ai_log (
+  id         bigint generated always as identity primary key,
+  student_id uuid not null references ck_students(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  text_id    text not null,
+  slot       smallint,
+  level      smallint,
+  question   text,
+  answer     text not null,
+  ok         boolean not null,
+  hits       jsonb not null default '[]',
+  feedback   text,
+  model      text,
+  overruled  boolean not null default false
+);
+create index if not exists ck_ai_log_student on ck_ai_log(student_id, created_at);
+alter table ck_ai_log enable row level security;
+revoke all on ck_ai_log from anon, authenticated;
+
+create or replace function ck_teacher_ai_log(p_token uuid, p_class text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token);
+begin
+  return coalesce((select json_agg(r order by r.created_at desc) from (
+    select l.id, l.created_at, st.display_name as name, l.text_id, l.level, l.question, l.answer, l.ok, l.hits, l.feedback, l.overruled
+      from ck_ai_log l join ck_students st on st.id = l.student_id
+     where st.class_code = p_class order by l.created_at desc limit 200) r), '[]'::json);
+end $$;
+
+create or replace function ck_teacher_ai_flag(p_token uuid, p_id bigint, p_overruled boolean) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token);
+begin
+  update ck_ai_log set overruled = p_overruled where id = p_id;
+end $$;
+
 -- Only the public entry points can be called from the website.
 revoke execute on function ck_auth(uuid), ck_require_teacher(uuid) from public, anon, authenticated;
 grant execute on function ck_login(text, text), ck_logout(uuid), ck_me(uuid), ck_history(uuid),
   ck_save_attempt(uuid, jsonb), ck_leaderboard(uuid, text), ck_teacher_classes(uuid),
-  ck_teacher_class(uuid, text), ck_teacher_student(uuid, uuid), ck_teacher_reset_pin(uuid, uuid, text)
+  ck_teacher_class(uuid, text), ck_teacher_student(uuid, uuid), ck_teacher_reset_pin(uuid, uuid, text),
+  ck_teacher_ai_log(uuid, text), ck_teacher_ai_flag(uuid, bigint, boolean)
   to anon;
