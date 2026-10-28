@@ -11,6 +11,8 @@ import { LISTENING, listeningFor } from "./listening.js";
 import { TIMES } from "./listening-times.js";
 import * as G from "./games.js";
 import * as L from "./look.js";
+import * as I from "./icons.js";
+import * as W from "./workout.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -151,7 +153,9 @@ function homeView() {
     h += `<div class="tcard"><span class="tag gold">Start here</span><h3>Baseline reading</h3>
       <p class="note" style="font-size:1rem">Three short texts, from easier to harder, with 12 questions and no hints. Your score sets your starting reading level. It takes about 15 minutes.</p>
       <div class="row"><button class="btn" id="base">Start the baseline</button></div></div>`;
-  } else if (me.baseline_done) {
+  } else if (me.baseline_done) h += workoutCard();
+  h += quickTiles(review.length);
+  if (me.baseline_done) {
     h += `<div class="stats">
       <div class="stat gold"><b>${me.xp_week}</b><span>XP this week</span></div>
       <div class="stat"><b>${U.levelName(me.level)}</b><span>reading level</span></div>
@@ -160,11 +164,6 @@ function homeView() {
   }
   h += `<div class="panel goal"><b>This week: ${Math.min(thisWeek, 2)} of 2 activities</b><div class="bar"><i style="width:${Math.min(thisWeek, 2) * 50}%"></i></div>
       <p class="note">Finish 2 activities a week (a reading text, a vocabulary set or a grammar set) to keep your streak and earn a ${E.XP.streakWeek} XP bonus.</p></div>`;
-  const fu = P.focusUnit();
-  h += `<h2>This week in class</h2>${focusCard(fu)}`;
-  if (review.length) h += `<div class="tcard"><span class="tag gold">Review</span><h3>${review.length} word${review.length > 1 ? "s" : ""} to review today</h3>
-      <p class="note">${U.esc(review.slice(0, 6).map(x => x.w).join(", "))}${review.length > 6 ? "…" : ""}</p>
-      <div class="row"><button class="btn" data-review="1">Review ${Math.min(review.length, 10)} words</button></div></div>`;
   h += `${canRetake ? `<div class="row"><button class="btn alt" id="rebase">Retake the baseline</button></div>` : ""}
     ${LIVE ? "" : `<p class="note">Demo mode: <button class="linkbtn" style="color:var(--teal)" id="reset">reset the demo data</button></p>`}</div>`;
   $app.innerHTML = h;
@@ -172,7 +171,50 @@ function homeView() {
   const rr = document.getElementById("resume"); if (rr) rr.onclick = resumeRun;
   const rb = document.getElementById("rebase"); if (rb) rb.onclick = startBaseline;
   const rs = document.getElementById("reset"); if (rs) rs.onclick = () => { resetDemo(); setSession(null); session = null; me = null; route(); };
+  $app.querySelectorAll("[data-wo]").forEach(b => b.onclick = () => startWorkoutItem(workout[+b.dataset.wo]));
   bindActivities();
+}
+
+/* ---------------- today's workout and quick tiles ---------------- */
+let workout = [];
+const AREA_ICON = { baseline: "read", review: "review", text: "read", listen: "listen", vocab: "words", grammar: "grammar" };
+function workoutCard() {
+  const fu = P.focusUnit();
+  workout = W.workoutPlan(history, fu, { level: me.level, baselineDone: me.baseline_done });
+  const n = workout.filter(i => i.done).length, next = workout.find(i => !i.done);
+  return `<div class="tcard workout"><div class="wo-head">${ringSVG(workout)}<div><p class="eyebrow">Today's workout</p>
+      <h3>${next ? "Strengthen your weakest areas" : "Workout complete!"}</h3>
+      <p class="note">${next ? `${n} of ${workout.length} done. Your weakest areas come first.` : "Great work. A new workout is ready tomorrow."}</p></div></div>
+    <ol class="wo-list">${workout.map(it => `<li class="${it.done ? "done" : it === next ? "next" : ""}">${I.tile(it.kind === "game" ? it.game : AREA_ICON[it.kind], "s")}
+      <span>${U.esc(it.label)}</span>${it.done ? `<span class="wo-tick" aria-label="done">${TICK}</span>` : ""}</li>`).join("")}</ol>
+    ${next ? `<button class="btn go" data-wo="${workout.indexOf(next)}">${n ? "Continue workout" : "Start workout"}</button>` : ""}</div>`;
+}
+function ringSVG(items) {
+  const n = items.length, gap = 16, seg = 360 / n, r = 42;
+  const pt = a => [50 + r * Math.sin(a * Math.PI / 180), 50 - r * Math.cos(a * Math.PI / 180)].map(v => v.toFixed(1)).join(" ");
+  const arcs = items.map((it, k) => { const a0 = k * seg + gap / 2, a1 = (k + 1) * seg - gap / 2;
+    return `<path d="M${pt(a0)} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${pt(a1)}"${it.done ? ' class="on"' : ""}/>`; }).join("");
+  return `<div class="ring"><svg viewBox="0 0 100 100" aria-hidden="true">${arcs}</svg>${I.tile("workout", "m")}</div>`;
+}
+function startWorkoutItem(it) {
+  if (!it) return;
+  const u = P.focusUnit();
+  if (it.kind === "baseline") return startBaseline();
+  if (it.kind === "review") return startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history }));
+  if (it.kind === "text") return startPractice(it.id);
+  if (it.kind === "listen") return startListening(it.id);
+  if (it.kind === "vocab") return startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history }));
+  if (it.kind === "grammar") return startPoint(it.point);
+  if (it.kind === "game") return startGame(it.game, u);
+}
+function quickTiles(due) {
+  const fu = P.focusUnit(), m = P.mission(fu, history), sc = W.areaScores(history, me.level).overall;
+  const best = Math.max(0, ...Object.keys(G.GAMES).map(g => G.bestScore(history, G.gameId(g, fu))));
+  const t = (href, ic, title, note) => `<a class="qtile" href="${href}">${I.tile(ic, "m")}<b>${title}</b><span class="note">${note}</span></a>`;
+  return `<div class="qtiles">${t(`#unit-${fu}`, I.unitIcon(fu), `Unit ${fu}`, `Mission ${m.steps.filter(x => x.done).length} of ${m.steps.length}`)}
+    ${t("#review", "review", "Review", due ? `${due} word${due > 1 ? "s" : ""} due` : "Nothing due")}
+    ${t("#games", "games", "Games", best ? `Best ${best} points` : "Play and practise")}
+    ${t("#me", "stats", "My stats", sc == null ? "Score: not yet" : `Score ${sc}`)}</div>`;
 }
 
 /* ---------------- units ---------------- */
@@ -184,52 +226,55 @@ function unitSections(u) {
   const vm = P.vocabMastery(u, history);
   const lists = VOCAB[u].map((l, i) => `List ${i + 1}: ${l.length} words`).join(" · ");
   const secs = [{ key: "mission", label: "Mission", html: missionHTML(u) }];
-  if (texts.length) secs.push({ key: "read", label: "Reading", html: `<div class="usec">${texts.map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${done.has(t.id) ? "Done before: half XP this time." : U.esc(t.blurb)}</span></div>
-        ${me.baseline_done ? `<button class="btn small" data-text="${t.id}">${done.has(t.id) ? "Read again" : "Read"}</button>` : `<span class="note">Take the baseline first</span>`}</div>`).join("")}</div>` });
-  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec">${listeningFor(u).map(t => `<div class="urow"><div><b>${U.esc(t.topic)}</b><br><span class="note">${U.esc(t.part)} · ${done.has(t.id) ? "Done before" : U.esc(t.blurb)}</span></div>
-        <button class="btn small" data-listen="${t.id}">${done.has(t.id) ? "Again" : "Listen"}</button></div>`).join("")}</div>` });
-  secs.push({ key: "words", label: "Words", html: `<div class="usec"><div class="urow"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
+  if (texts.length) secs.push({ key: "read", label: "Reading", html: `<div class="usec">${me.baseline_done ? "" : `<p class="note">Take the baseline on the Home page first. It sets your reading level.</p>`}
+      <div class="tiles">${texts.map(t => aTile("read", `data-text="${t.id}" ${me.baseline_done ? "" : "disabled"}`, t.topic, done.has(t.id) ? "Done before: half XP this time" : t.blurb, done.has(t.id))).join("")}</div></div>` });
+  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${listeningFor(u).map(t =>
+      aTile("listen", `data-listen="${t.id}"`, t.topic, `${t.part} · ${done.has(t.id) ? "Done before" : t.blurb}`, done.has(t.id))).join("")}</div></div>` });
+  secs.push({ key: "words", label: "Words", html: `<div class="usec"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
         <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
-      <button class="btn small" data-vocab="${u}">Practise 10 words</button></div>
-      <div class="row"><button class="btn small alt" data-cards="${u}">Word cards</button><button class="btn small alt" data-family="${u}">Word families</button></div></div>` });
+      <div class="tiles">${aTile("words", `data-vocab="${u}"`, "Practise 10 words", "Questions on the words you need most")}
+        ${aTile("cards", `data-cards="${u}"`, "Word cards", "Meet the words and hear them")}${aTile("family", `data-family="${u}"`, "Word families", "Choose the right form of the word")}</div></div>` });
   secs.push({ key: "grammar", label: "Grammar", html: `<div class="usec">${P.unitGrammar(u).map(g => { const m = P.grammarMastery(g.id, history);
-        return `<div class="urow"><div><b>${g.id} ${U.esc(g.title)}</b><br><span class="note">${g.code ? g.code + " · " : ""}${m == null ? "Not tried yet" : m + "% right first time"}</span></div>
+        return `<div class="urow">${I.tile("grammar", "s")}<div><b>${g.id} ${U.esc(g.title)}</b><br><span class="note">${g.code ? g.code + " · " : ""}${m == null ? "Not tried yet" : m + "% right first time"}</span></div>
           <button class="btn small alt" data-gram="${g.id}">Practise</button></div>`; }).join("")}
       <div class="row"><button class="btn small" data-gramunit="${u}">Mixed quiz: all of Unit ${u}</button></div></div>` });
   secs.push({ key: "games", label: "Games", html: gamesHTML(u) });
   return secs;
 }
-function gamesHTML(u) {
-  return `<div class="usec">${Object.entries(G.GAMES).filter(([g]) => g !== "speed" || G.speedTexts(u).length).map(([g, x]) => {
-        const best = G.bestScore(history, G.gameId(g, u)), locked = g === "speed" && !readTexts(u).length;
-        return `<div class="urow"><div><b>${x.name}</b><br><span class="note">${locked ? "Finish a reading text in this unit first. Speed Read uses the texts you have read." : U.esc(x.blurb)}${best ? ` Your best: ${best} points.` : ""}</span></div>
-          <button class="btn small" data-game="${g}" data-unit="${u}" ${locked ? "disabled" : ""}>Play</button></div>`; }).join("")}</div>`;
+// An activity tile: a coloured header with the icon, then the title and a short note. `attrs` makes it start the activity.
+function aTile(ic, attrs, title, note, done = false) {
+  return `<button class="atile" style="--hue:${I.hue(ic)}" ${attrs}><span class="ahead">${I.icon(ic, 34)}${done ? `<span class="adone" aria-label="done">${TICK}</span>` : ""}</span>
+    <span class="abody"><b>${U.esc(title)}</b><span class="note">${U.esc(note)}</span></span></button>`;
+}
+const GAME_GROUPS = [["Words", ["rain", "train"]], ["Reading", ["speed"]]];
+function gameTile(g, u) {
+  const x = G.GAMES[g], best = G.bestScore(history, G.gameId(g, u)), locked = g === "speed" && !readTexts(u).length;
+  return aTile(g, `data-game="${g}" data-unit="${u}" ${locked ? "disabled" : ""}`, x.name,
+    locked ? "Finish a reading text in this unit first" : best ? `Your best: ${best} points` : x.blurb);
+}
+function gamesHTML(u, grouped = false) {
+  const groups = GAME_GROUPS.map(([name, gs]) => [name, gs.filter(g => g !== "speed" || G.speedTexts(u).length)]).filter(([, gs]) => gs.length);
+  if (!grouped) return `<div class="usec"><div class="tiles">${groups.flatMap(([, gs]) => gs).map(g => gameTile(g, u)).join("")}</div></div>`;
+  return groups.map(([name, gs]) => `<h3 class="ghead">${name}</h3><div class="tiles">${gs.map(g => gameTile(g, u)).join("")}</div>`).join("");
 }
 const lastTab = {};
+const TAB_ICON = { mission: "mission", read: "read", listen: "listen", words: "words", grammar: "grammar", games: "games" };
 function unitCard(u, tab) {
   const secs = unitSections(u), cur = secs.find(x => x.key === tab) || secs[0], st = P.unitStatus(u);
   lastTab[u] = cur.key;
   return `<div class="tcard unit">
-    <div class="row" style="justify-content:space-between"><h3>${U.esc(P.unitTitle(u))}</h3><span class="chip ${STATUS[st][1]}">${STATUS[st][0]}</span></div>
-    <div class="utabs" role="tablist" aria-label="Unit ${u} sections">${secs.map(x => `<a role="tab" href="#unit-${u}/${x.key}" aria-selected="${x === cur}">${x.label}</a>`).join("")}</div>
+    <div class="row uhead">${I.tile(I.unitIcon(u), "m")}<h3>${U.esc(P.unitTitle(u))}</h3><span class="chip ${STATUS[st][1]}">${STATUS[st][0]}</span></div>
+    <div class="utabs" role="tablist" aria-label="Unit ${u} sections">${secs.map(x => `<a role="tab" href="#unit-${u}/${x.key}" aria-selected="${x === cur}">${I.icon(TAB_ICON[x.key], 16)}${x.label}</a>`).join("")}</div>
     <div role="tabpanel" aria-label="${cur.label}">${cur.html}</div></div>`;
 }
-// The home page shows a short card for this week's unit; the full unit is one tap away.
-function focusCard(u) {
-  const m = P.mission(u, history), n = m.steps.filter(s => s.done).length;
-  return `<div class="tcard"><div class="row" style="justify-content:space-between"><h3>${U.esc(P.unitTitle(u))}</h3><span class="chip hint">Now</span></div>
-    <div class="mbar" aria-hidden="true"><i style="width:${Math.round(100 * n / m.steps.length)}%"></i></div>
-    <p class="note">Mission: ${n} of ${m.steps.length} steps${m.complete ? ". Badge won!" : m.next ? `. Next: <b>${U.esc(m.next.label)}</b>` : ""}</p>
-    <div class="row">${m.next && !m.complete ? `<button class="btn" data-step="${m.next.key}" data-unit="${u}">${m.next.key === "boss" ? "Start the challenge" : "Next step"}</button>` : ""}
-      <a class="btn alt" href="#unit-${u}">Open Unit ${u}</a></div></div>`;
-}
 const TICK = `<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const STEP_ICON = { cards: "cards", read: "read", listen: "listen", vocab: "words", family: "family", grammar: "grammar", boss: "boss" };
 function missionHTML(u) {
   const m = P.mission(u, history), n = m.steps.filter(s => s.done).length;
   return `<div class="mission${m.complete ? " won" : ""}"><div class="row" style="justify-content:space-between"><p class="eyebrow">Unit ${u} mission · ${n} of ${m.steps.length} steps</p>
       ${m.complete ? `<span class="chip none">Badge won</span>` : ""}</div>
     <div class="mbar" aria-hidden="true"><i style="width:${Math.round(100 * n / m.steps.length)}%"></i></div>
-    <ol class="msteps">${m.steps.map((s, k) => `<li class="${s.done ? "done" : s.locked ? "locked" : m.next === s ? "next" : ""}"><span class="mdot">${s.done ? TICK : k + 1}</span>
+    <ol class="msteps">${m.steps.map((s, k) => `<li class="${s.done ? "done" : s.locked ? "locked" : m.next === s ? "next" : ""}"><span class="mico">${I.tile(STEP_ICON[s.key] || "mission", "s")}${s.done ? `<span class="mtick">${TICK}</span>` : ""}</span>
       <div><b>${U.esc(s.label)}</b><br><span class="note">${U.esc(s.detail)}</span></div>
       ${!s.done && !s.locked ? `<button class="btn small${m.next === s ? "" : " alt"}" data-step="${s.key}" data-unit="${u}">${s.key === "boss" ? "Start" : "Go"}</button>` : ""}</li>`).join("")}</ol>
     <p class="note">${m.complete ? `You won the <b>${U.esc(m.badge)}</b> badge.` : `Finish the final challenge to win the <b>${U.esc(m.badge)}</b> badge and +${P.BOSS_BONUS} XP.`}</p></div>`;
@@ -253,7 +298,7 @@ function pathHTML(fu) {
     const isNow = e === cur;
     if (e.kind !== "unit") return `<div class="pstep minor${isNow ? " now" : ""}"><span class="dot"></span><div><b>${U.esc(e.title)}</b> <span class="note">${e.weeks}</span></div></div>`;
     const vm = P.vocabMastery(e.unit, history), st = P.unitStatus(e.unit);
-    return `<a class="pstep ${st}${e.unit === fu ? " focus" : ""}" href="#unit-${e.unit}"><span class="dot">${e.unit}</span><div><b>${U.esc(UNITS[e.unit].title)}</b> <span class="note">${e.weeks}${isNow ? " · now" : ""}</span>
+    return `<a class="pstep ${st}${e.unit === fu ? " focus" : ""}" href="#unit-${e.unit}"><span class="dot">${I.icon(I.unitIcon(e.unit), 18)}</span><div><b>Unit ${e.unit}: ${U.esc(UNITS[e.unit].title)}</b> <span class="note">${e.weeks}${isNow ? " · now" : ""}</span>
       <br><span class="note">${vm.mastered}/${vm.total} words · ${P.unitGrammar(e.unit).length} grammar points</span></div></a>`;
   }).join("")}</div>`;
 }
@@ -283,7 +328,7 @@ function gamesView() {
   $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Games</p><h1>Play and practise</h1>
     <p class="lede">Games use the words and texts from the unit you choose. You can earn up to ${G.GAME_XP_DAY} XP a day from games.</p></div>
     <div class="tabs" role="tablist" aria-label="Unit">${SEQUENCE.filter(e => e.kind === "unit").map(e => `<button role="tab" aria-selected="${e.unit === u}" data-gu="${e.unit}">Unit ${e.unit}</button>`).join("")}</div>
-    <h2>${U.esc(P.unitTitle(u))}</h2>${gamesHTML(u)}</div>`;
+    <h2>${U.esc(P.unitTitle(u))}</h2>${gamesHTML(u, true)}</div>`;
   $app.querySelectorAll("[data-gu]").forEach(b => b.onclick = () => { gamesUnit = +b.dataset.gu; S.play("tap"); gamesView(); });
   bindActivities();
 }
@@ -784,7 +829,7 @@ function listenDone() {
 }
 
 /* ---------------- progress & leaderboard ---------------- */
-const meTabs = cur => `<div class="tabs" role="tablist">${[["me", "My progress"], ["leaderboard", "Leaderboard"], ["settings", "Settings"]]
+const meTabs = cur => `<div class="tabs" role="tablist">${[["me", "My stats"], ["leaderboard", "Leaderboard"], ["settings", "Settings"]]
   .map(([k, l]) => `<a role="tab" aria-selected="${k === cur}" href="#${k}">${l}</a>`).join("")}</div>`;
 const lookStats = () => ({ xp: me ? me.xp_total : 0, missionBadges: P.missionBadges(history).length });
 function settingsView() {
@@ -806,10 +851,28 @@ function settingsView() {
     <p class="note">Your settings are saved on this device and stay when you sign out.</p></div>`;
   $app.querySelectorAll("[data-look]").forEach(b => b.onclick = () => { L.setLook({ [b.dataset.look]: b.dataset.v }); S.play("tap"); settingsView(); });
 }
+const CHEV = `<svg class="chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>`;
+const AREA_LINK = { Reading: "read", Listening: "listen", Vocabulary: "words", Grammar: "grammar", Speed: "games" };
+function statsCard() {
+  const s = W.areaScores(history, me.level), fu = P.focusUnit();
+  const row = (label, score, detail, big = false) => `<details class="srow${big ? " big" : ""}"><summary><span class="sname">${label}</span>
+      <span class="sline"><span class="sbar"><i style="width:${score == null ? 0 : score / 10}%"></i></span><b>${score ?? "–"}</b></span>${CHEV}</summary><div class="sdet">${detail}</div></details>`;
+  const det = a => {
+    if (a.score == null) return `<p class="note">Answer at least ${W.MIN_ANSWERS} ${a.name === "Speed" ? "Speed Read questions" : "questions in this area"} to get a score.</p>${practise(a.name)}`;
+    const how = a.name === "Speed" ? `From your last ${a.n} Speed Read questions: ${a.right} right. Reading faster and getting them right raises this score.`
+      : `From your last ${a.n} answers: ${a.right} right first time.${a.name === "Reading" ? ` Your level (${U.levelName(me.level)}) counts too: moving up a level raises your score.` : ""}`;
+    return `<p class="note">${how}</p>${practise(a.name)}`;
+  };
+  const practise = name => (name === "Listening" && !listeningFor(fu).length) || (name === "Reading" && !PRACTICE_TEXTS.some(t => t.unitNo === fu)) ? ""
+    : `<a class="btn small alt" href="#unit-${fu}/${AREA_LINK[name]}">Practise ${name === "Speed" ? "with games" : name.toLowerCase()}</a>`;
+  return `<div class="scard"><div class="shead">${I.icon("workout", 18)}<span>Checkpoint score</span></div>
+    ${row("Overall", s.overall, `<p class="note">The average of your area scores. Each area is out of ${W.SCORE_MAX}.</p>`, true)}
+    ${s.areas.map(a => row(a.name, a.score, det(a))).join("")}</div>`;
+}
 function progressView() {
   $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Me</p><h1>${U.esc(me.name)}</h1></div>
-    ${meTabs("me")}
-    ${U.trackerHTML(history, me)}</div>`;
+    ${meTabs("me")}${statsCard()}
+    <h2>My progress</h2>${U.trackerHTML(history, me)}</div>`;
 }
 async function leaderboardView() {
   $app.innerHTML = `<div class="narrow"><p class="note">Loading the leaderboard…</p></div>`;
