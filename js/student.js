@@ -14,6 +14,7 @@ import * as G from "./games.js";
 import * as L from "./look.js";
 import * as I from "./icons.js";
 import * as W from "./workout.js";
+import * as M from "./minitests.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -50,7 +51,7 @@ const SOUND_OFF = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="
 function tick() {
   const el = document.getElementById("clock"); if (!el || !run) return;
   const s = Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
-  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12 }[run.kind];
+  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20 }[run.kind] || 15;
   el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${target}:00`;
   el.classList.toggle("over", s > target * 60);
 }
@@ -283,7 +284,17 @@ function missionHTML(u) {
     <ol class="msteps">${m.steps.map((s, k) => `<li class="${s.done ? "done" : s.locked ? "locked" : m.next === s ? "next" : ""}"><span class="mico">${I.tile(STEP_ICON[s.key] || "mission", "s")}${s.done ? `<span class="mtick">${TICK}</span>` : ""}</span>
       <div><b>${U.esc(s.label)}</b><br><span class="note">${U.esc(s.detail)}</span></div>
       ${!s.done && !s.locked ? `<button class="btn small${m.next === s ? "" : " alt"}" data-step="${s.key}" data-unit="${u}">${s.key === "boss" ? "Start" : "Go"}</button>` : ""}</li>`).join("")}</ol>
-    <p class="note">${m.complete ? `You won the <b>${U.esc(m.badge)}</b> badge.` : `Finish the final challenge to win the <b>${U.esc(m.badge)}</b> badge and +${P.BOSS_BONUS} XP.`}</p></div>`;
+    <p class="note">${m.complete ? `You won the <b>${U.esc(m.badge)}</b> badge.` : `Finish the final challenge to win the <b>${U.esc(m.badge)}</b> badge and +${P.BOSS_BONUS} XP.`}</p></div>
+    ${miniCard(u, m.complete)}`;
+}
+// The unit checkpoint: the gate on the Road to Checkpoint. Always open; best taken after the mission.
+function miniCard(u, missionDone) {
+  const T = M.MINI[u]; if (!T) return "";
+  const best = M.miniBest(u, history), passed = best != null && best >= M.MINI_PASS;
+  return `<div class="minicard${passed ? " won" : ""}">${I.tile("check", "m")}<div><p class="eyebrow">Unit checkpoint</p><b>${U.esc(T.title)}</b>
+      <p class="note">${passed ? `Passed with ${Math.round(best * 100)}%. The gate on your Road to Checkpoint is open.`
+        : `16 questions: reading, listening, vocabulary and grammar, with no hints. Score ${M.MINI_PASS * 100}% to open the gate on your Road to Checkpoint.${best != null ? ` Best so far ${Math.round(best * 100)}%.` : missionDone ? "" : " Best taken after the mission."}`}</p></div>
+    <button class="btn small${passed ? " alt" : ""}" data-mini="${u}">${passed ? "Try again" : best != null ? "Try again" : "Start"}</button></div>`;
 }
 function missionStep(key, u) {
   if (key === "cards") return startCards(u);
@@ -352,6 +363,7 @@ function bindActivities() {
     startSmall("vocab", `family-u${u}`, `Unit ${u} word families`, P.familySet(u)); });
   $app.querySelectorAll("[data-game]").forEach(btn => btn.onclick = () => startGame(btn.dataset.game, +btn.dataset.unit));
   $app.querySelectorAll("[data-step]").forEach(btn => btn.onclick = () => missionStep(btn.dataset.step, +btn.dataset.unit));
+  $app.querySelectorAll("[data-mini]").forEach(btn => btn.onclick = () => startMini(+btn.dataset.mini));
   $app.querySelectorAll("[data-gramunit]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.gramunit;
     startSmall("grammar", `grammar-u${u}`, `Unit ${u} grammar quiz`, P.grammarSet({ unit: u })); });
 }
@@ -722,7 +734,7 @@ function audio() {
   }
   return audioEl;
 }
-function stopAudio() { if (audioEl) { audioEl.pause(); segEnd = null; } }
+function stopAudio() { if (audioEl) { audioEl.pause(); segEnd = null; } if (miniAudio) miniAudio.pause(); }
 function playerUpdate() {
   const a = audioEl, btn = document.getElementById("lplay"); if (!a || !btn || !run || run.kind !== "listen") return;
   const playing = !a.paused && !a.seg, left = MAX_PLAYS - run.plays, full = !a.seg;
@@ -911,10 +923,11 @@ function startPractice(id) {
 }
 function runView() {
   header(); nav(null);
-  if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone()
+  if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "mini" ? miniDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone()
     : run.kind === "listen" ? listenDone() : run.kind === "game" ? gameDone() : practiceDone();
   if (run.kind === "game") return gameView();
   if (run.kind === "baseline") baselineView();
+  else if (run.kind === "mini") miniView();
   else if (run.kind === "small") smallView();
   else if (run.kind === "cards") cardsView();
   else if (run.kind === "listen") listenView();
@@ -934,6 +947,7 @@ function pausedRun() { const r = loadRun(); return r && r.pausedAt ? r : null; }
 function runName(r) {
   if (r.kind === "baseline") { const T = testOf(r.test); return `${T.id === "baseline" ? "Baseline reading" : T.title} (text ${r.part + 1} of ${T.passages.length})`; }
   if (r.kind === "small") return `${r.label} (question ${r.set.i + 1} of ${r.set.qs.length})`;
+  if (r.kind === "mini") return `${M.MINI[r.unit].title} (question ${r.qi + 1} of ${M.miniQuestions(r.unit).length})`;
   if (r.kind === "listen") return `Listening: ${LISTENING.find(t => t.id === r.id).topic}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
   return U.textTitle(r.textId);
@@ -1039,6 +1053,113 @@ function baselineDone() {
   document.getElementById("home").onclick = () => { run = null; saveRun(); location.hash = "#home"; route(); };
   saveAttempt({ mode: "baseline", text_id: T.id, level_start: 0, level_end: R.level, next_level: R.next, score: R.score, max_score: R.max,
                 xp: R.xp, seconds: R.seconds, answers: run.answers });
+}
+
+/* ---- unit checkpoint mini tests ---- */
+// Four parts, no hints, one answer per question. Listening: all four questions on one page, the recording plays twice.
+let miniAudio = null, miniAudioFor = null;
+function startMini(u) {
+  run = { kind: "mini", unit: u, phase: "read", qi: 0, answers: [], plays: 0, lpick: {}, t0: Date.now(), readStart: Date.now(), orders: {}, pick: null };
+  saveRun(); route(); top();
+}
+function miniHead(T, q, Q) {
+  const k = M.PARTS.findIndex(p => p[0] === q.part);
+  return `<div class="progress">${Q.map((_, i) => `<i class="${i < run.qi ? "ok" : i === run.qi || (q.part === "listening" && Q[i].part === "listening") ? "cur" : ""}"></i>`).join("")}</div>
+    <p class="eyebrow">${U.esc(T.title)} · Part ${k + 1} of ${M.PARTS.length}: ${M.PARTS[k][1]}</p>`;
+}
+function miniView() {
+  const T = M.MINI[run.unit], Q = M.miniQuestions(run.unit), q = Q[run.qi];
+  if (q.part === "reading" && run.phase === "read") {
+    $app.innerHTML = `<div class="narrow pop">${miniHead(T, q, Q)}
+      ${run.qi === 0 ? `<div class="panel"><p style="margin:0"><b>${Q.length} questions in ${M.PARTS.length} parts:</b> reading, listening, vocabulary and grammar. There are no hints, like the real Checkpoint test. Score ${M.MINI_PASS * 100}% or more (${Math.ceil(M.MINI_PASS * Q.length)} of ${Q.length}) to pass.</p></div>` : ""}
+      ${U.textHTML(T.reading)}<div class="row"><button class="btn" id="go">Start the questions</button></div></div>`;
+    readGate(T.reading.paras, () => { run.phase = "q"; saveRun(); runView(); top(); }, "Start the questions");
+    return;
+  }
+  if (q.part === "listening") return miniListenView(T, Q);
+  const ord = order("m" + run.qi, q.opts.length), last = run.qi === Q.length - 1;
+  $app.innerHTML = `<div class="${q.part === "reading" ? "qgrid" : "narrow"}"><div class="qcol">${miniHead(T, q, Q)}
+      <div class="qcard pop"><div class="qhead"><span class="tag">${U.esc(q.skill)}</span><span class="qnum">Question ${run.qi + 1} of ${Q.length}</span></div>
+      <p class="stem">${stemHTML(q.stem)}</p>${optsHTML(q, ord)}
+      <div class="row"><button class="btn" id="next" ${run.pick === null ? "disabled" : ""}>${last ? "Finish" : "Next"}</button></div></div></div>
+    ${q.part === "reading" ? `<div class="textcol"><details id="tx"><summary>Read the text again</summary>${U.textHTML(T.reading)}</details></div>` : ""}</div>`;
+  const tx = document.getElementById("tx"); if (tx && matchMedia("(min-width:900px)").matches) tx.open = true;
+  bindOpts(miniView);
+  document.getElementById("next").onclick = () => { miniAnswer(q, run.pick === 0); run.pick = null; miniNext(Q); };
+}
+function miniAnswer(q, right) {
+  const a = { skill: q.skill, part: q.part, first_try: right, support: "none" };
+  if (q.word) { a.word = q.word; a.unit = q.unit; }
+  if (q.point) a.point = q.point;
+  run.answers.push(a);
+}
+function miniNext(Q) {
+  run.qi++;
+  if (run.qi >= Q.length) { saveRun(); return finishMini(); }
+  saveRun(); runView(); top();
+}
+function miniPlayer() {
+  const T = M.MINI[run.unit];
+  if (!miniAudio || miniAudioFor !== T.listening.id) {
+    if (miniAudio) miniAudio.pause();
+    miniAudio = new Audio(`audio/listening/${T.listening.id}.mp3`); miniAudioFor = T.listening.id; miniAudio.preload = "auto";
+    const upd = () => miniPlayerUpdate();
+    miniAudio.addEventListener("timeupdate", upd); miniAudio.addEventListener("play", upd); miniAudio.addEventListener("pause", upd);
+    miniAudio.addEventListener("ended", () => { if (run && run.kind === "mini") { run.plays++; saveRun(); } miniPlayerUpdate(); });
+  }
+  return miniAudio;
+}
+function miniPlayerUpdate() {
+  const a = miniAudio, btn = document.getElementById("mplay"); if (!a || !btn || !run || run.kind !== "mini") return;
+  const left = MAX_PLAYS - run.plays, playing = !a.paused;
+  const bar = document.getElementById("mbar"); if (bar && a.duration) bar.style.width = `${Math.min(100, 100 * a.currentTime / a.duration)}%`;
+  btn.disabled = !playing && left <= 0;
+  btn.innerHTML = `${SPEAKER} ${playing ? "Pause" : a.currentTime > 0 && !a.ended ? "Continue" : left > 0 ? `Play the recording (${left} ${left === 1 ? "play" : "plays"} left)` : "No plays left"}`;
+}
+function miniListenView(T, Q) {
+  const first = Q.findIndex(x => x.part === "listening"), qs = Q.filter(x => x.part === "listening");
+  const all = qs.every((_, k) => run.lpick[k] != null);
+  $app.innerHTML = `<div class="narrow pop">${miniHead(T, qs[0], Q)}
+    <div class="panel"><p style="margin:0">${U.esc(M.MINI_LISTENING.find(l => l.id === T.listening.id).lines[0][1])} You can play the recording twice. Read the questions first.</p>
+      <div class="player" style="margin-top:10px"><button class="btn" id="mplay"></button><div class="lmeta"><div class="bar" aria-hidden="true"><i id="mbar" style="width:0;background:var(--teal)"></i></div></div></div></div>
+    ${qs.map((q, k) => { const ord = order("l" + k, q.opts.length);
+      return `<div class="qcard"><div class="qhead"><span class="tag">Listening</span><span class="qnum">Question ${first + k + 1} of ${Q.length}</span></div>
+        <p class="stem">${U.esc(q.stem)}</p><div class="opts" role="radiogroup">${ord.map((oi, n) => `<button class="opt${run.lpick[k] === oi ? " sel" : ""}" data-lq="${k}" data-o="${oi}" role="radio" aria-checked="${run.lpick[k] === oi}"><span class="k">${"ABCD"[n]}</span><span>${U.esc(q.opts[oi])}</span></button>`).join("")}</div></div>`; }).join("")}
+    <div class="row"><button class="btn" id="next" ${all ? "" : "disabled"}>Next part</button></div></div>`;
+  miniPlayer(); miniPlayerUpdate();
+  document.getElementById("mplay").onclick = () => { const a = miniPlayer(); if (!a.paused) a.pause(); else if (MAX_PLAYS - run.plays > 0) { if (a.ended) a.currentTime = 0; a.play(); } };
+  $app.querySelectorAll("[data-lq]").forEach(b => b.onclick = () => {
+    const k = +b.dataset.lq; run.lpick[k] = +b.dataset.o; S.play("tap"); saveRun();
+    $app.querySelectorAll(`[data-lq="${k}"]`).forEach(x => { const on = +x.dataset.o === run.lpick[k]; x.classList.toggle("sel", on); x.setAttribute("aria-checked", on); });
+    document.getElementById("next").disabled = !qs.every((_, j) => run.lpick[j] != null);
+  });
+  document.getElementById("next").onclick = () => {
+    stopAudio(); qs.forEach((q, k) => miniAnswer(q, run.lpick[k] === 0));
+    run.qi = first + qs.length - 1; run.lpick = {}; miniNext(Q);
+  };
+}
+function finishMini() {
+  const u = run.unit, Q = M.miniQuestions(u), score = run.answers.filter(a => a.first_try).length, max = Q.length;
+  run.result = { score, max, passed: score / max >= M.MINI_PASS, xp: M.miniXP(score, max, history, u), seconds: Math.round((Date.now() - run.t0) / 1000),
+                 parts: M.PARTS.map(([k, name]) => { const a = run.answers.filter(x => x.part === k); return { name, right: a.filter(x => x.first_try).length, total: a.length }; }) };
+  run.phase = "done"; S.play(run.result.passed ? "level" : "done"); saveRun(); runView(); top();
+}
+function miniDone() {
+  const R = run.result, T = M.MINI[run.unit];
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">${U.esc(T.title)}</p>
+    <h1>${R.passed ? "Checkpoint passed!" : "Not passed yet"}</h1>
+    ${R.passed ? `<div class="lvlup pop">${I.tile("check", "m")}<div><b>The Unit ${run.unit} gate is open.</b><p>You scored ${Math.round(100 * R.score / R.max)}%. Your Road to Checkpoint moves on to the next unit.</p></div></div>`
+      : `<div class="fb info"><p>You scored ${R.score} out of ${R.max}. You need ${Math.ceil(M.MINI_PASS * R.max)} to pass. Practise the part with the lowest score, then try again.</p></div>`}
+    <div class="stats"><div class="stat"><b>${R.score}/${R.max}</b><span>score</span></div><div class="stat gold"><b>+${R.xp}</b><span>XP</span></div>
+      <div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
+    <div class="parts">${R.parts.map(p => `<div class="part"><b>${p.right}/${p.total}</b><span>${p.name}</span><div class="bar"><i class="${p.right / p.total < 0.5 ? "low" : ""}" style="width:${100 * p.right / p.total}%"></i></div></div>`).join("")}</div>
+    <div class="tbl"><table><thead><tr><th>#</th><th>Part</th><th>Skill</th><th>Result</th></tr></thead><tbody>${run.answers.map((a, i) => `<tr><td>${i + 1}</td><td>${M.PARTS.find(p => p[0] === a.part)[1]}</td><td>${U.esc(a.skill === "Vocabulary" ? a.word : a.skill === "Grammar" ? (P.grammarPoint(a.point) || {}).title || "Grammar" : a.skill)}</td><td>${a.first_try ? `<span class="chip none">Right</span>` : `<span class="chip explained">Wrong</span>`}</td></tr>`).join("")}</tbody></table></div>
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row"><button class="btn" id="road">See my Road to Checkpoint</button><button class="btn alt" id="home">Back to home</button></div></div>`;
+  const leave = h => { run = null; saveRun(); location.hash = h; route(); top(); };
+  document.getElementById("home").onclick = () => leave("#home");
+  document.getElementById("road").onclick = () => leave("#me");
+  saveAttempt({ mode: "vocab", text_id: T.id, score: R.score, max_score: R.max, xp: R.xp, seconds: R.seconds, answers: run.answers });
 }
 
 /* ---- practice ---- */
