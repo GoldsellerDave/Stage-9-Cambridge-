@@ -712,3 +712,30 @@ tr.flagged td{background:var(--bad-bg)}
 .lvguard{align-self:flex-start;padding:8px 16px;border-radius:12px;background:var(--navy);color:var(--on-dark);font-size:1.3em}
 .lvguard b{font-family:ui-monospace,Menlo,Consolas,monospace} .lvguard.near{background:#8E2C1B}
 @media (max-width:600px){ .lvteam{grid-template-columns:2.2em 1fr auto;font-size:1em} .lvrooms{grid-column:2/4} }
+/* Listening Lab */
+.labteach h2{margin:4px 0 8px} .labteach p{margin:.4em 0}
+.labeg{margin-top:10px;padding:12px 14px;border-radius:12px;background:var(--card);border-left:4px solid var(--teal)}
+.labeg .stem{margin:0} .egrow{margin:.3em 0;font-family:var(--f-text)} .egrow .chip{font-family:var(--f-body);margin-right:6px}
+.labdots{display:flex;gap:6px;margin:4px 0 10px} .labdots i{flex:1;max-width:46px;height:8px;border-radius:4px;background:var(--line)}
+.labdots i.done{background:var(--teal)} .labdots i.now{background:var(--gold)}
+.kw{font:inherit;font-family:var(--f-text);font-size:1.05em;padding:2px 4px;margin:2px 0;border:0;border-bottom:3px solid transparent;border-radius:6px 6px 0 0;background:var(--card);color:var(--ink);cursor:pointer}
+.kw.on{background:var(--mark);border-bottom-color:var(--orange)}
+.kw.key{background:var(--mark);border-bottom-color:var(--teal);font-weight:700;cursor:default} .kw.extra{text-decoration:line-through;opacity:.6}
+.kw:disabled{cursor:default;color:var(--ink);opacity:1} .kw.extra:disabled{opacity:.6}
+.labeg .kw{background:transparent} .labeg .kw.key{background:var(--mark)}
+.chips-row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.pick{font:inherit;font-weight:600;padding:10px 14px;border:2px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);cursor:pointer}
+.pick.on{border-color:var(--teal);background:var(--mint)} .pick.right{border-color:var(--ok-line);background:var(--ok-bg)} .pick.wrong{border-color:var(--bad-line);background:var(--bad-bg)}
+.pick:disabled{cursor:default;color:var(--ink)}
+.labplayer{margin:8px 0 12px;flex-wrap:wrap}
+.ltrans p{font-family:var(--f-text);margin:.4em 0}
+mark.lkey{background:var(--ok-bg);color:var(--ok);font-weight:700;border-bottom:2px solid var(--ok);padding:0 2px;border-radius:3px}
+mark.ltrap{background:var(--peach);color:var(--orange);font-weight:700;border-bottom:2px dashed var(--orange);padding:0 2px;border-radius:3px}
+.ltrans .legend{font-family:var(--f-body)} .trapnotes{margin:6px 0 0;padding-left:1.2em} .trapnotes li{margin:.2em 0}
+.traptip{margin:.4em 0 0}
+.traps{display:flex;flex-direction:column;gap:8px}
+.trap{display:grid;grid-template-columns:9.5em 1fr auto auto;gap:10px;align-items:center}
+.trap .sbar i{background:linear-gradient(90deg,#F0A07A,var(--orange))} .trap.weak .tname{color:var(--orange);font-weight:700}
+@media (max-width:480px){ .trap{grid-template-columns:1fr auto;gap:4px 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+  .trap .tname{grid-column:1;grid-row:1} .trap .note{grid-column:2;grid-row:1;text-align:right}
+  .trap .sbar{grid-column:1;grid-row:2;align-self:center} .trap .btn{grid-column:2;grid-row:2} }

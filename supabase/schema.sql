@@ -245,7 +245,12 @@ begin
       (select coalesce(json_object_agg(skill, json_build_object('right', r_, 'total', t_)), '{}'::json) from (
          select e->>'skill' as skill, count(*) filter (where (e->>'first_try')::boolean) as r_, count(*) as t_
            from ck_attempts a, jsonb_array_elements(a.answers) e
-          where a.student_id = st.id group by 1) k) as skills
+          where a.student_id = st.id group by 1) k) as skills,
+      -- Listening traps (Listening Lab): how often each examiner's trick caught the student
+      (select coalesce(json_object_agg(trap, json_build_object('caught', c_, 'total', t_)), '{}'::json) from (
+         select e->>'trap' as trap, count(*) filter (where not coalesce((e->>'first_try')::boolean, false)) as c_, count(*) as t_
+           from ck_attempts a, jsonb_array_elements(a.answers) e
+          where a.student_id = st.id and e->>'skill' = 'Listening' and e->>'trap' is not null group by 1) k2) as traps
     from ck_students st where st.class_code = p_class and st.role = 'student') r), '[]'::json);
 end $$;
 

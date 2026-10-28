@@ -3,6 +3,7 @@
 import { api, LIVE, getSession, setSession } from "./api.js";
 import * as U from "./ui.js";
 import { ESCAPES, GUARD_SECONDS } from "./escape.js";
+import { TRAPS } from "./lab.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -103,6 +104,14 @@ function draw() {
           return p == null ? `<td class="h hn"></td>` : `<td class="h h${p < 40 ? 0 : p < 60 ? 1 : p < 80 ? 2 : 3}">${p}%</td>`; }).join("")}</tr>`).join("")
       }</tbody><tfoot><tr><th>Class</th>${U.SKILLS.map(s => { let rt = 0, tt = 0; rows.forEach(r => { const k = (r.skills || {})[s]; if (k) { rt += k.right; tt += k.total; } });
           return `<th class="num">${tt ? Math.round(100 * rt / tt) + "%" : "–"}</th>`; }).join("")}</tr></tfoot></table></div>`;
+    // Listening traps: the share of trap questions that caught each student (higher is worse, so the colours are reversed).
+    const TK = Object.keys(TRAPS).filter(k => k !== "prime");
+    if (rows.some(r => r.traps && Object.keys(r.traps).length)) h += `<h3>Listening traps</h3>
+      <p class="lede">How often each examiner's trick caught the student (listening questions not right first time). The Listening Lab has a mission for each one.</p>
+      <div class="tbl"><table class="heat"><thead><tr><th>Student</th>${TK.map(k => `<th class="num">${U.esc(TRAPS[k].name)}</th>`).join("")}</tr></thead><tbody>${
+        rows.map(r => `<tr><td>${U.esc(r.name)}</td>${TK.map(k => { const t = (r.traps || {})[k]; if (!t || !t.total) return `<td class="h hn"></td>`;
+          const p = Math.round(100 * t.caught / t.total); return `<td class="h h${p >= 60 ? 0 : p >= 40 ? 1 : p >= 20 ? 2 : 3}" title="caught ${t.caught} of ${t.total}">${p}%</td>`; }).join("")}</tr>`).join("")
+      }</tbody></table></div>`;
   } else if (tab === "manage") {
     h += manageHTML();
   } else if (tab === "live") {

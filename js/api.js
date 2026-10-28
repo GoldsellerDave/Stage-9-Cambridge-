@@ -181,9 +181,11 @@ const demo = {
     return later(db.students.filter(s => s.class_code === c && s.role === "student").map(s => {
       const h = hist(db, s.id), b = h.filter(a => a.mode === "baseline"), skills = {};
       h.forEach(a => (a.answers || []).forEach(x => { const k = skills[x.skill] = skills[x.skill] || { right: 0, total: 0 }; k.total++; if (x.first_try) k.right++; }));
+      const traps = {}; h.forEach(a => (a.answers || []).forEach(x => { if (x.skill !== "Listening" || !x.trap) return;
+        const k = traps[x.trap] = traps[x.trap] || { caught: 0, total: 0 }; k.total++; if (!x.first_try) k.caught++; }));
       return { id: s.id, name: s.display_name, username: s.username, level: s.level, xp_total: s.xp_total, xp_week: xpSince(db, s.id, ws),
         texts_done: h.filter(a => a.mode === "practice").length, baseline_first: b[0] ? pc(b[0]) : null,
-        baseline_latest: b.length ? pc(b[b.length - 1]) : null, last_active: h.length ? h[h.length - 1].created_at : null, skills };
+        baseline_latest: b.length ? pc(b[b.length - 1]) : null, last_active: h.length ? h[h.length - 1].created_at : null, skills, traps };
     }));
   },
   async teacherStudent(t, id) {
