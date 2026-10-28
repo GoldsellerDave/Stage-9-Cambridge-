@@ -46,3 +46,7 @@ Only the question, the paragraph, the mark scheme and the answer are sent, never
 ## How the data is protected
 
 The website never reads tables directly. Every request goes through `ck_*` functions that check the sign-in token, so students only see their own history and their own class leaderboard. Five wrong PINs lock an account for 5 minutes.
+
+## Updates reach devices straight away
+
+GitHub Pages lets browsers keep files for 10 minutes. After changing anything in `js/` or `assets/style.css`, run `python3 tools/stamp.py` before committing: it adds a version (`?v=` + content hash) to every module and the stylesheet in `index.html` and `teacher.html`, so phones and tablets load the new files at once.
