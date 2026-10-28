@@ -1,7 +1,7 @@
 // How the site looks for each student: light or dark, colour theme, text size, easy-read font, paper background.
-// Kept on this device for each student (like the sound setting) and applied as data- attributes on <html>.
+// Kept on this device (students use their own phones), applied as data- attributes on <html>, and kept after signing out.
 let who = "";
-const KEY = () => "ckpt-look-" + who;
+const KEY = "ckpt-look", OLD_KEY = () => "ckpt-look-" + who;   // older versions saved one copy per username
 export const DEFAULT_LOOK = { mode: "auto", theme: "ocean", size: "m", font: "normal", paper: "off" };
 
 // Some themes unlock as rewards. `need` says how, for the lock message.
@@ -17,11 +17,11 @@ export const themeOpen = (t, stats) => !t.ok || t.ok(stats);
 
 export function lookUser(username) { who = username || ""; }
 export function getLook() {
-  try { return { ...DEFAULT_LOOK, ...(JSON.parse(localStorage.getItem(KEY())) || {}) }; } catch (e) { return { ...DEFAULT_LOOK }; }
+  try { return { ...DEFAULT_LOOK, ...(JSON.parse(localStorage.getItem(KEY) || localStorage.getItem(OLD_KEY())) || {}) }; } catch (e) { return { ...DEFAULT_LOOK }; }
 }
 export function setLook(change) {
   const l = { ...getLook(), ...change };
-  try { localStorage.setItem(KEY(), JSON.stringify(l)); } catch (e) {}
+  try { localStorage.setItem(KEY, JSON.stringify(l)); } catch (e) {}
   applyLook(l);
   return l;
 }
@@ -32,4 +32,3 @@ export function applyLook(l = getLook(), stats = null) {
   const set = (k, v, def) => v === def ? root.removeAttribute("data-" + k) : root.setAttribute("data-" + k, v);
   set("mode", l.mode, "auto"); set("theme", theme, "ocean"); set("size", l.size, "m"); set("font", l.font, "normal"); set("paper", l.paper, "off");
 }
-export function clearLook() { ["mode", "theme", "size", "font", "paper"].forEach(k => document.documentElement.removeAttribute("data-" + k)); }

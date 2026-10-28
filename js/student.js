@@ -13,6 +13,7 @@ import * as G from "./games.js";
 import * as L from "./look.js";
 
 const $app = document.getElementById("app");
+L.applyLook();                 // the device's look, also on the sign-in page
 const $meta = document.getElementById("meta");
 let session = getSession();
 let me = null, history = [];
@@ -79,7 +80,7 @@ function nav(view) {
 
 /* ---------------- sign in ---------------- */
 function loginView(msg) {
-  header(); nav(null); L.clearLook();
+  header(); nav(null);
   $app.innerHTML = `<div class="narrow pop">
     <div class="hero"><p class="eyebrow">Stage 9 · Checkpoint English</p><h1>Read, learn words, practise grammar and level up</h1>
     <p class="lede">Sign in with the username and PIN your teacher gave you.</p></div>
@@ -802,7 +803,7 @@ function settingsView() {
     <div class="panel"><h3>Reading texts</h3>${seg("paper", [["off", "White page"], ["on", "Paper"]])}
       <p class="note">Paper puts the reading texts on a soft cream page, which some people find easier on the eyes.</p></div>
     <div class="text"><h2>A sample paragraph</h2><p>Teenagers need between eight and ten hours of sleep a night, but most get around seven. This is how reading texts will look.</p></div>
-    <p class="note">Your settings are saved on this device.</p></div>`;
+    <p class="note">Your settings are saved on this device and stay when you sign out.</p></div>`;
   $app.querySelectorAll("[data-look]").forEach(b => b.onclick = () => { L.setLook({ [b.dataset.look]: b.dataset.v }); S.play("tap"); settingsView(); });
 }
 function progressView() {
