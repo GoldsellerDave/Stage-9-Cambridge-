@@ -450,6 +450,112 @@ begin
   update ck_classes set teacher_id = p_teacher where code = p_class;
 end $$;
 
+/* ---------------- live escape room (team mode) ---------------- */
+-- The teacher opens a game for a class and gets a 4-digit code. Teams join on one device each (signed in as one of
+-- the team), wait, and all start together when the teacher presses Start. The board shows each team's room and time.
+-- Everyone gets the same puzzles (made from the seed). Times are worked out on the server, so device clocks don't matter.
+create table if not exists ck_live (
+  id          bigint generated always as identity primary key,
+  code        text not null,
+  class_code  text not null,
+  unit        smallint not null,
+  teacher_id  uuid references ck_students(id) on delete cascade,
+  status      text not null default 'waiting' check (status in ('waiting', 'playing', 'ended')),
+  seed        integer not null,
+  started_at  timestamptz,
+  created_at  timestamptz not null default now()
+);
+create unique index if not exists ck_live_open_code on ck_live(code) where status <> 'ended';
+create table if not exists ck_live_teams (
+  live_id     bigint not null references ck_live(id) on delete cascade,
+  team        text not null,
+  student_id  uuid references ck_students(id) on delete set null,
+  room        smallint not null default 0,
+  solved      smallint not null default 0,
+  penalty     integer not null default 0,
+  seconds     integer,
+  finished_at timestamptz,
+  updated_at  timestamptz not null default now(),
+  primary key (live_id, team)
+);
+alter table ck_live enable row level security;
+alter table ck_live_teams enable row level security;
+revoke all on ck_live, ck_live_teams from anon, authenticated;
+
+create or replace function ck_live_start(p_token uuid, p_class text, p_unit int) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_class(p_token, p_class); v_code text; v_seed int := floor(random() * 2000000000)::int;
+begin
+  update ck_live set status = 'ended' where teacher_id = s.id and status <> 'ended';
+  loop
+    v_code := lpad(floor(1000 + random() * 9000)::int::text, 4, '0');
+    exit when not exists(select 1 from ck_live where code = v_code and status <> 'ended');
+  end loop;
+  insert into ck_live(code, class_code, unit, teacher_id, seed) values (v_code, p_class, p_unit, s.id, v_seed);
+  return json_build_object('code', v_code);
+end $$;
+
+create or replace function ck_live_control(p_token uuid, p_code text, p_action text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token);
+begin
+  if p_action = 'start' then
+    update ck_live set status = 'playing', started_at = now() where code = p_code and teacher_id = s.id and status = 'waiting';
+  elsif p_action = 'end' then
+    update ck_live set status = 'ended' where code = p_code and teacher_id = s.id and status <> 'ended';
+  else raise exception 'Unknown action.'; end if;
+end $$;
+
+create or replace function ck_live_board(p_token uuid, p_code text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token); l ck_live;
+begin
+  select * into l from ck_live where code = p_code and teacher_id = s.id order by id desc limit 1;
+  if l.id is null then raise exception 'Game not found.'; end if;
+  return json_build_object('code', l.code, 'unit', l.unit, 'class_code', l.class_code, 'status', l.status,
+    'elapsed', case when l.started_at is null then 0 else extract(epoch from now() - l.started_at)::int end,
+    'teams', coalesce((select json_agg(r order by r.finished is null, r.seconds, r.room desc, r.solved desc, r.team) from (
+       select t.team, t.room, t.solved, t.penalty, t.seconds, t.finished_at as finished, st.display_name as device
+         from ck_live_teams t left join ck_students st on st.id = t.student_id where t.live_id = l.id) r), '[]'::json));
+end $$;
+
+-- What a team device needs: the game (unit and seed), whether it has started, and the server's clock.
+create or replace function ck_live_join(p_token uuid, p_code text, p_team text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_auth(p_token); l ck_live; v_team text := left(trim(coalesce(p_team, '')), 24);
+begin
+  select * into l from ck_live where code = trim(p_code) and status <> 'ended';
+  if l.id is null then raise exception 'No game with that code. Check the code on the board.'; end if;
+  if s.role = 'student' and s.class_code <> l.class_code then raise exception 'That game is for another class.'; end if;
+  if v_team <> '' then
+    insert into ck_live_teams(live_id, team, student_id) values (l.id, v_team, s.id)
+    on conflict (live_id, team) do update set student_id = excluded.student_id
+      where ck_live_teams.student_id = excluded.student_id or ck_live_teams.student_id is null;
+    if not exists(select 1 from ck_live_teams where live_id = l.id and team = v_team and student_id = s.id) then
+      raise exception 'Another device already uses that team name. Choose a different one.';
+    end if;
+  end if;
+  return json_build_object('code', l.code, 'unit', l.unit, 'seed', l.seed, 'status', l.status,
+    'elapsed', case when l.started_at is null then 0 else extract(epoch from now() - l.started_at) end);
+end $$;
+
+create or replace function ck_live_progress(p_token uuid, p_code text, p_team text, p_room int, p_solved int, p_penalty int, p_out boolean)
+returns json language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_auth(p_token); l ck_live; v_secs int;
+begin
+  select * into l from ck_live where code = trim(p_code) and status = 'playing';
+  if l.id is null then return json_build_object('status', 'ended'); end if;
+  v_secs := extract(epoch from now() - l.started_at)::int + greatest(coalesce(p_penalty, 0), 0);
+  update ck_live_teams set room = least(greatest(p_room, 0), 9), solved = least(greatest(p_solved, 0), 30),
+         penalty = greatest(coalesce(p_penalty, 0), 0), updated_at = now(),
+         seconds = case when p_out and finished_at is null then v_secs else seconds end,
+         finished_at = case when p_out and finished_at is null then now() else finished_at end
+   where live_id = l.id and team = p_team and student_id = s.id;
+  return json_build_object('status', l.status, 'seconds', v_secs,
+    'place', (select count(*) + 1 from ck_live_teams t where t.live_id = l.id and t.finished_at is not null
+               and t.seconds < (select seconds from ck_live_teams where live_id = l.id and team = p_team)));
+end $$;
+
 -- Only the public entry points can be called from the website.
 revoke execute on function ck_auth(uuid), ck_require_teacher(uuid), ck_require_class(uuid, text), ck_require_student_of(uuid, uuid),
   ck_require_admin(uuid), ck_can_see(ck_students, text), ck_new_pin(), ck_new_password() from public, anon, authenticated;
@@ -460,5 +566,6 @@ grant execute on function ck_login(text, text), ck_logout(uuid), ck_me(uuid), ck
   ck_teacher_add_students(uuid, text, jsonb), ck_teacher_new_pins(uuid, text), ck_teacher_remove_student(uuid, uuid),
   ck_teacher_delete_class(uuid, text), ck_set_password(uuid, text, text), ck_admin_teachers(uuid),
   ck_admin_add_teacher(uuid, text, text), ck_admin_reset_teacher(uuid, uuid), ck_admin_remove_teacher(uuid, uuid),
-  ck_admin_move_class(uuid, text, uuid)
+  ck_admin_move_class(uuid, text, uuid), ck_live_start(uuid, text, int), ck_live_control(uuid, text, text),
+  ck_live_board(uuid, text), ck_live_join(uuid, text, text), ck_live_progress(uuid, text, text, int, int, int, boolean)
   to anon;
