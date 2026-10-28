@@ -10,7 +10,8 @@ test("a Unit 3 game has three rooms of three puzzles, each with the answer among
     assert.equal(g.rooms.length, 3);
     g.rooms.forEach(r => { assert.equal(r.puzzles.length, 3); assert.equal(r.code.length, 3);
       r.puzzles.forEach((p, i) => { assert.ok(p.opts.includes(p.answer)); assert.equal(new Set(p.opts).size, p.opts.length); assert.equal(p.gives, r.code[i]); }); });
-    // the safe opens with the reading answers
+    // the padlock is the first letters of the words; the safe opens with the reading answers
+    assert.deepEqual(g.rooms[0].code, g.rooms[0].puzzles.map(p => p.answer[0].toUpperCase()));
     assert.deepEqual(g.rooms[1].code, g.rooms[1].puzzles.map(p => p.answer));
   }
 });

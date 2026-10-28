@@ -18,13 +18,13 @@ export const ESCAPES = {
     story: "Your class visited the Riverside Heritage Museum. You stayed behind to finish your worksheet… and the guard locked up and went home! Find the codes to get out.",
     rooms: [
       { name: "The ticket hall", kind: "vocab", lock: "letters",
-        scene: "The lights are off. The front door is locked with a letter padlock. Three things catch your eye.",
+        scene: "The lights are off. The front door has a letter padlock. Search the three places: the code is the first letter of each word you find, in order (shop, box, desk).",
         objects: ["Souvenir shop", "Lost property box", "Guide's desk"] },
       { name: "The gallery", kind: "reading", lock: "digits",
         scene: "A safe by the stairs has a number lock. Someone left a visitor leaflet on the bench. The answers to the questions will open the safe.",
         objects: ["Visitor leaflet: question 1", "Visitor leaflet: question 2", "Visitor leaflet: question 3"] },
       { name: "The storeroom", kind: "grammar", lock: "digits",
-        scene: "The back door to the street! Its keypad is covered in notes with mistakes. Fix them to find the numbers.",
+        scene: "The back door to the street! Its keypad is covered in notes with mistakes. Each note you fix shows one number of the code.",
         objects: ["Note on the shelf", "Label on a crate", "Message on the wall"] }
     ],
     doc: { title: "Riverside Heritage Museum: visitor information", paras: [
@@ -60,7 +60,6 @@ export function seededRandom(seed) {
 }
 export const solvedCount = play => play.solved.flat().filter(Boolean).length;
 
-const LETTER_CODES = ["MAP", "KEY", "SUN", "BUS", "SEA", "TEA", "BOX", "FAN", "JAR", "CUP", "OWL", "HAT"];
 function shuffle(a, rnd) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 const firstSentence = t => (t.match(/^.*?[.!?](\s|$)/) || [t])[0].trim();
 
@@ -102,7 +101,8 @@ export function makeEscape(unit, tier = 0, rnd = Math.random) {
   const E = ESCAPES[unit]; if (!E) return null;
   const rooms = E.rooms.map(r => {
     const ps = r.kind === "vocab" ? vocabPuzzles(unit, tier, rnd) : r.kind === "reading" ? readingPuzzles(E, tier, rnd) : grammarPuzzles(unit, tier, rnd);
-    const code = r.kind === "reading" ? ps.map(p => p.answer) : r.lock === "letters" ? shuffle(LETTER_CODES, rnd)[0].split("")
+    // Letter locks use the first letter of each word found; the reading safe uses the answers; grammar notes show a number.
+    const code = r.kind === "reading" ? ps.map(p => p.answer) : r.lock === "letters" ? ps.map(p => p.answer[0].toUpperCase())
       : ps.map(() => String(1 + Math.floor(rnd() * 9)));
     return { name: r.name, scene: r.scene, kind: r.kind, lock: r.lock,
              puzzles: ps.map((p, i) => ({ ...p, object: r.objects[i], gives: code[i] })), code };
