@@ -28,6 +28,13 @@ const RUN_KEY = () => "ckpt-run-" + (session ? session.username : "");
 function saveRun() { if (run && run.kind === "game" && run.phase !== "done") return; try { run ? localStorage.setItem(RUN_KEY(), JSON.stringify(run)) : localStorage.removeItem(RUN_KEY()); } catch (e) {} }
 function loadRun() { try { return JSON.parse(localStorage.getItem(RUN_KEY())); } catch (e) { return null; } }
 const top = () => window.scrollTo(0, 0);
+// An error after a tap (not while a page is drawn) shows the message too, so a stuck screen can be reported.
+function oops(e) { if (document.getElementById("oops")) return; const d = document.createElement("div"); d.id = "oops"; d.className = "panel";
+  d.style.cssText = "position:fixed;left:12px;right:12px;bottom:84px;z-index:99;box-shadow:0 6px 24px rgba(0,0,0,.25)";
+  d.innerHTML = `<p style="margin:0 0 6px"><b>Something went wrong.</b> Tap Reload. If it keeps happening, show your teacher: <span class="err" style="font-family:monospace;font-size:.85em">${U.esc(String(e && e.message || e))}</span></p><button class="btn" id="oops-r">Reload</button>`;
+  document.body.appendChild(d); document.getElementById("oops-r").onclick = () => location.reload(); }
+window.addEventListener("error", ev => oops(ev.error || ev.message));
+window.addEventListener("unhandledrejection", ev => oops(ev.reason));
 
 /* ---------------- header ---------------- */
 function header() {
@@ -112,7 +119,24 @@ function loginView(msg) {
 async function refresh() {
   [me, history] = await Promise.all([api.me(session.token), api.history(session.token)]);
 }
+// Any error while drawing a page shows a message with a way out, instead of leaving the page stuck on "Loading…".
 async function route() {
+  try { await draw(); } catch (e) { crashView(e); }
+}
+function crashView(e) {
+  console.error(e);
+  const inRun = !!run;
+  $app.innerHTML = `<div class="narrow"><div class="panel"><h2>Sorry, this page didn't load</h2>
+    <p>Try again. If it happens again, show your teacher this message:</p>
+    <p class="err" style="font-family:monospace;font-size:.85em;word-break:break-word">${U.esc(String(e && e.message || e))}</p>
+    <div class="row"><button class="btn" id="cr-again">Try again</button>
+    ${inRun ? `<button class="btn alt" id="cr-leave">Leave this activity</button>` : ""}
+    <button class="btn alt" id="cr-out">Sign out</button></div></div></div>`;
+  document.getElementById("cr-again").onclick = () => location.reload();
+  const lv = document.getElementById("cr-leave"); if (lv) lv.onclick = () => { run = null; saveRun(); location.hash = "#home"; location.reload(); };
+  document.getElementById("cr-out").onclick = () => { try { localStorage.removeItem(RUN_KEY()); } catch (x) {} setSession(null); session = null; me = null; run = null; location.hash = ""; location.reload(); };
+}
+async function draw() {
   clearInterval(timerId);
   if (!session) return loginView();
   S.soundUser(session.username); L.lookUser(session.username);

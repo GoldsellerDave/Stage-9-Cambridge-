@@ -6,14 +6,19 @@ export const LIVE = Boolean(CONFIG.supabaseUrl && CONFIG.supabaseAnonKey);
 
 async function rpc(fn, args) {
   let res;
+  // A slow or dropped school Wi-Fi connection gives up after 20 s with a message, so the page never just hangs.
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 20000);
   try {
     res = await fetch(`${CONFIG.supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/${fn}`, {
-      method: "POST",
+      method: "POST", signal: ctl.signal,
       // Only the apikey header: new sb_publishable_ keys are not JWTs, so they must not go in Authorization.
       headers: { "Content-Type": "application/json", apikey: CONFIG.supabaseAnonKey },
       body: JSON.stringify(args)
     });
-  } catch (e) { throw new Error(`No connection to the database (${e.message}). Check your internet and try again.`); }
+  } catch (e) {
+    throw new Error(e.name === "AbortError" ? "The connection is too slow right now. Check the Wi-Fi and try again."
+      : `No connection to the database (${e.message}). Check your internet and try again.`);
+  } finally { clearTimeout(timer); }
   const body = await res.json().catch(() => null);
   if (body && body.code === "PGRST202") throw new Error("The database is not set up yet. Your teacher needs to run supabase/schema.sql.");
   if (body && /Unknown attempt type/.test(body.message || "")) throw new Error("The database needs an update before this can be saved. Your teacher needs to run supabase/schema.sql again.");
