@@ -1,5 +1,6 @@
 // Shared rendering helpers for the student and teacher pages.
-import { LEVELS, BANDS, readingBand, currentBand, textLevel, skillStats, badges, weeklyStreak, SKILL_BADGES, SUPPORT_LABEL } from "./engine.js";
+import { LEVELS, BANDS, readingBand, currentBand, steadyBand, textLevel, skillStats, badges, weeklyStreak, SKILL_BADGES, STEP_BADGES, STEADY_OF, SUPPORT_LABEL } from "./engine.js";
+import { CHECKS } from "./checks.js";
 import { PRACTICE_TEXTS } from "./content.js";
 import { unitWords, wordPattern, missionBadges, MISSION_BADGES } from "./practice.js";
 import { LISTENING } from "./listening.js";
@@ -20,6 +21,7 @@ export function textTitle(id) {
   const t = PRACTICE_TEXTS.find(x => x.id === id); if (t) return t.topic;
   const l = LISTENING.find(x => x.id === id); if (l) return `Listening: ${l.topic}`;
   if (id === "baseline") return "Baseline";
+  const c = CHECKS.find(x => x.id === id); if (c) return c.title;
   if (id === "vocab-review") return "Word review";
   let m = /^vocab-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} vocabulary`;
   m = /^grammar-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} grammar quiz`;
@@ -80,24 +82,25 @@ function medalSVG(on) {
 
 // Reading level after each baseline and practice text, on eight CEFR steps (A2 to C1+), drawn as a step line.
 // Each CEFR band is a shaded strip; the dot's colour shows the text version it was read on.
-const LEVEL_DOT = ["#2F9E8F", "var(--teal)", "#2F6FB5", "#7B4FC4"];
+const LEVEL_DOT = ["#8FA82B", "var(--teal)", "#2F6FB5", "#7B4FC4"];
 export function levelChart(history) {
   const pts = history.filter(h => (h.mode === "practice" || h.mode === "baseline") && h.level_end != null).map(h => ({ h, b: readingBand(h), l: textLevel(h) }));
   if (pts.length < 1) return `<p class="note">Your level line appears after your first reading.</p>`;
   const W = 600, H = 270, L = 62, R = 14, T = 12, B = 34, n = pts.length, step = (H - T - B) / 8;
   const x = i => n === 1 ? L + (W - L - R) / 2 : L + i * (W - L - R) / (n - 1);
   const y = b => T + (7.5 - b) * step;
+  // The line is the steady level (middle of the last three readings); the dots are single readings.
   let d = "";
-  pts.forEach((p, i) => { d += i === 0 ? `M${x(i)},${y(p.b)}` : `H${x(i)}V${y(p.b)}`; });
+  pts.forEach((p, i) => { const s = steadyBand(pts.slice(0, i + 1).map(q => q.h)); d += i === 0 ? `M${x(i)},${y(s)}` : `H${x(i)}V${y(s)}`; });
   const strips = ["A2", "B1", "B2", "C1"].map((c, k) => `<rect x="${L}" y="${T + (3 - k) * 2 * step}" width="${W - L - R}" height="${2 * step}" fill="var(--teal)" opacity="${k % 2 ? 0.05 : 0.11}"/>`).join("");
   const grid = BANDS.map((name, b) => `<line x1="${L}" x2="${W - R}" y1="${y(b)}" y2="${y(b)}" stroke="var(--line)" stroke-dasharray="2 5"/><text x="${L - 8}" y="${y(b) + 4}" text-anchor="end"${b % 2 ? "" : ' font-weight="700"'}>${name}</text>`).join("");
-  const dots = pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.b)}" r="${i === n - 1 ? 6.5 : 4.5}" fill="${p.h.mode === "baseline" ? "var(--orange)" : LEVEL_DOT[p.l]}" stroke="var(--surface)" stroke-width="2"><title>${esc(textTitle(p.h.text_id))}, ${fmtDate(p.h.created_at)}: ${BANDS[p.b]} (${p.h.mode === "baseline" ? "baseline" : LEVELS[p.l] + " text"}, ${p.h.score}/${p.h.max_score})</title></circle>`).join("");
+  const dots = pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.b)}" r="${i === n - 1 ? 6.5 : 4.5}" fill="${p.h.mode === "baseline" ? "var(--orange)" : LEVEL_DOT[p.l]}" opacity="${i === n - 1 ? 1 : 0.85}" stroke="var(--surface)" stroke-width="2"><title>${esc(textTitle(p.h.text_id))}, ${fmtDate(p.h.created_at)}: ${BANDS[p.b]} (${p.h.mode === "baseline" ? (p.h.text_id === "baseline" ? "baseline" : "Checkpoint check") : LEVELS[p.l] + " text"}, ${p.h.score}/${p.h.max_score})</title></circle>`).join("");
   const first = `<text x="${x(0)}" y="${H - 8}" text-anchor="${n === 1 ? "middle" : "start"}">${fmtDate(pts[0].h.created_at)}</text>`;
   const last = n > 1 ? `<text x="${x(n - 1)}" y="${H - 8}" text-anchor="end">${fmtDate(pts[n - 1].h.created_at)}</text>` : "";
   const used = [...new Set(pts.filter(p => p.h.mode !== "baseline").map(p => p.l))].sort();
   return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reading level over time, from A2 to C1+">${strips}${grid}<path d="${d}" fill="none" stroke="var(--teal)" stroke-width="2.5"/>${dots}${first}${last}</svg></div>
-    <div class="legend"><span><i style="background:var(--orange);border-radius:50%"></i>Baseline</span>${used.map(l => `<span><i style="background:${LEVEL_DOT[l]};border-radius:50%"></i>${LEVELS[l]} text</span>`).join("")}</div>
-    <p class="note">Each text version covers a lower and an upper step: Easier A2 to A2+, Core B1 to B1+, Harder B2 to B2+, Challenge C1 to C1+. About 75% right first time puts a reading on the upper step.</p>
+    <div class="legend"><span><i style="background:var(--teal);height:3px"></i>Steady level</span><span><i style="background:var(--orange);border-radius:50%"></i>Baseline or check</span>${used.map(l => `<span><i style="background:${LEVEL_DOT[l]};border-radius:50%"></i>${LEVELS[l]} text</span>`).join("")}</div>
+    <p class="note">Each text version covers a lower and an upper step: Easier A2 to A2+, Core B1 to B1+, Harder B2 to B2+, Challenge C1 to C1+. About 75% right first time puts a reading on the upper step. The line shows your steady level: the middle step of your last ${STEADY_OF} readings, so one bad day does not pull it down.</p>
 `;
 }
 
@@ -113,6 +116,7 @@ export function badgeShelf(history) {
   const got = [...badges(history), ...missionBadges(history)], names = new Set(got.map(b => b.name));
   const all = [{ name: "First steps", why: "Finish the baseline" }, { name: "Off the mark", why: "Finish a practice text" },
                { name: "Bookworm", why: "Finish 5 practice texts" }, { name: "Top level", why: "Reach the Harder text" }, { name: "Challenger", why: "Reach a Challenge (C1) text" },
+               ...STEP_BADGES.map(b => ({ name: b.name, why: `Reach a steady ${BANDS[b.band]} reading level` })),
                { name: "On a roll", why: "Keep a 3-week streak" },
                ...Object.entries(SKILL_BADGES).map(([s, n]) => ({ name: n, why: "10 " + s.toLowerCase() + " questions right first time" })),
                ...Object.entries(MISSION_BADGES).map(([u, n]) => ({ name: n, why: `Complete the Unit ${u} mission` }))];
@@ -152,8 +156,8 @@ export function resultRows(slots, results) {
 }
 
 export function boardTable(rows, unit) {
-  if (!rows.length) return `<p class="note">${unit === "gain" ? "This board fills up when students take the baseline a second time." : "No one here yet."}</p>`;
-  return `<div class="tbl"><table><thead><tr><th>#</th><th>Name</th><th class="num">${unit === "gain" ? "Points gained" : "XP"}</th></tr></thead><tbody>${
+  if (!rows.length) return `<p class="note">${unit === "gain" ? "This board fills up when students take their first Checkpoint check." : "No one here yet."}</p>`;
+  return `<div class="tbl"><table><thead><tr><th>#</th><th>Name</th><th class="num">${unit === "gain" ? "% points gained" : "XP"}</th></tr></thead><tbody>${
     rows.map((r, i) => `<tr class="${r.me ? "me" : ""}"><td class="rank">${i < 3 && (r.xp || r.gain) > 0 ? `<span class="medal m${i + 1}">${i + 1}</span>` : i + 1}</td><td>${esc(r.name)}${r.me ? " (you)" : ""}</td><td class="num">${unit === "gain" ? (r.gain > 0 ? "+" : "") + r.gain : r.xp}</td></tr>`).join("")
   }</tbody></table></div>`;
 }

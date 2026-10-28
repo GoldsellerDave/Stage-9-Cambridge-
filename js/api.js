@@ -75,6 +75,7 @@ function auth(db, t) { const id = db.tokens[t]; const s = db.students.find(x => 
 function teacher(db, t) { const s = auth(db, t); if (s.role !== "teacher") throw new Error("Teacher sign-in needed."); return s; }
 const xpSince = (db, id, since) => db.attempts.filter(a => a.student_id === id && new Date(a.created_at) >= since).reduce((t, a) => t + a.xp, 0);
 const hist = (db, id) => db.attempts.filter(a => a.student_id === id).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+const pc = a => a.max_score ? Math.floor(a.score * 100 / a.max_score) : 0; // percentage, like the database
 const later = v => new Promise(res => setTimeout(() => res(JSON.parse(JSON.stringify(v))), 120));
 
 const demo = {
@@ -94,8 +95,10 @@ const demo = {
   async save(t, a) {
     const db = load(), s = auth(db, t);
     const reading = a.mode === "baseline" || a.mode === "practice";
-    const xp = Math.max(0, Math.min(400, a.xp | 0)), lvl = reading ? Math.max(0, Math.min(2, a.level_end | 0)) : s.level;
-    db.attempts.push({ ...a, xp, level_end: reading ? lvl : null, id: db.attempts.length + 1, student_id: s.id, created_at: new Date().toISOString() });
+    const xp = Math.max(0, Math.min(400, a.xp | 0)), end = Math.max(0, Math.min(3, a.level_end | 0)),
+      lvl = reading ? Math.max(0, Math.min(3, (a.next_level ?? a.level_end) | 0)) : s.level;
+    const { next_level, ...row } = a;
+    db.attempts.push({ ...row, xp, level_end: reading ? end : null, id: db.attempts.length + 1, student_id: s.id, created_at: new Date().toISOString() });
     s.xp_total += xp; s.level = lvl; store(db);
     return later({ xp_total: s.xp_total, level: s.level });
   },
@@ -105,7 +108,7 @@ const demo = {
     const ws = weekStart();
     const sort = arr => arr.sort((a, b) => b.xp - a.xp || a.name.localeCompare(b.name));
     const improved = kids.map(k => { const b = hist(db, k.id).filter(a => a.mode === "baseline");
-      return b.length >= 2 ? { name: k.display_name, me: k.id === s.id, gain: b[b.length - 1].score - b[0].score } : null; })
+      return b.length >= 2 ? { name: k.display_name, me: k.id === s.id, gain: pc(b[b.length - 1]) - pc(b[0]) } : null; })
       .filter(Boolean).sort((a, b) => b.gain - a.gain);
     return later({ class_code: cls,
       week: sort(kids.map(k => ({ name: k.display_name, me: k.id === s.id, xp: xpSince(db, k.id, ws) }))),
@@ -118,8 +121,8 @@ const demo = {
       const h = hist(db, s.id), b = h.filter(a => a.mode === "baseline"), skills = {};
       h.forEach(a => (a.answers || []).forEach(x => { const k = skills[x.skill] = skills[x.skill] || { right: 0, total: 0 }; k.total++; if (x.first_try) k.right++; }));
       return { id: s.id, name: s.display_name, username: s.username, level: s.level, xp_total: s.xp_total, xp_week: xpSince(db, s.id, ws),
-        texts_done: h.filter(a => a.mode === "practice").length, baseline_first: b[0] ? b[0].score : null,
-        baseline_latest: b.length ? b[b.length - 1].score : null, last_active: h.length ? h[h.length - 1].created_at : null, skills };
+        texts_done: h.filter(a => a.mode === "practice").length, baseline_first: b[0] ? pc(b[0]) : null,
+        baseline_latest: b.length ? pc(b[b.length - 1]) : null, last_active: h.length ? h[h.length - 1].created_at : null, skills };
     }));
   },
   async teacherStudent(t, id) {

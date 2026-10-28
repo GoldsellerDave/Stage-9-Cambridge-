@@ -49,6 +49,9 @@ alter table ck_students enable row level security;
 alter table ck_tokens   enable row level security;
 alter table ck_attempts enable row level security;
 revoke all on ck_students, ck_tokens, ck_attempts from anon, authenticated;
+-- Reading levels: 0 Easier, 1 Core, 2 Harder, 3 Challenge (C1).
+alter table ck_students drop constraint if exists ck_students_level_check;
+alter table ck_students add constraint ck_students_level_check check (level between 0 and 3);
 
 -- Monday 00:00 of the current week, school time (Vietnam, UTC+7).
 create or replace function ck_week_start() returns timestamptz
@@ -124,12 +127,13 @@ begin
   if (p_attempt->>'mode') not in ('baseline', 'practice', 'vocab', 'grammar', 'listening') then raise exception 'Unknown attempt type.'; end if;
   v_xp := least(greatest(coalesce((p_attempt->>'xp')::int, 0), 0), 400);
   -- Only reading changes the reading level; vocabulary and grammar keep it as it is.
+  -- next_level is the steady level (middle of the last three readings) worked out by the website.
   v_level := case when (p_attempt->>'mode') in ('baseline', 'practice')
-                  then least(greatest((p_attempt->>'level_end')::int, 0), 2) else s.level end;
+                  then least(greatest(coalesce((p_attempt->>'next_level')::int, (p_attempt->>'level_end')::int), 0), 3) else s.level end;
   insert into ck_attempts(student_id, mode, text_id, level_start, level_end, score, max_score, xp, seconds, answers)
   values (s.id, p_attempt->>'mode', left(coalesce(p_attempt->>'text_id', ''), 60),
           (p_attempt->>'level_start')::smallint,
-          case when (p_attempt->>'mode') in ('baseline', 'practice') then v_level end,
+          case when (p_attempt->>'mode') in ('baseline', 'practice') then least(greatest((p_attempt->>'level_end')::int, 0), 3) end,
           coalesce((p_attempt->>'score')::int, 0), coalesce((p_attempt->>'max_score')::int, 0),
           v_xp, least(coalesce((p_attempt->>'seconds')::int, 0), 36000),
           coalesce(p_attempt->'answers', '[]'::jsonb));
@@ -138,7 +142,8 @@ begin
   return json_build_object('xp_total', s.xp_total, 'level', s.level);
 end $$;
 
--- Class leaderboards: XP this week, XP all time, and most improved (first vs latest baseline).
+-- Class leaderboards: XP this week, XP all time, and most improved
+-- (percentage points from the first baseline to the latest baseline or Checkpoint check).
 create or replace function ck_leaderboard(p_token uuid, p_class text default null) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_auth(p_token); v_class text;
@@ -156,7 +161,8 @@ begin
           from ck_students where class_code = v_class and role = 'student') r), '[]'::json),
     'improved', coalesce((select json_agg(r order by r.gain desc, r.name) from (
         select st.display_name as name, st.id = s.id as me,
-               (array_agg(a.score order by a.created_at desc))[1] - (array_agg(a.score order by a.created_at))[1] as gain
+               (array_agg(a.score * 100 / nullif(a.max_score, 0) order by a.created_at desc))[1]
+             - (array_agg(a.score * 100 / nullif(a.max_score, 0) order by a.created_at))[1] as gain
           from ck_students st join ck_attempts a on a.student_id = st.id and a.mode = 'baseline'
          where st.class_code = v_class and st.role = 'student'
          group by st.id having count(*) >= 2) r), '[]'::json));
@@ -187,8 +193,8 @@ begin
     select st.id, st.display_name as name, st.username, st.level, st.xp_total,
       (select coalesce(sum(xp), 0) from ck_attempts a where a.student_id = st.id and a.created_at >= ck_week_start())::int as xp_week,
       (select count(*) from ck_attempts a where a.student_id = st.id and a.mode = 'practice')::int as texts_done,
-      (select score from ck_attempts a where a.student_id = st.id and a.mode = 'baseline' order by created_at limit 1) as baseline_first,
-      (select score from ck_attempts a where a.student_id = st.id and a.mode = 'baseline' order by created_at desc limit 1) as baseline_latest,
+      (select score * 100 / nullif(max_score, 0) from ck_attempts a where a.student_id = st.id and a.mode = 'baseline' order by created_at limit 1) as baseline_first,
+      (select score * 100 / nullif(max_score, 0) from ck_attempts a where a.student_id = st.id and a.mode = 'baseline' order by created_at desc limit 1) as baseline_latest,
       (select max(created_at) from ck_attempts a where a.student_id = st.id) as last_active,
       (select coalesce(json_object_agg(skill, json_build_object('right', r_, 'total', t_)), '{}'::json) from (
          select e->>'skill' as skill, count(*) filter (where (e->>'first_try')::boolean) as r_, count(*) as t_
