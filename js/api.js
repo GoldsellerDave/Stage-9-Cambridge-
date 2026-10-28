@@ -32,8 +32,26 @@ const live = {
   teacherClasses: t => rpc("ck_teacher_classes", { p_token: t }),
   teacherClass: (t, c) => rpc("ck_teacher_class", { p_token: t, p_class: c }),
   teacherStudent: (t, id) => rpc("ck_teacher_student", { p_token: t, p_student: id }),
-  resetPin: (t, id, pin) => rpc("ck_teacher_reset_pin", { p_token: t, p_student: id, p_pin: pin })
+  resetPin: (t, id, pin) => rpc("ck_teacher_reset_pin", { p_token: t, p_student: id, p_pin: pin }),
+  aiMark,
+  aiLog: (t, c) => rpc("ck_teacher_ai_log", { p_token: t, p_class: c }),
+  aiFlag: (t, id, on) => rpc("ck_teacher_ai_flag", { p_token: t, p_id: id, p_overruled: on })
 };
+
+// AI marking of a short answer by the "grade" Edge Function. Returns { ok, hits, feedback },
+// or null on any problem (not deployed, no key, daily limit, slow), so the keyword result stands.
+async function aiMark(t, q) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const res = await fetch(`${CONFIG.supabaseUrl.replace(/\/$/, "")}/functions/v1/grade`, {
+      method: "POST", signal: ctl.signal,
+      headers: { "Content-Type": "application/json", apikey: CONFIG.supabaseAnonKey },
+      body: JSON.stringify({ token: t, ...q })
+    });
+    const body = await res.json().catch(() => null);
+    return res.ok && body && typeof body.ok === "boolean" ? body : null;
+  } catch (e) { return null; } finally { clearTimeout(timer); }
+}
 
 /* ---------------- demo backend ---------------- */
 const KEY = "ckpt-demo-db-v1";
@@ -134,6 +152,10 @@ const demo = {
     if (!/^[0-9]{4}$/.test(pin)) throw new Error("A PIN must be 4 digits.");
     const s = db.students.find(x => x.id === id); if (s) s.pin = pin; store(db); return null;
   },
+  // No AI in demo mode: the keyword marker decides.
+  async aiMark() { return null; },
+  async aiLog(t) { teacher(load(), t); return later([]); },
+  async aiFlag() { return null; },
   reset() { try { localStorage.removeItem(KEY); } catch (e) {} }
 };
 

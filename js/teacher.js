@@ -74,7 +74,7 @@ function draw() {
       <div class="stat"><b>${lv.join(" · ")}</b><span>Easier · Core · Harder · Challenge</span></div>
       <div class="stat"><b>${active}</b><span>active in the last 7 days</span></div>
       <div class="stat gold"><b>${rows.reduce((t, r) => t + r.xp_week, 0)}</b><span>class XP this week</span></div></div>
-    <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
+    <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"], ["ai", "AI marking"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
   if (tab === "overview") {
     h += `<div class="tbl"><table><thead><tr><th>Student</th><th>Username</th><th>Level</th><th class="num" title="First baseline and latest baseline or Checkpoint check, as a percentage">Baseline / check</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
       rows.map(r => { const w = weakest(r.skills || {});
@@ -93,6 +93,9 @@ function draw() {
           return p == null ? `<td class="h hn"></td>` : `<td class="h h${p < 40 ? 0 : p < 60 ? 1 : p < 80 ? 2 : 3}">${p}%</td>`; }).join("")}</tr>`).join("")
       }</tbody><tfoot><tr><th>Class</th>${U.SKILLS.map(s => { let rt = 0, tt = 0; rows.forEach(r => { const k = (r.skills || {})[s]; if (k) { rt += k.right; tt += k.total; } });
           return `<th class="num">${tt ? Math.round(100 * rt / tt) + "%" : "–"}</th>`; }).join("")}</tr></tfoot></table></div>`;
+  } else if (tab === "ai") {
+    h += `<p class="lede">Short answers the keyword marker missed are checked by AI. Here are its last 200 decisions. Flag any you disagree with: a flag is a note for you and does not change XP or scores.</p>
+      <div id="ailog"><p class="note">Loading…</p></div>`;
   } else {
     h += `<div id="board"><p class="note">Loading…</p></div>`;
   }
@@ -102,6 +105,24 @@ function draw() {
   $app.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { tab = b.dataset.t; draw(); });
   $app.querySelectorAll("[data-s]").forEach(b => b.onclick = () => studentView(b.dataset.s));
   if (tab === "board") boardView();
+  if (tab === "ai") aiView();
+}
+
+async function aiView() {
+  const el = document.getElementById("ailog");
+  let log; try { log = await api.aiLog(session.token, cls); } catch (e) { el.innerHTML = `<p class="err">${U.esc(e.message)}</p>`; return; }
+  if (!log.length) { el.innerHTML = `<p class="note">${LIVE ? "No AI decisions yet for this class." : "AI marking only runs on the live site."}</p>`; return; }
+  el.innerHTML = `<div class="tbl"><table><thead><tr><th>When</th><th>Student</th><th>Question</th><th>Answer</th><th>AI said</th><th></th></tr></thead><tbody>${
+    log.map(l => `<tr class="${l.overruled ? "flagged" : ""}"><td>${U.fmtDate(l.created_at)}</td><td>${U.esc(l.name)}</td>
+      <td>${U.esc(U.textTitle(l.text_id))}<br><span class="note">${U.esc(l.question || "")}</span></td><td>${U.esc(l.answer)}</td>
+      <td><span class="chip ${l.ok ? "ok" : "bad"}">${l.ok ? "Accepted" : "Not yet"}</span><br><span class="note">${U.esc((l.hits || []).join("; ") || l.feedback || "")}</span></td>
+      <td><button class="btn small ${l.overruled ? "" : "alt"}" data-flag="${l.id}" data-on="${l.overruled ? 0 : 1}">${l.overruled ? "Flagged" : "Flag"}</button></td></tr>`).join("")
+  }</tbody></table></div>`;
+  el.querySelectorAll("[data-flag]").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try { await api.aiFlag(session.token, Number(b.dataset.flag), b.dataset.on === "1"); aiView(); }
+    catch (e) { b.disabled = false; b.textContent = "Try again"; }
+  });
 }
 
 async function boardView() {
