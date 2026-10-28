@@ -633,3 +633,21 @@ tr.flagged td{background:var(--bad-bg)}
   .slip{border:1.2px dashed #777;border-radius:0;height:49mm;box-sizing:border-box;padding:3.5mm 5mm}
   .sl-t,.sl-l{color:#555}
 }
+
+/* Escape room */
+.escstory{border-left:4px solid var(--teal)}
+.escroom{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.escobj{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border:2px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;text-align:center;min-height:96px;justify-content:center}
+.escobj svg{color:#7B4FC4} .escobj.on{border-color:var(--teal);box-shadow:0 0 0 3px var(--focus)}
+.escobj.done{border-color:var(--ok-line);background:var(--ok-bg)} .escobj.done svg{color:var(--ok)}
+.escpuz .esctext{font-size:1.1em;font-family:var(--f-text);margin:0}
+.escopts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.escopts .opt:disabled{opacity:.45;text-decoration:line-through}
+.escdoc p{font-family:var(--f-text);margin:.4em 0} .escdoc summary{cursor:pointer}
+.esclock h3{display:flex;align-items:center;gap:6px;margin:0}
+.nb{display:inline-block;min-width:1.8em;text-align:center;margin-left:4px;padding:2px 6px;border-radius:6px;background:var(--gold-bg);color:var(--ink)}
+.dials{display:flex;gap:12px;justify-content:center;margin:6px 0}
+.dial{display:flex;flex-direction:column;align-items:center;gap:4px}
+.dial b{font-size:2em;width:1.6em;text-align:center;padding:4px 0;border:2px solid var(--line);border-radius:10px;background:var(--surface)}
+.dial button{font:inherit;border:0;background:var(--card);color:var(--ink);border-radius:8px;width:48px;height:36px;cursor:pointer}
+@media (max-width:480px){ .escopts{grid-template-columns:1fr} .escobj{min-height:84px;font-size:.9em} }

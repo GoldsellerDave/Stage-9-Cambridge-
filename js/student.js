@@ -15,6 +15,7 @@ import * as L from "./look.js";
 import * as I from "./icons.js";
 import * as W from "./workout.js";
 import * as M from "./minitests.js";
+import * as X from "./escape.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -57,8 +58,8 @@ const SOUND_ON = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="t
 const SOUND_OFF = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 function tick() {
   const el = document.getElementById("clock"); if (!el || !run) return;
-  const s = Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
-  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20 }[run.kind] || 15;
+  const s = run.kind === "escape" ? (run.play ? X.escapeSeconds(run.play) : 0) : Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
+  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 15 }[run.kind] || 15;
   el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${target}:00`;
   el.classList.toggle("over", s > target * 60);
 }
@@ -283,10 +284,16 @@ function gameTile(g, u) {
   return aTile(g, `data-game="${g}" data-unit="${u}" ${locked ? "disabled" : ""}`, x.name,
     locked ? "Finish a reading text in this unit first" : best ? `Your best: ${best} points` : x.blurb);
 }
+function escapeTile(u) {
+  if (!X.ESCAPES[u]) return "";
+  const best = X.bestEscape(history, u);
+  return aTile("escape", `data-escape="${u}"`, `Escape room: ${X.ESCAPES[u].title}`, best != null ? `Your best escape: ${U.fmtTime(best)}` : "Solve word, reading and grammar puzzles to get out");
+}
 function gamesHTML(u, grouped = false) {
   const groups = GAME_GROUPS.map(([name, gs]) => [name, gs.filter(g => g !== "speed" || G.speedTexts(u).length)]).filter(([, gs]) => gs.length);
-  if (!grouped) return `<div class="usec"><div class="tiles">${groups.flatMap(([, gs]) => gs).map(g => gameTile(g, u)).join("")}</div></div>`;
-  return groups.map(([name, gs]) => `<h3 class="ghead">${name}</h3><div class="tiles">${gs.map(g => gameTile(g, u)).join("")}</div>`).join("");
+  if (!grouped) return `<div class="usec"><div class="tiles">${escapeTile(u)}${groups.flatMap(([, gs]) => gs).map(g => gameTile(g, u)).join("")}</div></div>`;
+  return (X.ESCAPES[u] ? `<h3 class="ghead">Escape room</h3><div class="tiles">${escapeTile(u)}</div>` : "")
+    + groups.map(([name, gs]) => `<h3 class="ghead">${name}</h3><div class="tiles">${gs.map(g => gameTile(g, u)).join("")}</div>`).join("");
 }
 const lastTab = {};
 const TAB_ICON = { mission: "mission", read: "read", listen: "listen", words: "words", grammar: "grammar", games: "games" };
@@ -386,6 +393,7 @@ function bindActivities() {
   $app.querySelectorAll("[data-family]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.family;
     startSmall("vocab", `family-u${u}`, `Unit ${u} word families`, P.familySet(u)); });
   $app.querySelectorAll("[data-game]").forEach(btn => btn.onclick = () => startGame(btn.dataset.game, +btn.dataset.unit));
+  $app.querySelectorAll("[data-escape]").forEach(btn => btn.onclick = () => startEscape(+btn.dataset.escape));
   $app.querySelectorAll("[data-step]").forEach(btn => btn.onclick = () => missionStep(btn.dataset.step, +btn.dataset.unit));
   $app.querySelectorAll("[data-mini]").forEach(btn => btn.onclick = () => startMini(+btn.dataset.mini));
   $app.querySelectorAll("[data-gramunit]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.gramunit;
@@ -735,6 +743,93 @@ function gameDone() {
                 xp: R.xp, seconds: R.seconds, answers: G.gameAnswers(run.game, R, u) });
 }
 
+/* ---------------- escape room ---------------- */
+// Three rooms; in each, tap an object to open a puzzle. Each puzzle solved shows one part of the lock code.
+// Wrong answers, hints and wrong codes add time instead of ending the game.
+function startEscape(u) {
+  run = { kind: "escape", unit: u, game: X.makeEscape(u, P.tierFor(history)), play: null, phase: "intro", t0: Date.now(), fb: null, msg: null };
+  saveRun(); route(); top();
+}
+const DIAL = { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ", digits: "0123456789" };
+function escapeView() {
+  const g = run.game, E = X.ESCAPES[run.unit];
+  if (run.phase === "intro") {
+    const best = X.bestEscape(history, run.unit);
+    $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Unit ${run.unit} · escape room</p><h1>${U.esc(E.title)}</h1>
+      <div class="panel escstory"><p>${U.esc(E.story)}</p></div>
+      <div class="panel"><ul><li>There are ${g.rooms.length} rooms. In each one, tap the things you can search to find a puzzle.</li>
+        <li>Every puzzle you solve shows one part of the lock code in your notebook.</li>
+        <li>Put the code in the lock to open the next room. Wrong answers add ${X.ESCAPE_PENALTY.wrong} s, hints and wrong codes add ${X.ESCAPE_PENALTY.hint} s.</li>
+        <li>Playing as a team? Share one tablet and talk it through!</li></ul></div>
+      <div class="stats"><div class="stat"><b>${best != null ? U.fmtTime(best) : "–"}</b><span>your best escape</span></div>
+        <div class="stat"><b><span class="chip tier t${g.tier}">${U.esc(g.tierName)}</span></b><span>puzzle level</span></div></div>
+      <div class="row"><button class="btn" id="go">Start</button></div></div>`;
+    backButton();
+    document.getElementById("go").onclick = () => { S.play("tap"); run.phase = "play"; run.play = X.newPlay(g); run.t0 = run.play.t0; saveRun(); escapeView(); top(); };
+    return;
+  }
+  const pl = run.play, R = g.rooms[pl.room], found = X.roomFound(g, pl), chars = DIAL[R.lock];
+  if (!pl.dial) pl.dial = R.code.map(() => 0);
+  const open = pl.open != null ? R.puzzles[pl.open] : null, key = i => `${pl.room}-${i}`;
+  const tried = open ? (pl.wrong || {})[key(pl.open)] || [] : [];
+  const doc = R.kind === "reading" ? `<details class="panel escdoc" open><summary><b>${U.esc(E.doc.title)}</b></summary>
+      ${E.doc.paras.map((t, i) => `<p><b>${i + 1}</b> ${U.esc(t)}</p>`).join("")}</details>` : "";
+  $app.innerHTML = `<div class="narrow pop esc">
+    <p class="eyebrow">Room ${pl.room + 1} of ${g.rooms.length}</p><h1>${U.esc(R.name)}</h1>
+    <p class="lede">${U.esc(R.scene)}</p>
+    <div class="escroom">${R.puzzles.map((p, i) => `<button class="escobj${pl.solved[pl.room][i] ? " done" : ""}${pl.open === i ? " on" : ""}" data-obj="${i}">
+      ${I.icon(pl.solved[pl.room][i] ? "check" : R.kind === "reading" ? "read" : R.kind === "grammar" ? "grammar" : "words", 26)}<span>${U.esc(p.object)}</span></button>`).join("")}</div>
+    ${doc}
+    ${open ? `<div class="panel escpuz"><p class="eyebrow">${U.esc(open.object)}</p>
+      ${pl.solved[pl.room][pl.open]
+        ? `<div class="fb ok"><p><strong>Solved!</strong> You found <b class="mono">${U.esc(open.gives)}</b>. It's in your notebook.</p></div>`
+        : `<p class="stem">${U.esc(open.prompt)}</p>${open.text ? `<p class="esctext">${U.esc(open.text)}</p>` : ""}
+          <div class="escopts">${open.opts.map(o => `<button class="opt" data-ans="${U.esc(o)}" ${tried.includes(o) ? "disabled" : ""}>${U.esc(o)}</button>`).join("")}</div>
+          ${run.fb ? `<div class="fb bad"><p>${U.esc(run.fb)}</p></div>` : ""}
+          ${pl.hints[pl.room][pl.open] ? `<div class="fb"><p><strong>Hint:</strong> ${U.esc(open.hint)}</p></div>`
+            : `<button class="btn small alt" id="hint">Hint (+${X.ESCAPE_PENALTY.hint} s)</button>`}`}</div>` : ""}
+    <div class="panel esclock"><h3>${I.icon("lock", 20)} The lock</h3>
+      <p class="note">Your notebook: ${found.map(c => `<b class="nb mono">${c == null ? "?" : U.esc(c)}</b>`).join("")}</p>
+      <div class="dials">${pl.dial.map((d, k) => `<div class="dial"><button data-up="${k}" aria-label="Next">▲</button><b class="mono">${chars[d]}</b><button data-dn="${k}" aria-label="Back">▼</button></div>`).join("")}</div>
+      ${run.msg ? `<p class="${run.msg.ok ? "note" : "err"}">${U.esc(run.msg.t)}</p>` : ""}
+      <div class="row"><button class="btn" id="try">Try the code</button></div></div></div>`;
+  backButton();
+  const redraw = () => { saveRun(); escapeView(); };
+  $app.querySelectorAll("[data-obj]").forEach(b => b.onclick = () => { S.play("tap"); pl.open = +b.dataset.obj; run.fb = null; redraw(); });
+  $app.querySelectorAll("[data-ans]").forEach(b => b.onclick = () => {
+    const out = X.answerPuzzle(g, pl, pl.open, b.dataset.ans);
+    if (out === "right") { S.play("ok"); run.fb = null; }
+    else { S.play("bad"); (pl.wrong = pl.wrong || {})[key(pl.open)] = [...tried, b.dataset.ans]; run.fb = `Not that one: +${X.ESCAPE_PENALTY.wrong} s. Try again.`; }
+    redraw();
+  });
+  const h = document.getElementById("hint"); if (h) h.onclick = () => { X.takeHint(pl, pl.open); S.play("info"); redraw(); };
+  const spin = (k, by) => { pl.dial[k] = (pl.dial[k] + by + chars.length) % chars.length; run.msg = null; S.play("tap"); redraw(); };
+  $app.querySelectorAll("[data-up]").forEach(b => b.onclick = () => spin(+b.dataset.up, 1));
+  $app.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => spin(+b.dataset.dn, -1));
+  document.getElementById("try").onclick = () => {
+    const was = pl.room;
+    if (X.tryCode(g, pl, pl.dial.map(d => chars[d]))) {
+      if (pl.out) { S.play("win"); run.phase = "done"; run.result = X.escapeResult(g, pl, history); saveRun(); return runView(); }
+      S.play("level"); run.msg = { ok: true, t: `Click! The lock opens. On to room ${was + 2}.` }; run.fb = null; redraw(); top();
+    } else { S.play("bad"); run.msg = { ok: false, t: `The lock doesn't open: +${X.ESCAPE_PENALTY.code} s. Check your notebook.` }; redraw(); }
+  };
+}
+function escapeDone() {
+  const R = run.result, u = run.unit, E = X.ESCAPES[u], best = X.bestEscape(history, u), record = best == null || R.seconds < best;
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Unit ${u} · escape room</p><h1>You escaped!</h1>
+    <div class="panel escstory"><p>${U.esc(E.escaped)}</p></div>
+    ${record && best != null ? `<div class="fb ok winbox"><p class="big">New best time!</p><p>Your old best was ${U.fmtTime(best)}.</p></div>` : best != null ? `<p class="note">Your best is ${U.fmtTime(best)}.</p>` : ""}
+    <div class="stats"><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>escape time</span></div>
+      <div class="stat"><b>${R.right}/${R.total}</b><span>right first time</span></div>
+      <div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div></div>
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
+  document.getElementById("again").onclick = () => { run = null; saveRun(); startEscape(u); };
+  document.getElementById("unit").onclick = () => { run = null; saveRun(); location.hash = `#unit-${u}/games`; route(); top(); };
+  saveAttempt({ mode: "vocab", text_id: X.escapeId(u), level_start: null, level_end: null, score: R.right, max_score: R.total,
+                xp: R.xp, seconds: R.seconds, answers: R.answers });
+}
+
 /* ---------------- listening ---------------- */
 // One recording, played twice in full like the exam; all questions on one page with a check for the whole task.
 // A wrong answer gets a hint and a replay of just that part; a second wrong answer shows the answer.
@@ -951,8 +1046,9 @@ function startPractice(id) {
 function runView() {
   header(); nav(null);
   if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "mini" ? miniDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone()
-    : run.kind === "listen" ? listenDone() : run.kind === "game" ? gameDone() : practiceDone();
+    : run.kind === "listen" ? listenDone() : run.kind === "game" ? gameDone() : run.kind === "escape" ? escapeDone() : practiceDone();
   if (run.kind === "game") return gameView();
+  if (run.kind === "escape") return escapeView();
   if (run.kind === "baseline") baselineView();
   else if (run.kind === "mini") miniView();
   else if (run.kind === "small") smallView();
@@ -977,12 +1073,13 @@ function runName(r) {
   if (r.kind === "mini") return `${M.MINI[r.unit].title} (question ${r.qi + 1} of ${M.miniQuestions(r.unit).length})`;
   if (r.kind === "listen") return `Listening: ${LISTENING.find(t => t.id === r.id).topic}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
+  if (r.kind === "escape") return `Unit ${r.unit} escape room${r.play ? ` (room ${r.play.room + 1} of ${r.game.rooms.length})` : ""}`;
   return U.textTitle(r.textId);
 }
 function resumeRun() {
   const r = pausedRun(); if (!r) return;
   const away = Date.now() - r.pausedAt;          // the timer does not count time away
-  r.t0 += away; if (r.readStart) r.readStart += away; delete r.pausedAt;
+  r.t0 += away; if (r.readStart) r.readStart += away; if (r.play) r.play.t0 += away; delete r.pausedAt;
   run = r; saveRun(); route(); top();
 }
 function readGate(paras, onGo, label) {

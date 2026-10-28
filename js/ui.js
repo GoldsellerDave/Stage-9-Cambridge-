@@ -30,6 +30,7 @@ export function textTitle(id) {
   m = /^cards-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} word cards`;
   m = /^family-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} word families`;
   m = /^rain-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} Word Rain`;
+  m = /^escape-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} escape room`;
   m = /^train-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} Word Train`;
   m = /^speed-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} Speed Read`;
   m = /^boss-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} final challenge`;
