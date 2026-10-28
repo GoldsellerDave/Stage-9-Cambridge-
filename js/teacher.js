@@ -2,7 +2,7 @@
 // Teachers add their own classes and print login sheets; the admin also adds colleagues (Teachers page).
 import { api, LIVE, getSession, setSession } from "./api.js";
 import * as U from "./ui.js";
-import { ESCAPES } from "./escape.js";
+import { ESCAPES, GUARD_SECONDS } from "./escape.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -209,17 +209,20 @@ async function liveView() {
     let b; try { b = await api.liveBoard(session.token, code); } catch (e) { setLiveCode(null); stopLive(); return liveView(); }
     if (!document.getElementById("live")) return stopLive();
     const R = 3, ord = n => n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : n + "th";
-    const time = t => t.finished ? U.fmtTime(t.seconds) : b.status === "playing" ? U.fmtTime(b.elapsed + t.penalty) : "–";
+    const time = t => t.finished ? U.fmtTime(t.seconds) : b.status === "playing" ? U.fmtTime(Math.max(0, b.elapsed + t.penalty)) : "–";
+    const caught = t => (t.finished ? t.seconds : b.status === "playing" ? b.elapsed + t.penalty : 0) > GUARD_SECONDS;
+    const guard = GUARD_SECONDS - b.elapsed;
     el.innerHTML = `<div class="liveboard">
       <div class="lvhead"><div><p class="eyebrow">Unit ${b.unit}: ${U.esc((ESCAPES[b.unit] || {}).title || "")}</p>
         <p class="lvjoin">Join: <b>Games › Escape room › Join a team game</b></p></div>
         <div class="lvcode"><span>Game code</span><b>${U.esc(b.code)}</b></div></div>
+      ${b.status === "playing" ? `<div class="lvguard${guard < 60 ? " near" : ""}">${guard > 0 ? `The guard is back in <b>${U.fmtClock(guard)}</b>` : "<b>The guard is back!</b> Teams still inside are caught."}</div>` : ""}
       <p class="lede">${b.status === "waiting" ? `${b.teams.length} team${b.teams.length === 1 ? "" : "s"} ready. Press Start when everyone has joined.`
         : b.status === "playing" ? `Playing: ${U.fmtTime(b.elapsed)}. ${b.teams.filter(t => t.finished).length} of ${b.teams.length} teams have escaped.` : "This game has ended."}</p>
       <div class="lvteams">${b.teams.map((t, i) => `<div class="lvteam${t.finished ? " out" : ""}">
           <b class="lvrank">${t.finished ? ord(i + 1) : ""}</b>
           <div class="lvname"><b>${U.esc(t.team)}</b><span class="note">${U.esc(t.device || "")}</span></div>
-          <div class="lvrooms">${[0, 1, 2].map(k => `<i class="${t.finished || k < t.room ? "done" : k === t.room && b.status === "playing" ? "now" : ""}"></i>`).join("")}<span class="note">${t.finished ? "Escaped!" : `Room ${t.room + 1} · ${t.solved}/9 puzzles`}</span></div>
+          <div class="lvrooms">${[0, 1, 2].map(k => `<i class="${t.finished || k < t.room ? "done" : k === t.room && b.status === "playing" ? "now" : ""}"></i>`).join("")}<span class="note">${t.finished ? (caught(t) ? "Out, but caught" : "Escaped!") : t.room > 2 ? "At the exit door" : `Room ${t.room + 1} · ${t.solved}/9 puzzles`}${!t.finished && caught(t) ? " · caught!" : ""}</span></div>
           <b class="lvtime">${time(t)}</b></div>`).join("") || `<p class="note">No teams yet.</p>`}</div>
       <div class="row">${b.status === "waiting" ? `<button class="btn" id="lgo">Start</button>` : ""}${b.status !== "ended" ? `<button class="btn alt" id="lend">End game</button>` : `<button class="btn" id="lnew">New game</button>`}</div></div>`;
     const g = document.getElementById("lgo"); if (g) g.onclick = async () => { await api.liveControl(session.token, code, "start"); draw(); };

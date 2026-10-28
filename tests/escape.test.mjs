@@ -37,7 +37,8 @@ test("wrong answers, hints and wrong codes add time; the right codes get you out
   assert.equal(X.tryCode(g, pl, ["Z", "Z", "Z"]), g.rooms[0].code.join("") === "ZZZ");
   assert.equal(pl.penalty, X.ESCAPE_PENALTY.wrong + X.ESCAPE_PENALTY.hint + X.ESCAPE_PENALTY.code);
   for (const r of g.rooms) { r.puzzles.forEach((p, i) => { if (!pl.solved[pl.room][i]) X.answerPuzzle(g, pl, i, p.answer); }); assert.ok(X.tryCode(g, pl, r.code)); }
-  assert.ok(pl.out);
+  assert.ok(pl.final && !pl.out);                                  // the last lock leads to the exit door
+  X.finishFinal(pl, true); assert.ok(pl.out);
   const res = X.escapeResult(g, pl, [], 100000);
   assert.equal(res.seconds, 100 + pl.penalty);
   assert.equal(res.total, 9); assert.equal(res.right, 7);         // one wrong, one hint
@@ -45,4 +46,33 @@ test("wrong answers, hints and wrong codes add time; the right codes get you out
   const hist = [{ text_id: "escape-u3", answers: res.answers }];
   assert.equal(X.bestEscape(hist, 3), res.seconds);
   assert.equal(X.escapeResult(g, pl, hist, 100000).xp, 7 * X.ESCAPE_XP.first + X.ESCAPE_XP.escape);
+});
+
+test("golden keys, events, the torch, the exit door, the guard and stars", () => {
+  const g = X.makeEscape(3, 0, seeded(11)), pl = X.newPlay(g, 0);
+  g.rooms.forEach(r => { assert.ok(r.key.opts.includes(r.key.answer)); assert.ok(r.keyObject); });
+  assert.deepEqual(g.rooms.map(r => r.event.type), ["footsteps", "powercut", "footsteps"]);
+  g.rooms.filter(r => r.event.type === "footsteps").forEach(r => assert.ok(r.event.opts.includes(r.event.answer)));
+  assert.equal(g.final.tiles.slice().sort().join(""), g.final.word.split("").sort().join(""));
+  assert.notEqual(g.final.tiles.join(""), g.final.word);
+  // one try at the key: right takes 30 s off, a second answer changes nothing
+  assert.equal(X.answerKey(g, pl, g.rooms[0].key.answer), true);
+  assert.equal(X.answerKey(g, pl, "nope"), true); assert.equal(pl.penalty, -X.KEY_BONUS);
+  X.answerEvent(pl, false); X.answerEvent(pl, true); assert.equal(pl.events[0], "missed");
+  assert.equal(pl.penalty, -X.KEY_BONUS + X.ESCAPE_PENALTY.event);
+  // the gallery: dark after 60 s, the torch lights it for 20 s
+  pl.room = 1; pl.roomStart[1] = 0;
+  assert.equal(X.leafletDark(g, pl, 30000), false); assert.equal(X.leafletDark(g, pl, 61000), true);
+  X.useTorch(pl, 61000); assert.equal(X.leafletDark(g, pl, 70000), false); assert.equal(X.leafletDark(g, pl, 82000), true);
+  // the exit door: too slow costs a minute but still opens
+  const p2 = X.newPlay(g, 0); X.startFinal(p2, 0); assert.equal(X.finalLeft(p2, 15000), 45);
+  X.finishFinal(p2, false); assert.ok(p2.out); assert.equal(p2.penalty, X.ESCAPE_PENALTY.final);
+  // the guard and stars
+  assert.equal(X.guardLeft(X.newPlay(g, 0), 100000), X.GUARD_SECONDS - 100);
+  assert.deepEqual([300, 400, 700, 800].map(X.stars), [3, 2, 1, 0]);
+  const late = X.escapeResult(g, p2, [], 800000);
+  assert.ok(late.caught); assert.equal(late.stars, 0); assert.equal(late.finalOk, false);
+  const r = X.escapeResult(g, pl, [], 200000);
+  assert.equal(r.keys, 1); assert.ok(!r.caught);
+  assert.ok(r.answers.some(a => a.skill === "Vocabulary" && a.word === g.rooms[0].event.word && a.first_try === false));
 });

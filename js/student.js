@@ -57,9 +57,10 @@ function header() {
 const SOUND_ON = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 const SOUND_OFF = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
 function tick() {
+  escTick();
   const el = document.getElementById("clock"); if (!el || !run) return;
   const s = run.kind === "escape" ? (run.play ? X.escapeSeconds(run.play) : 0) : Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
-  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 15 }[run.kind] || 15;
+  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 12 }[run.kind] || 15;
   el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${target}:00`;
   el.classList.toggle("over", s > target * 60);
 }
@@ -751,61 +752,137 @@ function startEscape(u) {
   saveRun(); route(); top();
 }
 const DIAL = { letters: "ABCDEFGHIJKLMNOPQRSTUVWXYZ", digits: "0123456789" };
+// A small night picture of each room (fixed colours: it is dark inside the museum in both themes).
+function escPic(kind) {
+  const door = (x, lock) => `<rect x="${x}" y="22" width="38" height="58" rx="3" fill="#3B2A1E" stroke="#6B4A2E" stroke-width="2"/><circle cx="${x + 31}" cy="52" r="2.5" fill="#C9A24A"/>
+    ${lock ? `<rect x="${x + 12}" y="44" width="14" height="12" rx="2" fill="#C9A24A"/><path d="M${x + 14} 44v-4a5 5 0 0 1 10 0v4" fill="none" stroke="#C9A24A" stroke-width="2"/>` : ""}`;
+  const parts = {
+    vocab: `<rect x="30" y="50" width="120" height="30" rx="3" fill="#2E3E52"/><rect x="30" y="46" width="120" height="6" fill="#41556E"/>
+      <rect x="44" y="28" width="22" height="16" fill="#41556E"/><rect x="70" y="34" width="14" height="10" fill="#8B5E3C"/>
+      <rect x="180" y="58" width="34" height="22" fill="#5A4632"/><text x="186" y="72" font-size="8" fill="#C9B79A" font-family="sans-serif">LOST</text>${door(250, true)}`,
+    reading: `<rect x="24" y="24" width="40" height="30" fill="#3A2F22" stroke="#C9A24A" stroke-width="3"/><path d="M28 50l10-12 8 8 6-6 8 10z" fill="#4B6A57"/>
+      <rect x="80" y="20" width="30" height="38" fill="#3A2F22" stroke="#C9A24A" stroke-width="3"/><circle cx="95" cy="36" r="8" fill="#7A5A3A"/>
+      <rect x="128" y="62" width="70" height="6" fill="#6B4A2E"/><rect x="140" y="56" width="18" height="6" fill="#E8E0CC"/>
+      <rect x="236" y="38" width="56" height="42" rx="4" fill="#4A5563" stroke="#7E8A99" stroke-width="2"/><circle cx="264" cy="59" r="10" fill="none" stroke="#C9D3DC" stroke-width="3"/><path d="M264 59l5-5" stroke="#C9D3DC" stroke-width="2"/>`,
+    grammar: `<rect x="20" y="22" width="80" height="58" fill="none" stroke="#6B4A2E" stroke-width="3"/><path d="M20 42h80M20 62h80" stroke="#6B4A2E" stroke-width="3"/>
+      <rect x="28" y="30" width="14" height="12" fill="#8B5E3C"/><rect x="60" y="50" width="22" height="12" fill="#5A4632"/>
+      <rect x="120" y="54" width="44" height="26" fill="#8B5E3C" stroke="#5A3E26" stroke-width="2"/><path d="M120 54l44 26M164 54l-44 26" stroke="#5A3E26" stroke-width="2"/>
+      <rect x="172" y="30" width="16" height="12" fill="#F2D86B" transform="rotate(-8 180 36)"/>${door(250, false)}<rect x="236" y="40" width="10" height="16" rx="2" fill="#4A5563"/>`,
+    exit: `${door(141, false)}<path d="M143 24h34v56h-34z" fill="#F2D86B" opacity=".25"/><path d="M160 80l-60 10h120z" fill="#F2D86B" opacity=".2"/>
+      <text x="138" y="16" font-size="10" fill="#9FD6B6" font-family="sans-serif" font-weight="700">EXIT</text>`
+  };
+  return `<svg class="escpic" viewBox="0 0 320 90" role="img" aria-label="The room in the dark"><rect width="320" height="90" fill="#141C28"/>
+    <rect x="0" y="80" width="320" height="10" fill="#202A38"/><circle cx="300" cy="14" r="6" fill="#E6E2C8" opacity=".7"/>${parts[kind] || ""}</svg>`;
+}
+function escHud(pl) {
+  const left = X.guardLeft(pl), keys = pl.keys.filter(k => k === true).length;
+  return `<div class="eschud"><span id="guard" class="${left < 60 ? "near" : ""}">${guardText(left)}</span>
+    <span class="chip gold" title="Golden keys">${I.icon("lock", 14)} ${keys}/${pl.keys.length} keys</span></div>`;
+}
+// The dark closing in: one layer over the whole page (outside the app, so the page animation can't move it).
+function escDark(pl) {
+  let el = document.getElementById("escdark");
+  if (!pl) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement("div"); el.id = "escdark"; el.setAttribute("aria-hidden", "true"); document.body.appendChild(el); }
+  el.style.opacity = darkness(pl); el.classList.toggle("caught", !!pl.caught);
+}
+const guardText = left => left > 0 ? `The guard is back in <b>${U.fmtClock(Math.ceil(left))}</b>` : `<b>Caught!</b> The guard is back`;
+const darkness = pl => Math.min(1, 0.15 + 0.85 * X.escapeSeconds(pl) / X.GUARD_SECONDS).toFixed(2);
+function escToast(t, kind = "") {
+  const el = document.createElement("div"); el.className = `esctoast ${kind}`; el.setAttribute("role", "status"); el.textContent = t;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 3500);
+}
 function escapeView() {
   const g = run.game, E = X.ESCAPES[run.unit];
   if (run.phase === "intro") {
     const best = X.bestEscape(history, run.unit);
     $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Unit ${run.unit} · escape room</p><h1>${U.esc(E.title)}</h1>
+      ${escPic("vocab")}
       <div class="panel escstory"><p>${U.esc(E.story)}</p></div>
       <div class="panel"><ul><li>There are ${g.rooms.length} rooms. In each one, tap the things you can search to find a puzzle.</li>
         <li>Every puzzle you solve shows one part of the lock code in your notebook.</li>
-        <li>Put the code in the lock to open the next room. Wrong answers add ${X.ESCAPE_PENALTY.wrong} s, hints and wrong codes add ${X.ESCAPE_PENALTY.hint} s.</li>
+        <li><b>The guard comes back in ${X.GUARD_SECONDS / 60} minutes!</b> Wrong answers add ${X.ESCAPE_PENALTY.wrong} s, hints and wrong codes add ${X.ESCAPE_PENALTY.hint} s, so he comes sooner.</li>
+        <li>Each room hides a <b>golden key</b>: a harder question, one try only. Get it right to take ${X.KEY_BONUS} s off.</li>
+        <li>Listen for footsteps… and the exit door has one last lock, with ${X.FINAL_SECONDS} seconds to open it.</li>
+        <li>Escape in under ${X.STAR_TIMES[0] / 60} minutes for 3 stars.</li>
         <li>Playing as a team? Share one tablet and talk it through!</li></ul></div>
       <div class="stats"><div class="stat"><b>${best != null ? U.fmtTime(best) : "–"}</b><span>your best escape</span></div>
         <div class="stat"><b><span class="chip tier t${g.tier}">${U.esc(g.tierName)}</span></b><span>puzzle level</span></div></div>
       <div class="row"><button class="btn" id="go">Play on my own</button><button class="btn alt" id="team">Join a team game</button></div>
       <p class="note">Team game: your teacher shows a 4-digit code on the board. One tablet per team, signed in as one of you.</p></div>`;
     backButton();
-    document.getElementById("go").onclick = () => { S.play("tap"); run.phase = "play"; run.play = X.newPlay(g); run.t0 = run.play.t0; saveRun(); escapeView(); top(); };
+    document.getElementById("go").onclick = () => { S.play("creak"); run.phase = "play"; run.play = X.newPlay(g); run.t0 = run.play.t0; saveRun(); escapeView(); top(); };
     document.getElementById("team").onclick = () => { S.play("tap"); run.phase = "join"; saveRun(); escapeView(); };
     return;
   }
   if (run.phase === "join") return liveJoinView();
   if (run.phase === "wait") return liveWaitView();
-  const pl = run.play, R = g.rooms[pl.room], found = X.roomFound(g, pl), chars = DIAL[R.lock];
+  const pl = run.play;
+  if (pl.final && !pl.final.done) return finalView();
+  const R = g.rooms[pl.room], found = X.roomFound(g, pl), chars = DIAL[R.lock];
   if (!pl.dial) pl.dial = R.code.map(() => 0);
-  const open = pl.open != null ? R.puzzles[pl.open] : null, key = i => `${pl.room}-${i}`;
-  const tried = open ? (pl.wrong || {})[key(pl.open)] || [] : [];
-  const doc = R.kind === "reading" ? `<details class="panel escdoc" open><summary><b>${U.esc(E.doc.title)}</b></summary>
-      ${E.doc.paras.map((t, i) => `<p><b>${i + 1}</b> ${U.esc(t)}</p>`).join("")}</details>` : "";
-  $app.innerHTML = `<div class="narrow pop esc">
-    <p class="eyebrow">Room ${pl.room + 1} of ${g.rooms.length}</p><h1>${U.esc(R.name)}</h1>
-    <p class="lede">${U.esc(R.scene)}</p>
-    <div class="escroom">${R.puzzles.map((p, i) => `<button class="escobj${pl.solved[pl.room][i] ? " done" : ""}${pl.open === i ? " on" : ""}" data-obj="${i}">
-      ${I.icon(pl.solved[pl.room][i] ? "check" : R.kind === "reading" ? "read" : R.kind === "grammar" ? "grammar" : "words", 26)}<span>${U.esc(p.object)}</span></button>`).join("")}</div>
-    ${doc}
-    ${open ? `<div class="panel escpuz"><p class="eyebrow">${U.esc(open.object)}</p>
+  const isKey = pl.open === "key", open = isKey ? R.key : pl.open != null ? R.puzzles[pl.open] : null, key = i => `${pl.room}-${i}`;
+  const tried = open && !isKey ? (pl.wrong || {})[key(pl.open)] || [] : [];
+  const dark = R.event.type === "powercut" && X.leafletDark(g, pl), torch = R.event.type === "powercut" && pl.torchUntil > Date.now();
+  const doc = R.kind !== "reading" ? "" : dark
+    ? `<div class="panel escdoc off"><p><b>The lights went out!</b> It's too dark to read the leaflet.</p>
+        <button class="btn small" id="torch">Use your torch (+${X.ESCAPE_PENALTY.torch} s)</button></div>`
+    : `<details class="panel escdoc${torch ? " torch" : ""}" open><summary><b>${U.esc(E.doc.title)}</b>${torch ? ` <span class="chip gold">Torch: <b id="torchs">${Math.ceil((pl.torchUntil - Date.now()) / 1000)}</b> s</span>` : ""}</summary>
+      ${E.doc.paras.map((t, i) => `<p><b>${i + 1}</b> ${U.esc(t)}</p>`).join("")}</details>`;
+  const kst = pl.keys[pl.room];
+  const puzzle = !open ? "" : isKey
+    ? `<div class="panel escpuz goldkey"><p class="eyebrow">${U.esc(R.keyObject)}</p>
+        ${kst === true ? `<div class="fb ok"><p><strong>A golden key!</strong> ${X.KEY_BONUS} seconds off your time.</p></div>`
+        : kst === false ? `<div class="fb bad"><p>Not that one. The key slips away into the dark… The answer was <b>${U.esc(R.key.answer)}</b>.</p></div>`
+        : `<p class="note">One try only! Right: −${X.KEY_BONUS} s.</p><p class="stem">${U.esc(R.key.prompt)}</p>${R.key.text ? `<p class="esctext">${U.esc(R.key.text)}</p>` : ""}
+          <div class="escopts">${R.key.opts.map(o => `<button class="opt" data-k="${U.esc(o)}">${U.esc(o)}</button>`).join("")}</div>`}</div>`
+    : `<div class="panel escpuz"><p class="eyebrow">${U.esc(open.object)}</p>
       ${pl.solved[pl.room][pl.open]
         ? `<div class="fb ok"><p><strong>Solved!</strong> You found <b class="mono">${U.esc(open.gives)}</b>. It's in your notebook.</p></div>`
         : `<p class="stem">${U.esc(open.prompt)}</p>${open.text ? `<p class="esctext">${U.esc(open.text)}</p>` : ""}
           <div class="escopts">${open.opts.map(o => `<button class="opt" data-ans="${U.esc(o)}" ${tried.includes(o) ? "disabled" : ""}>${U.esc(o)}</button>`).join("")}</div>
           ${run.fb ? `<div class="fb bad"><p>${U.esc(run.fb)}</p></div>` : ""}
           ${pl.hints[pl.room][pl.open] ? `<div class="fb"><p><strong>Hint:</strong> ${U.esc(open.hint)}</p></div>`
-            : `<button class="btn small alt" id="hint">Hint (+${X.ESCAPE_PENALTY.hint} s)</button>`}`}</div>` : ""}
+            : `<button class="btn small alt" id="hint">Hint (+${X.ESCAPE_PENALTY.hint} s)</button>`}`}</div>`;
+  const ev = R.event, steps = ev.type === "footsteps" && pl.evAt && pl.events[pl.room] == null;
+  $app.innerHTML = `<div class="narrow pop esc${pl.caught ? " caught" : ""}">${escHud(pl)}
+    <p class="eyebrow">Room ${pl.room + 1} of ${g.rooms.length}</p><h1>${U.esc(R.name)}</h1>
+    ${escPic(R.kind)}
+    <p class="lede">${U.esc(R.scene)}</p>
+    <div class="escroom">${R.puzzles.map((p, i) => `<button class="escobj${pl.solved[pl.room][i] ? " done" : ""}${pl.open === i ? " on" : ""}" data-obj="${i}">
+      ${I.icon(pl.solved[pl.room][i] ? "check" : R.kind === "reading" ? "read" : R.kind === "grammar" ? "grammar" : "words", 26)}<span>${U.esc(p.object)}</span></button>`).join("")}
+      <button class="escobj key${kst == null ? " glint" : kst ? " done" : " lost"}${isKey ? " on" : ""}" data-obj="key">${I.icon("lock", 20)}<span>${kst == null ? U.esc(R.keyObject) : kst ? "Golden key found" : "The key is lost"}</span></button></div>
+    ${doc}${puzzle}
     <div class="panel esclock"><h3>${I.icon("lock", 20)} The lock</h3>
       <p class="note">Your notebook: ${found.map(c => `<b class="nb mono">${c == null ? "?" : U.esc(c)}</b>`).join("")}</p>
       <div class="dials">${pl.dial.map((d, k) => `<div class="dial"><button data-up="${k}" aria-label="Next">▲</button><b class="mono">${chars[d]}</b><button data-dn="${k}" aria-label="Back">▼</button></div>`).join("")}</div>
       ${run.msg ? `<p class="${run.msg.ok ? "note" : "err"}">${U.esc(run.msg.t)}</p>` : ""}
-      <div class="row"><button class="btn" id="try">Try the code</button></div></div></div>`;
-  backButton();
+      <div class="row"><button class="btn" id="try">Try the code</button></div></div></div>
+    ${steps ? `<div class="escmodal" role="dialog" aria-modal="true" aria-labelledby="evh"><div class="panel">
+      <p class="eyebrow">Footsteps!</p><h2 id="evh">The guard is near. Stay quiet!</h2>
+      <p>Answer in <b id="evtime">${Math.max(0, Math.ceil(X.EVENT_SECONDS - (Date.now() - pl.evAt) / 1000))}</b> seconds to stay hidden.</p>
+      <p class="stem">Tap the word that means…</p><p class="esctext">${U.esc(ev.text)}</p>
+      <div class="escopts">${ev.opts.map(o => `<button class="opt" data-ev="${U.esc(o)}">${U.esc(o)}</button>`).join("")}</div></div></div>` : ""}`;
+  backButton(); escDark(pl);
   const redraw = () => { saveRun(); escapeView(); };
-  $app.querySelectorAll("[data-obj]").forEach(b => b.onclick = () => { S.play("tap"); pl.open = +b.dataset.obj; run.fb = null; redraw(); });
+  $app.querySelectorAll("[data-obj]").forEach(b => b.onclick = () => {
+    const k = b.dataset.obj; S.play(k === "key" && kst == null ? "glint" : "tap"); pl.open = k === "key" ? "key" : +k; run.fb = null; redraw(); });
   $app.querySelectorAll("[data-ans]").forEach(b => b.onclick = () => {
     const out = X.answerPuzzle(g, pl, pl.open, b.dataset.ans);
     if (out === "right") { S.play("ok"); run.fb = null; }
     else { S.play("bad"); (pl.wrong = pl.wrong || {})[key(pl.open)] = [...tried, b.dataset.ans]; run.fb = `Not that one: +${X.ESCAPE_PENALTY.wrong} s. Try again.`; }
     livePush(); redraw();
   });
+  $app.querySelectorAll("[data-k]").forEach(b => b.onclick = () => {
+    if (X.answerKey(g, pl, b.dataset.k)) { S.play("level"); escToast(`Golden key! −${X.KEY_BONUS} seconds`, "gold"); } else S.play("bad");
+    livePush(); redraw();
+  });
+  $app.querySelectorAll("[data-ev]").forEach(b => b.onclick = () => {
+    const ok = b.dataset.ev === ev.answer; X.answerEvent(pl, ok); pl.evAt = null;
+    if (ok) { S.play("ok"); escToast("Phew! The footsteps go away."); } else { S.play("bad"); escToast(`The guard heard you! +${X.ESCAPE_PENALTY.event} s`, "bad"); }
+    livePush(); redraw();
+  });
+  const tb = document.getElementById("torch"); if (tb) tb.onclick = () => { X.useTorch(pl); S.play("click"); livePush(); redraw(); };
   const h = document.getElementById("hint"); if (h) h.onclick = () => { X.takeHint(pl, pl.open); S.play("info"); livePush(); redraw(); };
   const spin = (k, by) => { pl.dial[k] = (pl.dial[k] + by + chars.length) % chars.length; run.msg = null; S.play("tap"); redraw(); };
   $app.querySelectorAll("[data-up]").forEach(b => b.onclick = () => spin(+b.dataset.up, 1));
@@ -813,21 +890,103 @@ function escapeView() {
   document.getElementById("try").onclick = () => {
     const was = pl.room;
     if (X.tryCode(g, pl, pl.dial.map(d => chars[d]))) {
-      if (pl.out) { S.play("win"); run.phase = "done"; run.result = X.escapeResult(g, pl, history); saveRun(); livePush(); return runView(); }
-      livePush(); S.play("level"); run.msg = { ok: true, t: `Click! The lock opens. On to room ${was + 2}.` }; run.fb = null; redraw(); top();
-    } else { S.play("bad"); run.msg = { ok: false, t: `The lock doesn't open: +${X.ESCAPE_PENALTY.code} s. Check your notebook.` }; livePush(); redraw(); }
+      S.play("click"); run.fb = null; run.msg = pl.final ? null : { ok: true, t: `Click! The lock opens. On to room ${was + 2}.` }; saveRun(); livePush();
+      const lk = $app.querySelector(".esclock"); lk.classList.add("open"); lk.querySelector("h3").innerHTML = `${I.icon("lock", 20)} Click! It opens!`;
+      $app.querySelectorAll("button").forEach(x => x.disabled = true);
+      setTimeout(() => { if (!run || run.play !== pl) return; S.play(pl.final ? "creak" : "level"); escapeView(); top(); }, 900);
+    } else {
+      S.play("bad"); run.msg = { ok: false, t: `The lock doesn't open: +${X.ESCAPE_PENALTY.code} s. Check your notebook.` }; livePush(); redraw();
+      const lk = $app.querySelector(".esclock"); if (lk) lk.classList.add("shake");
+    }
   };
-  if (run.live) $app.querySelector(".esc").insertAdjacentHTML("afterbegin", `<p class="chip">Team ${U.esc(run.live.team)} · game ${U.esc(run.live.code)}</p>`);
-  if (run.live && run.live.ended) $app.querySelector(".esc").insertAdjacentHTML("afterbegin", `<div class="fb bad"><p>Your teacher has ended this game.</p></div>`);
+  liveChips();
 }
-
+function liveChips() {
+  const top = $app.querySelector(".esc"); if (!top || !run.live) return;
+  top.insertAdjacentHTML("afterbegin", `<p class="chip">Team ${U.esc(run.live.team)} · game ${U.esc(run.live.code)}</p>`);
+  if (run.live.ended) top.insertAdjacentHTML("afterbegin", `<div class="fb bad"><p>Your teacher has ended this game.</p></div>`);
+}
+// The exit door: put the letters of a word from the ticket hall in order, in 60 seconds.
+function finalView() {
+  const pl = run.play, F = run.game.final, pick = pl.final.pick || (pl.final.pick = []);
+  const left = Math.max(0, Math.ceil(X.finalLeft(pl)));
+  $app.innerHTML = `<div class="narrow pop esc final${pl.caught ? " caught" : ""}">${escHud(pl)}
+    <p class="eyebrow">The exit door</p><h1>One last lock!</h1>
+    ${escPic("exit")}
+    <p class="lede">The street door has a word lock. Tap the letters in order to spell a word you found in the ticket hall.</p>
+    <div class="ftimer${left <= 10 ? " near" : ""}"><b id="ftime">${left}</b><span>seconds left</span></div>
+    ${F.clue ? `<p class="note">Clue: ${U.esc(F.clue)}</p>` : ""}
+    <div class="fword" aria-label="Your word">${F.tiles.map((_, k) => `<b class="mono">${pick[k] != null ? U.esc(F.tiles[pick[k]]) : ""}</b>`).join("")}</div>
+    <div class="ftiles">${F.tiles.map((c, k) => `<button class="opt mono" data-tile="${k}" ${pick.includes(k) ? "disabled" : ""}>${U.esc(c)}</button>`).join("")}</div>
+    <div class="row"><button class="btn small alt" id="fundo" ${pick.length ? "" : "disabled"}>Undo</button><button class="btn small alt" id="fclear" ${pick.length ? "" : "disabled"}>Start again</button></div></div>`;
+  backButton(); escDark(pl);
+  $app.querySelectorAll("[data-tile]").forEach(b => b.onclick = () => {
+    pick.push(+b.dataset.tile); S.play("tap");
+    if (pick.length === F.tiles.length) {
+      if (pick.map(k => F.tiles[k]).join("") === F.word) { X.finishFinal(pl, true); S.play("creak"); return escapeOut(); }
+      S.play("bad"); saveRun(); finalView(); const w = $app.querySelector(".fword"); if (w) w.classList.add("shake");
+      setTimeout(() => { if (run && run.play === pl && !pl.final.done) { pl.final.pick = []; saveRun(); finalView(); } }, 700);
+      return;
+    }
+    saveRun(); finalView();
+  });
+  document.getElementById("fundo").onclick = () => { pick.pop(); S.play("tap"); saveRun(); finalView(); };
+  document.getElementById("fclear").onclick = () => { pl.final.pick = []; S.play("tap"); saveRun(); finalView(); };
+  liveChips();
+}
+function escapeOut() {
+  const pl = run.play; S.play("win");
+  run.phase = "done"; run.result = X.escapeResult(run.game, pl, history); saveRun(); livePush(); runView(); top();
+}
+// Every second while a room is on screen: the guard's countdown, the darkness, heartbeats, events, the exit door timer, rival alerts.
+let feedN = 0;
+function escTick() {
+  if (!run || run.kind !== "escape" || run.phase !== "play" || !run.play || !$app.querySelector(".esc")) return escDark(null);
+  const g = run.game, pl = run.play, now = Date.now(), left = X.guardLeft(pl, now);
+  const gd = document.getElementById("guard"); if (gd) { gd.innerHTML = guardText(left); gd.classList.toggle("near", left < 60); }
+  escDark(pl);
+  if (left <= 0 && !pl.caught) {
+    pl.caught = true; S.play("alarm"); saveRun(); $app.querySelector(".esc").classList.add("caught");
+    escToast("The guard is back! You're caught… but keep going to get out.", "bad");
+  } else if (left > 0 && left <= 60) S.play("heart");
+  if (run.live && ++feedN % 5 === 0) liveFeed();
+  if (pl.final && !pl.final.done) {
+    const f = X.finalLeft(pl, now), el = document.getElementById("ftime");
+    if (el) { el.textContent = Math.max(0, Math.ceil(f)); el.parentElement.classList.toggle("near", f <= 10); }
+    if (f > 0 && f <= 10) S.play("tick");
+    if (f <= 0) { X.finishFinal(pl, false); S.play("alarm"); escToast(`Too slow! The door jams for a minute (+${X.ESCAPE_PENALTY.final} s)… then it opens.`, "bad"); escapeOut(); }
+    return;
+  }
+  if (!$app.querySelector(".escroom")) return;
+  const R = g.rooms[pl.room], ev = R.event;
+  if (ev.type === "footsteps" && pl.events[pl.room] == null) {
+    if (!pl.evAt && X.roomSeconds(pl, now) >= ev.at) { pl.evAt = now; S.play("steps"); saveRun(); return escapeView(); }
+    if (pl.evAt) {
+      const s = X.EVENT_SECONDS - (now - pl.evAt) / 1000, el = document.getElementById("evtime");
+      if (el) el.textContent = Math.max(0, Math.ceil(s));
+      if (s <= 0) { X.answerEvent(pl, false); pl.evAt = null; S.play("bad"); escToast(`Too slow! The guard heard you: +${X.ESCAPE_PENALTY.event} s`, "bad"); livePush(); saveRun(); return escapeView(); }
+      S.play("tick");
+    }
+  }
+  if (ev.type === "powercut") {
+    const dark = X.leafletDark(g, pl, now), ts = document.getElementById("torchs");
+    if (ts) ts.textContent = Math.max(0, Math.ceil((pl.torchUntil - now) / 1000));
+    if (dark !== !!$app.querySelector(".escdoc.off")) { if (dark && !pl.cut) { pl.cut = true; S.play("dark"); escToast("The lights went out!", "bad"); } saveRun(); escapeView(); }
+  }
+}
+function starsHTML(R) {
+  const n = R.stars, next = n === 3 ? "" : n === 2 ? `Under ${X.STAR_TIMES[0] / 60} minutes for 3 stars.` : n === 1 ? `Under ${X.STAR_TIMES[1] / 60} minutes for 2 stars.` : `Get out before the guard for a star.`;
+  return `<div class="escstars" aria-label="${n} of 3 stars">${[0, 1, 2].map(k => `<span class="${k < n ? "on" : ""}" style="animation-delay:${k * 0.25}s">★</span>`).join("")}</div>
+    <p class="note center">${R.finalOk ? "You opened the exit door in time." : "The exit door jammed (+60 s)."} ${next}</p>`;
+}
 function liveDone() {
   const R = run.result, L = run.live, u = run.unit;
-  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Team ${U.esc(L.team)} · game ${U.esc(L.code)}</p><h1>You escaped!</h1>
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Team ${U.esc(L.team)} · game ${U.esc(L.code)}</p><h1>${R.caught ? "Caught… but you got out!" : "You escaped!"}</h1>
+    ${starsHTML(R)}
     <div class="panel escstory"><p>${U.esc(X.ESCAPES[u].escaped)}</p></div>
     <div class="stats"><div class="stat"><b>${U.fmtTime(L.seconds ?? R.seconds)}</b><span>team time</span></div>
       ${L.place ? `<div class="stat gold"><b>${L.place === 1 ? "1st" : L.place === 2 ? "2nd" : L.place === 3 ? "3rd" : L.place + "th"}</b><span>place so far</span></div>` : ""}
-      <div class="stat"><b>${R.right}/${R.total}</b><span>right first time</span></div></div>
+      <div class="stat"><b>${R.keys}/3</b><span>golden keys</span></div></div>
     <p class="lede">Look at the board to see the other teams.</p>
     <div class="row"><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
   document.getElementById("unit").onclick = () => { run = null; saveRun(); location.hash = `#unit-${u}/games`; route(); top(); };
@@ -873,10 +1032,23 @@ function liveWaitView(state) {
   if (state && state.status === "playing") return go(state);
   clearInterval(liveTimer); liveTimer = setInterval(poll, 2000);
 }
+// Rival alerts: what the other teams just did, from the class game (every 5 seconds while playing).
+async function liveFeed() {
+  if (!run || !run.live) return;
+  try { const r = await api.liveFeed(session.token, run.live.code); if (!run || !run.live) return;
+    const was = run.live.feed, names = ["the ticket hall", "the gallery", "the storeroom"];
+    run.live.feed = Object.fromEntries(r.teams.map(t => [t.team, { room: t.room, out: t.out }]));
+    if (r.status === "ended" && !run.live.ended) { run.live.ended = true; saveRun(); return escapeView(); }
+    if (!was) return;
+    for (const t of r.teams) { if (t.team === run.live.team) continue; const o = was[t.team]; if (!o) continue;
+      if (t.out && !o.out) { S.play("alarm"); escToast(`🚪 ${t.team} just got out of the museum!`, "bad"); }
+      else if (t.room > o.room) { S.play("info"); escToast(t.room >= 3 ? `⚡ ${t.team} reached the exit door!` : `⚡ ${t.team} just escaped ${names[t.room - 1] || "a room"}!`); } }
+  } catch (e) {}
+}
 async function livePush() {
   if (!run || !run.live || !run.play) return;
   const pl = run.play;
-  try { const r = await api.liveProgress(session.token, run.live.code, run.live.team, { room: pl.room, solved: X.solvedCount(pl), penalty: pl.penalty, out: !!pl.out });
+  try { const r = await api.liveProgress(session.token, run.live.code, run.live.team, { room: pl.final ? run.game.rooms.length : pl.room, solved: X.solvedCount(pl), penalty: pl.penalty, out: !!pl.out });
     if (r.status === "ended" && run && run.live) { run.live.ended = true; saveRun(); }
     if (pl.out && run && run.live) { run.live.place = r.place; run.live.seconds = r.seconds; saveRun(); if (run.phase === "done") escapeDone(); } }
   catch (e) {}
@@ -884,12 +1056,15 @@ async function livePush() {
 function escapeDone() {
   if (run.live) return liveDone();
   const R = run.result, u = run.unit, E = X.ESCAPES[u], best = X.bestEscape(history, u), record = best == null || R.seconds < best;
-  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Unit ${u} · escape room</p><h1>You escaped!</h1>
-    <div class="panel escstory"><p>${U.esc(E.escaped)}</p></div>
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Unit ${u} · escape room</p><h1>${R.caught ? "Caught… but you got out!" : "You escaped!"}</h1>
+    ${starsHTML(R)}
+    <div class="panel escstory"><p>${U.esc(R.caught ? "The guard caught you at the door. He let you go home, but next time, be faster!" : E.escaped)}</p></div>
     ${record && best != null ? `<div class="fb ok winbox"><p class="big">New best time!</p><p>Your old best was ${U.fmtTime(best)}.</p></div>` : best != null ? `<p class="note">Your best is ${U.fmtTime(best)}.</p>` : ""}
     <div class="stats"><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>escape time</span></div>
       <div class="stat"><b>${R.right}/${R.total}</b><span>right first time</span></div>
+      <div class="stat"><b>${R.keys}/3</b><span>golden keys</span></div>
       <div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div></div>
+    ${R.caught ? `<p class="note">No escape bonus this time. Get out before the guard comes back (${X.GUARD_SECONDS / 60} minutes) for it.</p>` : ""}
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
   document.getElementById("again").onclick = () => { run = null; saveRun(); startEscape(u); };
@@ -1144,10 +1319,14 @@ function runName(r) {
   if (r.kind === "escape") return `Unit ${r.unit} escape room${r.play ? ` (room ${r.play.room + 1} of ${r.game.rooms.length})` : ""}`;
   return U.textTitle(r.textId);
 }
+function shiftPlay(pl, away) {
+  pl.t0 += away; pl.roomStart = (pl.roomStart || []).map(t => t == null ? t : t + away);
+  if (pl.torchUntil) pl.torchUntil += away; if (pl.evAt) pl.evAt += away; if (pl.final && pl.final.t0) pl.final.t0 += away;
+}
 function resumeRun() {
   const r = pausedRun(); if (!r) return;
   const away = Date.now() - r.pausedAt;          // the timer does not count time away
-  r.t0 += away; if (r.readStart) r.readStart += away; if (r.play && !r.live) r.play.t0 += away; delete r.pausedAt;   // a live game's clock keeps going
+  r.t0 += away; if (r.readStart) r.readStart += away; if (r.play && !r.live) shiftPlay(r.play, away); delete r.pausedAt;   // a live game's clock keeps going
   run = r; saveRun(); route(); top();
 }
 function readGate(paras, onGo, label) {

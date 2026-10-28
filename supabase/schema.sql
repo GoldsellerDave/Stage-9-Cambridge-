@@ -545,15 +545,28 @@ declare s ck_students := ck_auth(p_token); l ck_live; v_secs int;
 begin
   select * into l from ck_live where code = trim(p_code) and status = 'playing';
   if l.id is null then return json_build_object('status', 'ended'); end if;
-  v_secs := extract(epoch from now() - l.started_at)::int + greatest(coalesce(p_penalty, 0), 0);
+  v_secs := extract(epoch from now() - l.started_at)::int + greatest(coalesce(p_penalty, 0), -90);   -- golden keys take off up to 90 s
   update ck_live_teams set room = least(greatest(p_room, 0), 9), solved = least(greatest(p_solved, 0), 30),
-         penalty = greatest(coalesce(p_penalty, 0), 0), updated_at = now(),
+         penalty = greatest(coalesce(p_penalty, 0), -90), updated_at = now(),
          seconds = case when p_out and finished_at is null then v_secs else seconds end,
          finished_at = case when p_out and finished_at is null then now() else finished_at end
    where live_id = l.id and team = p_team and student_id = s.id;
   return json_build_object('status', l.status, 'seconds', v_secs,
     'place', (select count(*) + 1 from ck_live_teams t where t.live_id = l.id and t.finished_at is not null
                and t.seconds < (select seconds from ck_live_teams where live_id = l.id and team = p_team)));
+end $$;
+
+-- What the other teams are doing, for the "rival" alerts on team tablets: names, rooms and who is out. No times or devices.
+create or replace function ck_live_feed(p_token uuid, p_code text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_auth(p_token); l ck_live;
+begin
+  select * into l from ck_live where code = trim(p_code) order by id desc limit 1;
+  if l.id is null then raise exception 'Game not found.'; end if;
+  if s.role = 'student' and s.class_code <> l.class_code then raise exception 'That game is for another class.'; end if;
+  return json_build_object('status', l.status,
+    'teams', coalesce((select json_agg(json_build_object('team', t.team, 'room', t.room, 'solved', t.solved, 'out', t.finished_at is not null) order by t.team)
+                         from ck_live_teams t where t.live_id = l.id), '[]'::json));
 end $$;
 
 -- Only the public entry points can be called from the website.
@@ -567,5 +580,6 @@ grant execute on function ck_login(text, text), ck_logout(uuid), ck_me(uuid), ck
   ck_teacher_delete_class(uuid, text), ck_set_password(uuid, text, text), ck_admin_teachers(uuid),
   ck_admin_add_teacher(uuid, text, text), ck_admin_reset_teacher(uuid, uuid), ck_admin_remove_teacher(uuid, uuid),
   ck_admin_move_class(uuid, text, uuid), ck_live_start(uuid, text, int), ck_live_control(uuid, text, text),
-  ck_live_board(uuid, text), ck_live_join(uuid, text, text), ck_live_progress(uuid, text, text, int, int, int, boolean)
+  ck_live_board(uuid, text), ck_live_join(uuid, text, text), ck_live_progress(uuid, text, text, int, int, int, boolean),
+  ck_live_feed(uuid, text)
   to anon;
