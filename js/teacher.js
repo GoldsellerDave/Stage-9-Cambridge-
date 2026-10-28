@@ -63,7 +63,7 @@ function ago(d) {
 
 function draw() {
   const placed = rows.filter(r => r.level != null);
-  const lv = [0, 1, 2].map(l => placed.filter(r => r.level === l).length);
+  const lv = [0, 1, 2, 3].map(l => placed.filter(r => r.level === l).length);
   const active = rows.filter(r => r.last_active && Date.now() - new Date(r.last_active) < 7 * 86400e3).length;
   const needHelp = rows.filter(r => r.last_active == null || Date.now() - new Date(r.last_active) > 14 * 86400e3);
   let h = `<div class="narrow" style="max-width:1100px">
@@ -71,16 +71,16 @@ function draw() {
       <div class="tabs" role="tablist" aria-label="Class">${classes.map(c => `<button role="tab" aria-selected="${c === cls}" data-c="${U.esc(c)}">${U.esc(c)}</button>`).join("")}</div></div>
     <div class="stats">
       <div class="stat"><b>${placed.length}/${rows.length}</b><span>took the baseline</span></div>
-      <div class="stat"><b>${lv[0]} · ${lv[1]} · ${lv[2]}</b><span>Easier · Core · Harder</span></div>
+      <div class="stat"><b>${lv.join(" · ")}</b><span>Easier · Core · Harder · Challenge</span></div>
       <div class="stat"><b>${active}</b><span>active in the last 7 days</span></div>
       <div class="stat gold"><b>${rows.reduce((t, r) => t + r.xp_week, 0)}</b><span>class XP this week</span></div></div>
     <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
   if (tab === "overview") {
-    h += `<div class="tbl"><table><thead><tr><th>Student</th><th>Username</th><th>Level</th><th class="num">Baseline</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
+    h += `<div class="tbl"><table><thead><tr><th>Student</th><th>Username</th><th>Level</th><th class="num" title="First baseline and latest baseline or Checkpoint check, as a percentage">Baseline / check</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
       rows.map(r => { const w = weakest(r.skills || {});
         return `<tr><td><button class="linkbtn" style="color:var(--teal);text-align:left" data-s="${r.id}">${U.esc(r.name)}</button></td><td>${U.esc(r.username)}</td>
           <td><span class="lvl">${U.levelName(r.level)}</span></td>
-          <td class="num">${r.baseline_first == null ? "–" : r.baseline_latest !== r.baseline_first ? `${r.baseline_first} → ${r.baseline_latest}` : r.baseline_first}</td>
+          <td class="num">${r.baseline_first == null ? "–" : r.baseline_latest !== r.baseline_first ? `${r.baseline_first}% → ${r.baseline_latest}%` : r.baseline_first + "%"}</td>
           <td class="num">${r.xp_week}</td><td class="num">${r.xp_total}</td><td class="num">${r.texts_done}</td><td>${ago(r.last_active)}</td>
           <td>${w ? `${U.esc(w.s)} (${w.p}%)` : "–"}</td></tr>`; }).join("")
     }</tbody></table></div>

@@ -553,3 +553,11 @@ body.has-nav main{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 .chev{grid-column:2;grid-row:1/3;color:var(--muted);transition:transform .2s}
 .srow[open] .chev{transform:rotate(90deg)}
 .sdet{padding:0 16px 14px 28px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+
+/* Reading level up */
+.lvlup{display:flex;align-items:center;flex-wrap:wrap;gap:10px 14px;background:var(--gold-bg);border:2px solid var(--gold);border-radius:14px;padding:14px 16px}
+.lvlup p{margin:2px 0 0}
+.lvl-from,.lvl-to{font-weight:900;font-size:1.4rem;border-radius:10px;padding:4px 10px}
+.lvl-from{color:var(--muted);text-decoration:line-through;opacity:.7}
+.lvl-to{background:var(--gold);color:#1A1205}
+.lvl-arrow{font-size:1.4rem;font-weight:900;color:var(--gold)}

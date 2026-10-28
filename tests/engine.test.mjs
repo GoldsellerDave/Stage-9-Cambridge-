@@ -81,17 +81,19 @@ test("weekly streak counts weeks with 2+ practice texts", () => {
   assert.equal(E.weekKey("2026-10-25T18:00:00Z"), "2026-10-26");   // Sunday 18:00 UTC is Monday 01:00 in Vietnam
 });
 
-test("Challenge: Units 2 and 3 have a fourth level, reached only inside a text after Harder", () => {
+test("Challenge: Units 2 and 3 have a fourth level, reached after Harder or earned as a steady level", () => {
   const withC = PRACTICE_TEXTS.filter(t => t.levels.length === 4).map(t => t.unitNo);
   assert.equal(withC.length, 8);
   assert.ok(withC.every(u => u === 2 || u === 3));
   const t = PRACTICE_TEXTS.find(x => x.id === "camping");
   t.slots.forEach(s => { if (s.q[3].type === "short") assert.ok(s.q[3].groups.length >= s.q[2].groups.length && !("extra" in s.q[3])); });
-  const r = E.newRun(t, 3);
-  assert.equal(r.level, 2, "never starts on Challenge");
+  assert.equal(E.newRun(t, 3).level, 3, "a student with a steady C1 level starts on Challenge");
+  const r = E.newRun(t, 2);
   for (let i = 0; i < 3; i++) { E.submit(t, r, true); E.advance(t, r); }
   assert.equal(r.level, 3);
-  const u4 = PRACTICE_TEXTS.find(x => x.unitNo === 4), r4 = E.newRun(u4, 2);
+  const u4 = PRACTICE_TEXTS.find(x => x.unitNo === 4);
+  assert.equal(E.newRun(u4, 3).level, 2, "Unit 4 has no Challenge text");
+  const r4 = E.newRun(u4, 2);
   for (let i = 0; i < 3; i++) { E.submit(u4, r4, true); E.advance(u4, r4); }
   assert.equal(r4.level, 2, "Unit 4 texts stop at Harder");
 });
@@ -110,4 +112,53 @@ test("reading bands: eight CEFR steps from the text level and the score", () => 
   assert.equal(E.currentBand([{ mode: "baseline", level_end: 2, score: 12 }, { mode: "vocab", level_end: null }]), 5);
   assert.equal(E.currentBand([]), null);
   assert.ok(E.badges([{ mode: "practice", created_at: "2026-10-28T02:00:00Z", ...ch }]).some(b => b.name === "Challenger"));
+});
+
+import { CHECKS, checkDue, daysToCheck, CHECK_GAP_DAYS } from "../js/checks.js";
+const day = n => new Date(Date.UTC(2026, 8, 1) + n * 86400e3).toISOString();
+const prac = (lv, score, d, ans) => ({ mode: "practice", text_id: "sleep", level_end: lv, score, max_score: 8, created_at: day(d),
+  answers: ans || Array.from({ length: 8 }, (_, i) => ({ skill: "Detail", level: lv, first_try: i < score })) });
+
+test("steady level: the middle step of the last three readings", () => {
+  assert.equal(E.steadyBand([]), null);
+  const h = [prac(1, 8, 0), prac(1, 2, 1), prac(2, 8, 2)]; // B1+, B1, B2+
+  assert.equal(E.steadyBand(h), 3, "middle of B1, B1+, B2+ is B1+");
+  const good = [prac(2, 8, 0), prac(2, 8, 1), prac(2, 8, 2)]; // B2+ three times
+  assert.equal(E.steadyBand([...good, prac(0, 1, 3)]), 5, "one bad day does not pull it down");
+  assert.equal(E.steadyLevel(h), 1);
+  assert.equal(E.steadyLevel([], 2), 2, "falls back before any reading");
+  const vocab = { mode: "vocab", text_id: "vocab-u2", level_end: null, score: 5, max_score: 5, created_at: day(4), answers: [] };
+  assert.equal(E.steadyBand([...h, vocab]), 3, "only reading counts");
+});
+
+test("level up: only when the steady level passes the best so far", () => {
+  const h = [prac(1, 8, 0), prac(1, 8, 1), prac(1, 8, 2)]; // steady B1+
+  assert.equal(E.levelUpAfter([], prac(1, 8, 0)), null, "no level up on the first reading");
+  assert.equal(E.levelUpAfter(h, prac(2, 8, 3)), null, "one good Harder reading is not enough");
+  const h2 = [...h, prac(2, 8, 3)];
+  assert.deepEqual(E.levelUpAfter(h2, prac(2, 8, 4)), { from: 3, to: 5 });
+  const back = [...h2, prac(2, 8, 4), prac(0, 0, 5), prac(0, 0, 6)]; // dropped down
+  assert.equal(E.levelUpAfter(back, prac(1, 8, 7)), null, "climbing back to an old level is not a new level up");
+  const names = E.badges([...h2, prac(2, 8, 4)]).map(b => b.name);
+  assert.ok(names.includes("B1 reader") && names.includes("B2 reader") && !names.includes("C1 reader"));
+});
+
+test("Checkpoint checks: two new 16-question tests, due six weeks after the last one", () => {
+  assert.equal(CHECKS.length, 2);
+  CHECKS.forEach(c => {
+    assert.deepEqual(c.passages.map(p => p.level), [0, 1, 2, 3]);
+    c.passages.forEach(p => { assert.equal(p.qs.length, 4); p.qs.forEach(q => assert.equal(q.opts.length, 4)); });
+  });
+  const base = { mode: "baseline", text_id: "baseline", level_end: 1, score: 7, max_score: 12, created_at: day(0), answers: [] };
+  assert.equal(checkDue([], new Date(day(100))), null, "needs the baseline first");
+  assert.equal(checkDue([base], new Date(day(CHECK_GAP_DAYS - 1))), null);
+  assert.equal(daysToCheck([base], new Date(day(CHECK_GAP_DAYS - 3))), 3);
+  assert.equal(checkDue([base], new Date(day(CHECK_GAP_DAYS))).id, "check-1");
+  const c1 = { ...base, text_id: "check-1", score: 12, max_score: 16, created_at: day(CHECK_GAP_DAYS) };
+  assert.equal(checkDue([base, c1], new Date(day(CHECK_GAP_DAYS + 1))), null);
+  assert.equal(checkDue([base, c1], new Date(day(2 * CHECK_GAP_DAYS))).id, "check-2");
+  assert.equal(E.testBand("check-1", 16), 7);
+  assert.equal(E.testBand("check-1", 12), 5);
+  assert.equal(E.testBand("baseline", 12), 5);
+  assert.equal(E.readingBand(c1), 5);
 });

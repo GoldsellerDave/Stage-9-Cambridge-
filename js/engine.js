@@ -2,7 +2,6 @@
 import { PLACEMENT } from "./content.js";
 
 export const LEVELS = ["Easier", "Core", "Harder", "Challenge"];
-export const TOP_START = 2;            // Challenge is reached only inside a text, never as a starting level
 export const UP_AFTER = 3;             // right first time in a row before moving up
 export const MISSES_FOR_REREAD = 2;    // questions missed in a row before the reread appears
 export const XP = { first: [10, 15, 20, 25], hint: 5, rescue: 3, easier: 3, explained: 0,
@@ -30,7 +29,7 @@ export function mark(q, response) {
 
 /* ---------------- practice run ---------------- */
 export function newRun(text, startLevel) {
-  startLevel = Math.max(0, Math.min(startLevel ?? 1, TOP_START, text.levels.length - 1));
+  startLevel = Math.max(0, Math.min(startLevel ?? 1, text.levels.length - 1));
   return { textId: text.id, level: startLevel, levelStart: startLevel, slot: 0, stage: 0,
            missedRow: 0, rightRow: 0, dropped: false, results: [], path: [{ level: startLevel, at: 0 }],
            levelUps: 0, done: false };
@@ -140,7 +139,9 @@ export function badges(history) {
   if (practice.length >= 1) out.push({ name: "Off the mark", why: "Finished a practice text" });
   if (practice.length >= 5) out.push({ name: "Bookworm", why: "Finished 5 practice texts" });
   if (history.some(h => h.level_end === 2)) out.push({ name: "Top level", why: "Reached the Harder text" });
-  if (practice.some(h => textLevel(h) === 3)) out.push({ name: "Challenger", why: "Reached a Challenge (C1) text" });
+  if (practice.some(h => textLevel(h) === 3)) out.push({ name: "Challenger", why: "Finished on a Challenge (C1) text" });
+  const peak = peakBand(history);
+  STEP_BADGES.forEach(b => { if (peak != null && peak >= b.band) out.push({ name: b.name, why: `Reading level reached ${BANDS[b.band]}` }); });
   if (weeklyStreak(history).streak >= 3) out.push({ name: "On a roll", why: "3-week reading streak" });
   const right = {};
   history.forEach(h => (h.answers || []).forEach(a => { if (a.first_try) right[a.skill] = (right[a.skill] || 0) + 1; }));
@@ -174,18 +175,42 @@ export function textLevel(h) {
   return last && last.level > h.level_end ? last.level : h.level_end;
 }
 // Upper half of the band when about 75% is right first time on the level the student finished on.
-// The baseline uses its score: the same bands as placement, split in two.
+// The baseline uses its score: the same bands as placement, split in two. A half-term check (16 questions) works the same way.
 export function readingBand(h) {
   const L = textLevel(h);
   if (L == null) return null;
-  if (h.mode === "baseline") { const s = h.score | 0; return s >= 12 ? 5 : s >= 10 ? 4 : s >= 8 ? 3 : s >= 6 ? 2 : s >= 3 ? 1 : 0; }
+  if (h.mode === "baseline") return testBand(h.text_id, h.score);
   const all = (h.answers || []).filter(a => a && a.skill), here = all.filter(a => a.level === L), use = here.length >= 3 ? here : all;
   if (!use.length) return 2 * L;
   let got = 0, max = 0;
   use.forEach(a => { const w = DEEP.includes(a.skill) ? 1.5 : 1; max += w; if (a.first_try) got += w; });
   return 2 * L + (got / max >= UPPER ? 1 : 0);
 }
-export function currentBand(history) {
-  const r = history.filter(h => h.mode === "practice" || h.mode === "baseline").filter(h => h.level_end != null);
-  return r.length ? readingBand(r[r.length - 1]) : null;
+export function testBand(id, score) {
+  const s = score | 0;
+  if (String(id || "").startsWith("check")) return s >= 16 ? 7 : s >= 14 ? 6 : s >= 12 ? 5 : s >= 10 ? 4 : s >= 8 ? 3 : s >= 6 ? 2 : s >= 4 ? 1 : 0;
+  return s >= 12 ? 5 : s >= 10 ? 4 : s >= 8 ? 3 : s >= 6 ? 2 : s >= 3 ? 1 : 0;
 }
+// A steady reading level: the middle step of the last three readings (baseline, checks and practice texts),
+// so one bad day does not knock a student down and moving up takes more than one good text.
+export const STEADY_OF = 3, LEVEL_UP_XP = 30;
+export const STEP_BADGES = [{ band: 2, name: "B1 reader" }, { band: 4, name: "B2 reader" }, { band: 6, name: "C1 reader" }];
+export const readings = history => history.filter(h => (h.mode === "practice" || h.mode === "baseline") && h.level_end != null);
+export function steadyBand(history) {
+  const b = readings(history).slice(-STEADY_OF).map(readingBand).sort((x, y) => x - y);
+  return b.length ? b[Math.floor((b.length - 1) / 2)] : null;
+}
+// The text version a new practice text starts on: the band of the steady level (Easier, Core, Harder or Challenge).
+export function steadyLevel(history, fallback = 1) { const b = steadyBand(history); return b == null ? fallback : Math.floor(b / 2); }
+// The highest steady step ever reached.
+export function peakBand(history) {
+  const r = readings(history); let peak = null;
+  for (let i = 1; i <= r.length; i++) { const b = steadyBand(r.slice(0, i)); if (peak == null || b > peak) peak = b; }
+  return peak;
+}
+// A new reading that lifts the steady level above anything reached before is a level-up (worth LEVEL_UP_XP).
+export function levelUpAfter(history, attempt) {
+  const before = peakBand(history), after = steadyBand([...history, attempt]);
+  return before != null && after != null && after > before ? { from: before, to: after } : null;
+}
+export const currentBand = steadyBand;

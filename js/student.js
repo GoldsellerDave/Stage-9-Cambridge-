@@ -1,6 +1,7 @@
 // Student app: sign in, baseline, adaptive practice, progress tracker, class leaderboard.
 import { api, LIVE, getSession, setSession, resetDemo } from "./api.js";
 import { PRACTICE_TEXTS, BASELINE, STRATEGY } from "./content.js";
+import * as C from "./checks.js";
 import * as E from "./engine.js";
 import * as U from "./ui.js";
 import * as P from "./practice.js";
@@ -139,8 +140,7 @@ window.addEventListener("hashchange", () => { if (!run) route(); });
 /* ---------------- home ---------------- */
 function homeView() {
   const { streak, thisWeek } = E.weeklyStreak(history);
-  const lastBase = [...history].reverse().find(h => h.mode === "baseline");
-  const canRetake = lastBase && Date.now() - new Date(lastBase.created_at) > 28 * 86400e3;
+  const check = me.baseline_done ? C.checkDue(history) : null, checkIn = me.baseline_done ? C.daysToCheck(history) : null;
   const first = me.name.split(" ").pop();
   const review = P.wordsToReview(history);
   let h = `<div class="narrow pop">
@@ -153,7 +153,12 @@ function homeView() {
     h += `<div class="tcard"><span class="tag gold">Start here</span><h3>Baseline reading</h3>
       <p class="note" style="font-size:1rem">Three short texts, from easier to harder, with 12 questions and no hints. Your score sets your starting reading level. It takes about 15 minutes.</p>
       <div class="row"><button class="btn" id="base">Start the baseline</button></div></div>`;
-  } else if (me.baseline_done) h += workoutCard();
+  } else if (me.baseline_done) {
+    if (check && !(paused && paused.kind === "baseline")) h += `<div class="tcard"><span class="tag gold">New</span><h3>${U.esc(check.title)}</h3>
+      <p class="note" style="font-size:1rem">Your half-term reading check: four short texts, from easier to Challenge, with 16 questions and no hints. It shows how far your reading has come. About 20 minutes.</p>
+      <div class="row"><button class="btn" id="check">Start the check</button></div></div>`;
+    h += workoutCard();
+  }
   h += quickTiles(review.length);
   if (me.baseline_done) {
     h += `<div class="stats">
@@ -164,12 +169,12 @@ function homeView() {
   }
   h += `<div class="panel goal"><b>This week: ${Math.min(thisWeek, 2)} of 2 activities</b><div class="bar"><i style="width:${Math.min(thisWeek, 2) * 50}%"></i></div>
       <p class="note">Finish 2 activities a week (a reading text, a vocabulary set or a grammar set) to keep your streak and earn a ${E.XP.streakWeek} XP bonus.</p></div>`;
-  h += `${canRetake ? `<div class="row"><button class="btn alt" id="rebase">Retake the baseline</button></div>` : ""}
+  h += `${!check && checkIn != null ? `<p class="note">Your next Checkpoint check opens in ${checkIn} day${checkIn === 1 ? "" : "s"}.</p>` : ""}
     ${LIVE ? "" : `<p class="note">Demo mode: <button class="linkbtn" style="color:var(--teal)" id="reset">reset the demo data</button></p>`}</div>`;
   $app.innerHTML = h;
   const b = document.getElementById("base"); if (b) b.onclick = startBaseline;
   const rr = document.getElementById("resume"); if (rr) rr.onclick = resumeRun;
-  const rb = document.getElementById("rebase"); if (rb) rb.onclick = startBaseline;
+  const ck = document.getElementById("check"); if (ck) ck.onclick = () => startBaseline(check.id);
   const rs = document.getElementById("reset"); if (rs) rs.onclick = () => { resetDemo(); setSession(null); session = null; me = null; route(); };
   $app.querySelectorAll("[data-wo]").forEach(b => b.onclick = () => startWorkoutItem(workout[+b.dataset.wo]));
   bindActivities();
@@ -180,7 +185,7 @@ let workout = [];
 const AREA_ICON = { baseline: "read", review: "review", text: "read", listen: "listen", vocab: "words", grammar: "grammar" };
 function workoutCard() {
   const fu = P.focusUnit();
-  workout = W.workoutPlan(history, fu, { level: me.level, baselineDone: me.baseline_done });
+  workout = W.workoutPlan(history, fu, { level: E.steadyLevel(history, me.level ?? 1), baselineDone: me.baseline_done });
   const n = workout.filter(i => i.done).length, next = workout.find(i => !i.done);
   return `<div class="tcard workout"><div class="wo-head">${ringSVG(workout)}<div><p class="eyebrow">Today's workout</p>
       <h3>${next ? "Strengthen your weakest areas" : "Workout complete!"}</h3>
@@ -208,7 +213,7 @@ function startWorkoutItem(it) {
   if (it.kind === "game") return startGame(it.game, u);
 }
 function quickTiles(due) {
-  const fu = P.focusUnit(), m = P.mission(fu, history), sc = W.areaScores(history, me.level).overall;
+  const fu = P.focusUnit(), m = P.mission(fu, history), sc = W.areaScores(history, E.steadyLevel(history, me.level ?? 1)).overall;
   const best = Math.max(0, ...Object.keys(G.GAMES).map(g => G.bestScore(history, G.gameId(g, fu))));
   const t = (href, ic, title, note) => `<a class="qtile" href="${href}">${I.tile(ic, "m")}<b>${title}</b><span class="note">${note}</span></a>`;
   return `<div class="qtiles">${t(`#unit-${fu}`, I.unitIcon(fu), `Unit ${fu}`, `Mission ${m.steps.filter(x => x.done).length} of ${m.steps.length}`)}
@@ -227,7 +232,8 @@ function unitSections(u) {
   const lists = VOCAB[u].map((l, i) => `List ${i + 1}: ${l.length} words`).join(" · ");
   const secs = [{ key: "mission", label: "Mission", html: missionHTML(u) }];
   if (texts.length) secs.push({ key: "read", label: "Reading", html: `<div class="usec">${me.baseline_done ? "" : `<p class="note">Take the baseline on the Home page first. It sets your reading level.</p>`}
-      <div class="tiles">${texts.map(t => aTile("read", `data-text="${t.id}" ${me.baseline_done ? "" : "disabled"}`, t.topic, done.has(t.id) ? "Done before: half XP this time" : t.blurb, done.has(t.id))).join("")}</div></div>` });
+      <div class="tiles">${texts.map(t => aTile("read", `data-text="${t.id}" ${me.baseline_done ? "" : "disabled"}`, t.topic, done.has(t.id) ? "Done before: half XP this time" : t.blurb, done.has(t.id))).join("")}</div>
+      </div>` });
   if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${listeningFor(u).map(t =>
       aTile("listen", `data-listen="${t.id}"`, t.topic, `${t.part} · ${done.has(t.id) ? "Done before" : t.blurb}`, done.has(t.id))).join("")}</div></div>` });
   secs.push({ key: "words", label: "Words", html: `<div class="usec"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
@@ -662,7 +668,7 @@ function gameView() {
   $app.querySelectorAll("[data-wpm]").forEach(w => w.onclick = () => { run.wpm = +w.dataset.wpm; S.play("tap"); gameView(); });
   if (run.phase === "play") {
     const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed }[run.game];
-    stopGame = play(document.getElementById("gbox"), { unit: run.unit, texts: readTexts(run.unit), level: me.level ?? 1, wpm: run.wpm, onEnd: R => {
+    stopGame = play(document.getElementById("gbox"), { unit: run.unit, texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
       stopGame = null; if (!run || run.kind !== "game") return;
       run.result = { ...R, xp: G.gameXP(R.hits, history), best };
       run.phase = "done"; S.play(R.points > best ? "win" : "done"); saveRun(); runView(); top();
@@ -854,13 +860,13 @@ function settingsView() {
 const CHEV = `<svg class="chev" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>`;
 const AREA_LINK = { Reading: "read", Listening: "listen", Vocabulary: "words", Grammar: "grammar", Speed: "games" };
 function statsCard() {
-  const s = W.areaScores(history, me.level), fu = P.focusUnit();
+  const s = W.areaScores(history, E.steadyLevel(history, me.level ?? 1)), fu = P.focusUnit();
   const row = (label, score, detail, big = false) => `<details class="srow${big ? " big" : ""}"><summary><span class="sname">${label}</span>
       <span class="sline"><span class="sbar"><i style="width:${score == null ? 0 : score / 10}%"></i></span><b>${score ?? "–"}</b></span>${CHEV}</summary><div class="sdet">${detail}</div></details>`;
   const det = a => {
     if (a.score == null) return `<p class="note">Answer at least ${W.MIN_ANSWERS} ${a.name === "Speed" ? "Speed Read questions" : "questions in this area"} to get a score.</p>${practise(a.name)}`;
     const how = a.name === "Speed" ? `From your last ${a.n} Speed Read questions: ${a.right} right. Reading faster and getting them right raises this score.`
-      : `From your last ${a.n} answers: ${a.right} right first time.${a.name === "Reading" ? ` Your text level (${U.levelName(me.level)}) counts too: moving up a level raises your score.` : ""}`;
+      : `From your last ${a.n} answers: ${a.right} right first time.${a.name === "Reading" ? ` Your reading level (${U.bandName(history, me.level)}) counts too: moving up a level raises your score.` : ""}`;
     return `<p class="note">${how}</p>${practise(a.name)}`;
   };
   const practise = name => (name === "Listening" && !listeningFor(fu).length) || (name === "Reading" && !PRACTICE_TEXTS.some(t => t.unitNo === fu)) ? ""
@@ -882,7 +888,7 @@ async function leaderboardView() {
   const draw = () => {
     $app.innerHTML = `<div class="narrow pop">${meTabs("leaderboard")}
       <div class="hero"><p class="eyebrow">Class ${U.esc(lb.class_code)}</p><h1>Leaderboard</h1>
-      <p class="lede">${cur === "week" ? "XP earned since Monday. It starts again every week." : cur === "all" ? "All the XP earned since the start." : "Biggest rise from the first baseline to the latest one."}</p></div>
+      <p class="lede">${cur === "week" ? "XP earned since Monday. It starts again every week." : cur === "all" ? "All the XP earned since the start." : "Biggest rise in percentage from the first baseline to the latest Checkpoint check."}</p></div>
       <div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button role="tab" aria-selected="${k === cur}" data-k="${k}">${l}</button>`).join("")}</div>
       ${U.boardTable(lb[cur], cur === "improved" ? "gain" : "xp")}</div>`;
     $app.querySelectorAll("[data-k]").forEach(b => b.onclick = () => { cur = b.dataset.k; draw(); });
@@ -891,13 +897,15 @@ async function leaderboardView() {
 }
 
 /* ---------------- reading runs ---------------- */
-function startBaseline() {
-  run = { kind: "baseline", phase: "read", part: 0, qi: 0, answers: [], t0: Date.now(), readStart: Date.now(), orders: {}, pick: null };
+// The baseline and the half-term checks run the same way: passages in order, MCQs with no hints.
+const testOf = id => id && id !== "baseline" ? C.CHECKS.find(c => c.id === id) : { id: "baseline", title: "Baseline", passages: BASELINE };
+function startBaseline(test = "baseline") {
+  run = { kind: "baseline", test, phase: "read", part: 0, qi: 0, answers: [], t0: Date.now(), readStart: Date.now(), orders: {}, pick: null };
   saveRun(); route(); top();
 }
 function startPractice(id) {
   const text = PRACTICE_TEXTS.find(t => t.id === id);
-  run = { kind: "practice", textId: id, phase: "read", r: E.newRun(text, me.level ?? 1), t0: Date.now(), readStart: Date.now(),
+  run = { kind: "practice", textId: id, phase: "read", r: E.newRun(text, E.steadyLevel(history, me.level ?? 1)), t0: Date.now(), readStart: Date.now(),
           orders: {}, pick: null, draft: "", fb: null, xpSoFar: 0 };
   saveRun(); route(); top();
 }
@@ -924,7 +932,7 @@ function backButton() {
 }
 function pausedRun() { const r = loadRun(); return r && r.pausedAt ? r : null; }
 function runName(r) {
-  if (r.kind === "baseline") return `Baseline reading (text ${r.part + 1} of 3)`;
+  if (r.kind === "baseline") { const T = testOf(r.test); return `${T.id === "baseline" ? "Baseline reading" : T.title} (text ${r.part + 1} of ${T.passages.length})`; }
   if (r.kind === "small") return `${r.label} (question ${r.set.i + 1} of ${r.set.qs.length})`;
   if (r.kind === "listen") return `Listening: ${LISTENING.find(t => t.id === r.id).topic}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
@@ -961,37 +969,42 @@ function bindOpts(after) {
   $app.querySelectorAll(".opt").forEach(b => b.onclick = () => { run.pick = +b.dataset.o; S.play("tap"); saveRun(); after(); backButton(); });
 }
 
-/* ---- baseline ---- */
+/* ---- baseline and half-term checks ---- */
 function baselineView() {
-  const P = BASELINE[run.part];
+  const T = testOf(run.test), PS = T.passages, P = PS[run.part], total = PS.reduce((n, x) => n + x.qs.length, 0), isBase = T.id === "baseline";
   if (run.phase === "read") {
-    $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Baseline · text ${run.part + 1} of 3 · read it all first</p>
-      ${run.part === 0 ? `<div class="panel"><p style="margin:0">There are no hints in the baseline. Just do your best: it finds the right starting level for you.</p></div>` : ""}
+    $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">${U.esc(T.title)} · text ${run.part + 1} of ${PS.length} · read it all first</p>
+      ${run.part === 0 ? `<div class="panel"><p style="margin:0">${isBase ? "There are no hints in the baseline. Just do your best: it finds the right starting level for you." : "There are no hints in the check. Just do your best: it shows how far your reading has come since last time."}</p></div>` : ""}
       ${U.textHTML(P)}<div class="row"><button class="btn" id="go">Start the questions</button></div></div>`;
     readGate(P.paras, () => { run.phase = "q"; saveRun(); runView(); top(); }, "Start the questions");
     return;
   }
-  const q = P.qs[run.qi], ord = order("b" + run.part + "-" + run.qi, q.opts.length), n = run.part * 4 + run.qi;
+  const q = P.qs[run.qi], ord = order("b" + run.part + "-" + run.qi, q.opts.length), n = PS.slice(0, run.part).reduce((k, x) => k + x.qs.length, 0) + run.qi;
   $app.innerHTML = `<div class="qgrid"><div class="qcol">
-      <div class="progress">${Array.from({ length: 12 }, (_, i) => `<i class="${i < n ? "ok" : i === n ? "cur" : ""}"></i>`).join("")}</div>
-      <div class="qcard pop"><div class="qhead"><span class="tag">${U.esc(q.skill)}</span><span class="qnum">Question ${n + 1} of 12</span></div>
+      <div class="progress">${Array.from({ length: total }, (_, i) => `<i class="${i < n ? "ok" : i === n ? "cur" : ""}"></i>`).join("")}</div>
+      <div class="qcard pop"><div class="qhead"><span class="tag">${U.esc(q.skill)}</span><span class="qnum">Question ${n + 1} of ${total}</span></div>
       <p class="stem">${U.esc(q.stem)}</p>${optsHTML(q, ord)}
-      <div class="row"><button class="btn" id="next" ${run.pick === null ? "disabled" : ""}>${n === 11 ? "Finish" : "Next"}</button></div></div></div>
+      <div class="row"><button class="btn" id="next" ${run.pick === null ? "disabled" : ""}>${n === total - 1 ? "Finish" : "Next"}</button></div></div></div>
     <div class="textcol"><details id="tx"><summary>Read the text again</summary>${U.textHTML(P)}</details></div></div>`;
   if (matchMedia("(min-width:900px)").matches) document.getElementById("tx").open = true;
   bindOpts(baselineView);
   document.getElementById("next").onclick = () => {
     run.answers.push({ skill: q.skill, level: P.level, first_try: run.pick === 0, support: "none" });
     run.pick = null; run.qi++;
-    if (run.qi >= P.qs.length) { run.part++; run.qi = 0; run.phase = run.part >= BASELINE.length ? "finish" : "read"; run.readStart = Date.now(); }
+    if (run.qi >= P.qs.length) { run.part++; run.qi = 0; run.phase = run.part >= PS.length ? "finish" : "read"; run.readStart = Date.now(); }
     saveRun();
     if (run.phase === "finish") return finishBaseline();
     runView(); top();
   };
 }
 async function finishBaseline() {
-  const score = run.answers.filter(a => a.first_try).length, level = E.placement(score);
-  run.result = { score, level, xp: E.baselineXP(score), seconds: Math.round((Date.now() - run.t0) / 1000) };
+  const T = testOf(run.test), isBase = T.id === "baseline", score = run.answers.filter(a => a.first_try).length;
+  const max = T.passages.reduce((n, x) => n + x.qs.length, 0), band = E.testBand(T.id, score);
+  const level = isBase ? E.placement(score) : Math.floor(band / 2);
+  const attempt = { mode: "baseline", text_id: T.id, level_end: level, score, max_score: max, answers: run.answers };
+  const up = isBase ? null : E.levelUpAfter(history, attempt);
+  run.result = { score, max, band, level, levelUp: up, xp: E.baselineXP(score) + (up ? E.LEVEL_UP_XP : 0), seconds: Math.round((Date.now() - run.t0) / 1000),
+                 next: E.steadyLevel([...history, attempt], level) };
   run.phase = "done"; S.play("done"); saveRun(); runView(); top();
 }
 async function saveAttempt(payload) {
@@ -1005,17 +1018,26 @@ async function saveAttempt(payload) {
     const r = document.getElementById("retry"); if (r) r.onclick = () => saveAttempt(payload);
   }
 }
+// The celebration when a reading lifts the steady level to a step never reached before.
+function levelUpHTML(up) {
+  if (!up) return "";
+  return `<div class="lvlup pop"><span class="lvl-from">${E.BANDS[up.from]}</span><span class="lvl-arrow" aria-hidden="true">→</span><span class="lvl-to">${E.BANDS[up.to]}</span>
+    <div><b>Reading level up!</b><p>Your reading level is now <b>${E.BANDS[up.to]}</b>. <span class="xpgain">+${E.LEVEL_UP_XP} XP</span></p></div></div>`;
+}
 function baselineDone() {
-  const R = run.result;
-  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Baseline finished</p><h1>You scored ${R.score} out of 12</h1>
-    <div class="stats"><div class="stat"><b>${R.score}/12</b><span>score</span></div><div class="stat"><b>${E.LEVELS[R.level]}</b><span>your starting level</span></div>
+  const R = run.result, T = testOf(run.test), isBase = T.id === "baseline";
+  if (R.levelUp) S.play("level");
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">${U.esc(T.title)} finished</p><h1>You scored ${R.score} out of ${R.max}</h1>
+    ${levelUpHTML(R.levelUp)}
+    <div class="stats"><div class="stat"><b>${R.score}/${R.max}</b><span>score</span></div><div class="stat"><b>${isBase ? E.LEVELS[R.level] : E.BANDS[R.band]}</b><span>${isBase ? "your starting level" : "this check"}</span></div>
       <div class="stat gold"><b>+${R.xp}</b><span>XP</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
-    <div class="panel"><p style="margin:0">Your practice texts will start on the <b>${E.LEVELS[R.level]}</b> version. The platform moves you up or down as you answer.</p></div>
+    <div class="panel"><p style="margin:0">${isBase ? `Your practice texts will start on the <b>${E.LEVELS[R.level]}</b> version. The platform moves you up or down as you answer.`
+      : `This check counts as one of your readings. Your practice texts now start on the <b>${E.LEVELS[R.next]}</b> version.`}</p></div>
     ${U.resultRows(null, run.answers)}
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="home">Go to my home page</button></div></div>`;
   document.getElementById("home").onclick = () => { run = null; saveRun(); location.hash = "#home"; route(); };
-  saveAttempt({ mode: "baseline", text_id: "baseline", level_start: 0, level_end: R.level, score: R.score, max_score: 12,
+  saveAttempt({ mode: "baseline", text_id: T.id, level_start: 0, level_end: R.level, next_level: R.next, score: R.score, max_score: R.max,
                 xp: R.xp, seconds: R.seconds, answers: run.answers });
 }
 
@@ -1105,8 +1127,11 @@ function next(text) {
 function finishPractice(text) {
   const r = run.r, replay = history.some(h => h.mode === "practice" && h.text_id === text.id);
   const bonus = E.streakBonus(history);
-  const xp = E.runXP(r, { replay }) + bonus;
-  run.result = { xp, bonus, replay, score: r.results.filter(x => x.first_try).length, seconds: Math.round((Date.now() - run.t0) / 1000) };
+  const score = r.results.filter(x => x.first_try).length;
+  const attempt = { mode: "practice", text_id: text.id, level_end: r.level, score, max_score: text.slots.length, answers: r.results };
+  const up = E.levelUpAfter(history, attempt);
+  const xp = E.runXP(r, { replay }) + bonus + (up ? E.LEVEL_UP_XP : 0);
+  run.result = { xp, bonus, replay, score, levelUp: up, next: E.steadyLevel([...history, attempt], r.level), seconds: Math.round((Date.now() - run.t0) / 1000) };
   run.phase = "done"; run.xpSoFar = 0; S.play("done"); saveRun(); runView(); top();
 }
 function practiceDone() {
@@ -1117,6 +1142,7 @@ function practiceDone() {
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished</p><h1>Well done, ${U.esc(me.name.split(" ").pop())}</h1>
     <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${text.slots.length}</b><span>right first time</span></div>
       <div class="stat"><b>${E.LEVELS[r.level]}</b><span>finished on</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
+    ${levelUpHTML(R.levelUp)}
     ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 texts this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     ${R.replay ? `<p class="note">You have read this text before, so this time earns half XP.</p>` : ""}
     <div class="panel"><p style="margin:0"><b>Strong:</b> ${strong.length ? U.esc(strong.join(", ")) : "Keep going, you will get there."}</p>
@@ -1127,7 +1153,8 @@ function practiceDone() {
   const leave = () => { run = null; saveRun(); };
   document.getElementById("home").onclick = () => { leave(); location.hash = "#home"; route(); };
   document.getElementById("lb").onclick = leave;
-  saveAttempt({ mode: "practice", text_id: text.id, level_start: r.levelStart, level_end: r.level, score: R.score, max_score: text.slots.length,
+  if (R.levelUp) S.play("level");
+  saveAttempt({ mode: "practice", text_id: text.id, level_start: r.levelStart, level_end: r.level, next_level: R.next, score: R.score, max_score: text.slots.length,
                 xp: R.xp, seconds: R.seconds, answers: r.results });
 }
 
