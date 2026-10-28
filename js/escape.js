@@ -53,6 +53,13 @@ export const ESCAPES = {
 };
 export const escapeUnits = () => Object.keys(ESCAPES).map(Number);
 
+// The same numbers from the same seed, so every team in a live game gets the same puzzles.
+export function seededRandom(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+export const solvedCount = play => play.solved.flat().filter(Boolean).length;
+
 const LETTER_CODES = ["MAP", "KEY", "SUN", "BUS", "SEA", "TEA", "BOX", "FAN", "JAR", "CUP", "OWL", "HAT"];
 function shuffle(a, rnd) { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 const firstSentence = t => (t.match(/^.*?[.!?](\s|$)/) || [t])[0].trim();

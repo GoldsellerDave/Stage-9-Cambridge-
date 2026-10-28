@@ -50,7 +50,12 @@ const live = {
   addTeacher: (t, name, u) => rpc("ck_admin_add_teacher", { p_token: t, p_name: name, p_username: u }),
   resetTeacher: (t, id) => rpc("ck_admin_reset_teacher", { p_token: t, p_teacher: id }),
   removeTeacher: (t, id) => rpc("ck_admin_remove_teacher", { p_token: t, p_teacher: id }),
-  moveClass: (t, c, id) => rpc("ck_admin_move_class", { p_token: t, p_class: c, p_teacher: id })
+  moveClass: (t, c, id) => rpc("ck_admin_move_class", { p_token: t, p_class: c, p_teacher: id }),
+  liveStart: (t, c, u) => rpc("ck_live_start", { p_token: t, p_class: c, p_unit: u }),
+  liveControl: (t, code, action) => rpc("ck_live_control", { p_token: t, p_code: code, p_action: action }),
+  liveBoard: (t, code) => rpc("ck_live_board", { p_token: t, p_code: code }),
+  liveJoin: (t, code, team) => rpc("ck_live_join", { p_token: t, p_code: code, p_team: team }),
+  liveProgress: (t, code, team, p) => rpc("ck_live_progress", { p_token: t, p_code: code, p_team: team, p_room: p.room, p_solved: p.solved, p_penalty: p.penalty, p_out: p.out })
 };
 
 // AI marking of a short answer by the "grade" Edge Function. Returns { ok, hits, feedback },
@@ -242,6 +247,33 @@ const demo = {
     db.students = db.students.filter(x => !(x.id === id && x.role === "teacher")); db.classes.forEach(c => { if (c.teacher_id === id) c.teacher_id = null; }); store(db); return null; },
   async moveClass(t, c, id) { const db = load(); admin(db, t); if (!db.students.some(x => x.id === id && x.role === "teacher")) throw new Error("Teacher not found.");
     const cl = db.classes.find(x => x.code === c); if (cl) cl.teacher_id = id; store(db); return null; },
+  // Live team escape room. In demo mode a teacher tab and team tabs in the same browser share the game.
+  async liveStart(t, c, u) { const db = load(), s = ofClass(db, t, c); db.live = (db.live || []).map(l => l.teacher_id === s.id ? { ...l, status: "ended" } : l);
+    const code = String(1000 + Math.floor(Math.random() * 9000));
+    db.live.push({ code, class_code: c, unit: u, teacher_id: s.id, status: "waiting", seed: Math.floor(Math.random() * 2e9), started_at: null, teams: [] });
+    store(db); return later({ code }); },
+  async liveControl(t, code, action) { const db = load(), s = teacher(db, t), l = (db.live || []).find(x => x.code === code && x.teacher_id === s.id && x.status !== "ended");
+    if (l && action === "start" && l.status === "waiting") { l.status = "playing"; l.started_at = Date.now(); }
+    if (l && action === "end") l.status = "ended"; store(db); return null; },
+  async liveBoard(t, code) { const db = load(), s = teacher(db, t), l = [...(db.live || [])].reverse().find(x => x.code === code && x.teacher_id === s.id);
+    if (!l) throw new Error("Game not found.");
+    const teams = l.teams.map(x => ({ ...x, device: (db.students.find(y => y.id === x.student_id) || {}).display_name }))
+      .sort((a, b) => (!a.finished - !b.finished) || (a.seconds ?? 1e9) - (b.seconds ?? 1e9) || b.room - a.room || b.solved - a.solved);
+    return later({ code: l.code, unit: l.unit, class_code: l.class_code, status: l.status, elapsed: l.started_at ? Math.round((Date.now() - l.started_at) / 1000) : 0, teams }); },
+  async liveJoin(t, code, team) { const db = load(), s = auth(db, t), l = (db.live || []).find(x => x.code === String(code).trim() && x.status !== "ended");
+    if (!l) throw new Error("No game with that code. Check the code on the board.");
+    if (s.role === "student" && s.class_code !== l.class_code) throw new Error("That game is for another class.");
+    const name = String(team || "").trim().slice(0, 24);
+    if (name) { const x = l.teams.find(y => y.team === name);
+      if (x && x.student_id !== s.id) throw new Error("Another device already uses that team name. Choose a different one.");
+      if (!x) l.teams.push({ team: name, student_id: s.id, room: 0, solved: 0, penalty: 0, seconds: null, finished: null }); store(db); }
+    return later({ code: l.code, unit: l.unit, seed: l.seed, status: l.status, elapsed: l.started_at ? (Date.now() - l.started_at) / 1000 : 0 }); },
+  async liveProgress(t, code, team, p) { const db = load(), s = auth(db, t), l = (db.live || []).find(x => x.code === code && x.status === "playing");
+    if (!l) return later({ status: "ended" });
+    const secs = Math.round((Date.now() - l.started_at) / 1000) + Math.max(0, p.penalty | 0), x = l.teams.find(y => y.team === team && y.student_id === s.id);
+    if (x) { Object.assign(x, { room: p.room, solved: p.solved, penalty: p.penalty }); if (p.out && !x.finished) { x.finished = new Date().toISOString(); x.seconds = secs; } }
+    store(db);
+    return later({ status: l.status, seconds: secs, place: 1 + l.teams.filter(y => y.finished && x && y.seconds < x.seconds).length }); },
   reset() { try { localStorage.removeItem(KEY); } catch (e) {} }
 };
 

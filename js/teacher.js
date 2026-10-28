@@ -2,6 +2,7 @@
 // Teachers add their own classes and print login sheets; the admin also adds colleagues (Teachers page).
 import { api, LIVE, getSession, setSession } from "./api.js";
 import * as U from "./ui.js";
+import { ESCAPES } from "./escape.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -83,7 +84,7 @@ function draw() {
       <div class="stat"><b>${lv.join(" · ")}</b><span>Easier · Core · Harder · Challenge</span></div>
       <div class="stat"><b>${active}</b><span>active in the last 7 days</span></div>
       <div class="stat gold"><b>${rows.reduce((t, r) => t + r.xp_week, 0)}</b><span>class XP this week</span></div></div>
-    <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"], ["ai", "AI marking"], ["manage", "Manage class"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
+    <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"], ["live", "Team escape room"], ["ai", "AI marking"], ["manage", "Manage class"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
   if (tab === "overview") {
     h += `<div class="tbl"><table><thead><tr><th>Student</th><th>Username</th><th>Level</th><th class="num" title="First baseline and latest baseline or Checkpoint check, as a percentage">Baseline / check</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
       rows.map(r => { const w = weakest(r.skills || {});
@@ -104,6 +105,8 @@ function draw() {
           return `<th class="num">${tt ? Math.round(100 * rt / tt) + "%" : "–"}</th>`; }).join("")}</tr></tfoot></table></div>`;
   } else if (tab === "manage") {
     h += manageHTML();
+  } else if (tab === "live") {
+    h += `<div id="live"><p class="note">Loading…</p></div>`;
   } else if (tab === "ai") {
     h += `<p class="lede">Short answers the keyword marker missed are checked by AI. Here are its last 200 decisions. Flag any you disagree with: a flag is a note for you and does not change XP or scores.</p>
       <div id="ailog"><p class="note">Loading…</p></div>`;
@@ -118,6 +121,7 @@ function draw() {
   document.getElementById("addcls").onclick = () => addClassView(false);
   const tb = document.getElementById("tch"); if (tb) tb.onclick = () => teachersView();
   if (tab === "manage") manageWire();
+  if (tab === "live") liveView(); else stopLive();
   if (tab === "board") boardView();
   if (tab === "ai") aiView();
 }
@@ -175,6 +179,56 @@ async function studentView(id) {
     try { await api.resetPin(session.token, id, document.getElementById("np").value.trim()); m.textContent = "PIN changed."; }
     catch (e) { m.innerHTML = `<span class="err">${U.esc(e.message)}</span>`; }
   });
+}
+
+/* ---------------- team escape room: open a game, start it, watch the board ---------------- */
+// The open game's code is kept on this device, so the board comes back after a reload.
+const LIVE_KEY = () => "ckpt-live-" + (session ? session.name : "");
+const liveCode = () => { try { const v = JSON.parse(localStorage.getItem(LIVE_KEY())); return v && v.cls === cls ? v.code : null; } catch (e) { return null; } };
+const setLiveCode = code => { try { code ? localStorage.setItem(LIVE_KEY(), JSON.stringify({ code, cls })) : localStorage.removeItem(LIVE_KEY()); } catch (e) {} };
+let liveTimer = null;
+function stopLive() { clearInterval(liveTimer); liveTimer = null; }
+async function liveView() {
+  stopLive();
+  const el = document.getElementById("live"); if (!el) return;
+  const code = liveCode();
+  if (!code) {
+    const units = Object.keys(ESCAPES).map(Number);
+    el.innerHTML = `<div class="panel"><h3>Run a team escape room</h3>
+      <p>Teams of 3 or 4 share one tablet, signed in as one of them. Every team gets the same puzzles at Core level. You press Start, and this board shows each team's room and time. Put it on the projector!</p>
+      <div class="row"><select id="lu" style="max-width:22em">${units.map(u => `<option value="${u}">Unit ${u}: ${U.esc(ESCAPES[u].title)}</option>`).join("")}</select>
+        <button class="btn" id="lopen">Open a game for ${U.esc(cls)}</button></div><p class="note" id="lm" aria-live="polite"></p>
+      <p class="note">Team games don't give XP. Students can play the same escape room on their own afterwards for XP.</p></div>`;
+    document.getElementById("lopen").onclick = async () => {
+      try { const r = await api.liveStart(session.token, cls, +document.getElementById("lu").value); setLiveCode(r.code); liveView(); }
+      catch (e) { document.getElementById("lm").innerHTML = `<span class="err">${U.esc(e.message)}</span>`; }
+    };
+    return;
+  }
+  const draw = async () => {
+    let b; try { b = await api.liveBoard(session.token, code); } catch (e) { setLiveCode(null); stopLive(); return liveView(); }
+    if (!document.getElementById("live")) return stopLive();
+    const R = 3, ord = n => n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : n + "th";
+    const time = t => t.finished ? U.fmtTime(t.seconds) : b.status === "playing" ? U.fmtTime(b.elapsed + t.penalty) : "–";
+    el.innerHTML = `<div class="liveboard">
+      <div class="lvhead"><div><p class="eyebrow">Unit ${b.unit}: ${U.esc((ESCAPES[b.unit] || {}).title || "")}</p>
+        <p class="lvjoin">Join: <b>Games › Escape room › Join a team game</b></p></div>
+        <div class="lvcode"><span>Game code</span><b>${U.esc(b.code)}</b></div></div>
+      <p class="lede">${b.status === "waiting" ? `${b.teams.length} team${b.teams.length === 1 ? "" : "s"} ready. Press Start when everyone has joined.`
+        : b.status === "playing" ? `Playing: ${U.fmtTime(b.elapsed)}. ${b.teams.filter(t => t.finished).length} of ${b.teams.length} teams have escaped.` : "This game has ended."}</p>
+      <div class="lvteams">${b.teams.map((t, i) => `<div class="lvteam${t.finished ? " out" : ""}">
+          <b class="lvrank">${t.finished ? ord(i + 1) : ""}</b>
+          <div class="lvname"><b>${U.esc(t.team)}</b><span class="note">${U.esc(t.device || "")}</span></div>
+          <div class="lvrooms">${[0, 1, 2].map(k => `<i class="${t.finished || k < t.room ? "done" : k === t.room && b.status === "playing" ? "now" : ""}"></i>`).join("")}<span class="note">${t.finished ? "Escaped!" : `Room ${t.room + 1} · ${t.solved}/9 puzzles`}</span></div>
+          <b class="lvtime">${time(t)}</b></div>`).join("") || `<p class="note">No teams yet.</p>`}</div>
+      <div class="row">${b.status === "waiting" ? `<button class="btn" id="lgo">Start</button>` : ""}${b.status !== "ended" ? `<button class="btn alt" id="lend">End game</button>` : `<button class="btn" id="lnew">New game</button>`}</div></div>`;
+    const g = document.getElementById("lgo"); if (g) g.onclick = async () => { await api.liveControl(session.token, code, "start"); draw(); };
+    const e = document.getElementById("lend"); if (e) e.onclick = async () => { if (!confirm("End the game for every team?")) return; await api.liveControl(session.token, code, "end"); draw(); };
+    const n = document.getElementById("lnew"); if (n) n.onclick = () => { setLiveCode(null); liveView(); };
+    if (b.status === "ended") stopLive();
+  };
+  await draw();
+  if (liveCode()) liveTimer = setInterval(draw, 3000);
 }
 
 /* ---------------- classes: add, manage, login sheets ---------------- */

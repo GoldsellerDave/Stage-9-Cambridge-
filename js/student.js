@@ -763,11 +763,15 @@ function escapeView() {
         <li>Playing as a team? Share one tablet and talk it through!</li></ul></div>
       <div class="stats"><div class="stat"><b>${best != null ? U.fmtTime(best) : "–"}</b><span>your best escape</span></div>
         <div class="stat"><b><span class="chip tier t${g.tier}">${U.esc(g.tierName)}</span></b><span>puzzle level</span></div></div>
-      <div class="row"><button class="btn" id="go">Start</button></div></div>`;
+      <div class="row"><button class="btn" id="go">Play on my own</button><button class="btn alt" id="team">Join a team game</button></div>
+      <p class="note">Team game: your teacher shows a 4-digit code on the board. One tablet per team, signed in as one of you.</p></div>`;
     backButton();
     document.getElementById("go").onclick = () => { S.play("tap"); run.phase = "play"; run.play = X.newPlay(g); run.t0 = run.play.t0; saveRun(); escapeView(); top(); };
+    document.getElementById("team").onclick = () => { S.play("tap"); run.phase = "join"; saveRun(); escapeView(); };
     return;
   }
+  if (run.phase === "join") return liveJoinView();
+  if (run.phase === "wait") return liveWaitView();
   const pl = run.play, R = g.rooms[pl.room], found = X.roomFound(g, pl), chars = DIAL[R.lock];
   if (!pl.dial) pl.dial = R.code.map(() => 0);
   const open = pl.open != null ? R.puzzles[pl.open] : null, key = i => `${pl.room}-${i}`;
@@ -800,21 +804,85 @@ function escapeView() {
     const out = X.answerPuzzle(g, pl, pl.open, b.dataset.ans);
     if (out === "right") { S.play("ok"); run.fb = null; }
     else { S.play("bad"); (pl.wrong = pl.wrong || {})[key(pl.open)] = [...tried, b.dataset.ans]; run.fb = `Not that one: +${X.ESCAPE_PENALTY.wrong} s. Try again.`; }
-    redraw();
+    livePush(); redraw();
   });
-  const h = document.getElementById("hint"); if (h) h.onclick = () => { X.takeHint(pl, pl.open); S.play("info"); redraw(); };
+  const h = document.getElementById("hint"); if (h) h.onclick = () => { X.takeHint(pl, pl.open); S.play("info"); livePush(); redraw(); };
   const spin = (k, by) => { pl.dial[k] = (pl.dial[k] + by + chars.length) % chars.length; run.msg = null; S.play("tap"); redraw(); };
   $app.querySelectorAll("[data-up]").forEach(b => b.onclick = () => spin(+b.dataset.up, 1));
   $app.querySelectorAll("[data-dn]").forEach(b => b.onclick = () => spin(+b.dataset.dn, -1));
   document.getElementById("try").onclick = () => {
     const was = pl.room;
     if (X.tryCode(g, pl, pl.dial.map(d => chars[d]))) {
-      if (pl.out) { S.play("win"); run.phase = "done"; run.result = X.escapeResult(g, pl, history); saveRun(); return runView(); }
-      S.play("level"); run.msg = { ok: true, t: `Click! The lock opens. On to room ${was + 2}.` }; run.fb = null; redraw(); top();
-    } else { S.play("bad"); run.msg = { ok: false, t: `The lock doesn't open: +${X.ESCAPE_PENALTY.code} s. Check your notebook.` }; redraw(); }
+      if (pl.out) { S.play("win"); run.phase = "done"; run.result = X.escapeResult(g, pl, history); saveRun(); livePush(); return runView(); }
+      livePush(); S.play("level"); run.msg = { ok: true, t: `Click! The lock opens. On to room ${was + 2}.` }; run.fb = null; redraw(); top();
+    } else { S.play("bad"); run.msg = { ok: false, t: `The lock doesn't open: +${X.ESCAPE_PENALTY.code} s. Check your notebook.` }; livePush(); redraw(); }
   };
+  if (run.live) $app.querySelector(".esc").insertAdjacentHTML("afterbegin", `<p class="chip">Team ${U.esc(run.live.team)} · game ${U.esc(run.live.code)}</p>`);
+  if (run.live && run.live.ended) $app.querySelector(".esc").insertAdjacentHTML("afterbegin", `<div class="fb bad"><p>Your teacher has ended this game.</p></div>`);
+}
+
+function liveDone() {
+  const R = run.result, L = run.live, u = run.unit;
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Team ${U.esc(L.team)} · game ${U.esc(L.code)}</p><h1>You escaped!</h1>
+    <div class="panel escstory"><p>${U.esc(X.ESCAPES[u].escaped)}</p></div>
+    <div class="stats"><div class="stat"><b>${U.fmtTime(L.seconds ?? R.seconds)}</b><span>team time</span></div>
+      ${L.place ? `<div class="stat gold"><b>${L.place === 1 ? "1st" : L.place === 2 ? "2nd" : L.place === 3 ? "3rd" : L.place + "th"}</b><span>place so far</span></div>` : ""}
+      <div class="stat"><b>${R.right}/${R.total}</b><span>right first time</span></div></div>
+    <p class="lede">Look at the board to see the other teams.</p>
+    <div class="row"><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
+  document.getElementById("unit").onclick = () => { run = null; saveRun(); location.hash = `#unit-${u}/games`; route(); top(); };
+}
+
+/* team game: join with the teacher's code, wait for Start, play the same puzzles as every other team */
+let liveTimer = null;
+function liveJoinView() {
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Unit ${run.unit} · team escape room</p><h1>Join a team game</h1>
+    <form class="panel" id="f" novalidate>
+      <label class="fld" for="lc">Game code (on the board)<input type="tel" id="lc" inputmode="numeric" maxlength="4" placeholder="4 digits" style="max-width:10em"></label>
+      <label class="fld" for="lt">Team name<input type="text" id="lt" maxlength="24" placeholder="for example The Explorers"></label>
+      <p class="err" id="e" role="alert"></p>
+      <div class="row"><button class="btn" type="submit" id="j">Join</button></div></form></div>`;
+  backButton();
+  document.getElementById("f").addEventListener("submit", async ev => {
+    ev.preventDefault(); const b = document.getElementById("j"); b.disabled = true;
+    const code = document.getElementById("lc").value.trim(), team = document.getElementById("lt").value.trim();
+    if (!team) { document.getElementById("e").textContent = "Choose a team name."; b.disabled = false; return; }
+    try { const r = await api.liveJoin(session.token, code, team);
+      if (r.unit !== run.unit) { run.unit = r.unit; }
+      run.live = { code: r.code, team, seed: r.seed }; run.phase = "wait"; saveRun(); liveWaitView(r); }
+    catch (e) { document.getElementById("e").textContent = e.message; b.disabled = false; }
+  });
+}
+function liveWaitView(state) {
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Team ${U.esc(run.live.team)} · game ${U.esc(run.live.code)}</p><h1>Get ready…</h1>
+    <div class="panel escstory"><p>${U.esc(X.ESCAPES[run.unit].story)}</p></div>
+    <p class="lede" id="ws">Waiting for your teacher to press Start.</p></div>`;
+  backButton();
+  const go = r => {
+    clearInterval(liveTimer); liveTimer = null;
+    run.game = X.makeEscape(run.unit, 0, X.seededRandom(run.live.seed));      // every team: the same puzzles at Core level
+    run.play = X.newPlay(run.game, Date.now() - Math.round(r.elapsed * 1000)); run.t0 = run.play.t0;
+    run.phase = "play"; S.play("level"); saveRun(); escapeView(); top();
+  };
+  const poll = async () => {
+    if (!run || run.phase !== "wait") { clearInterval(liveTimer); liveTimer = null; return; }
+    try { const r = await api.liveJoin(session.token, run.live.code, "");
+      if (r.status === "playing") go(r); }
+    catch (e) { const w = document.getElementById("ws"); if (w) w.textContent = e.message; clearInterval(liveTimer); liveTimer = null; }
+  };
+  if (state && state.status === "playing") return go(state);
+  clearInterval(liveTimer); liveTimer = setInterval(poll, 2000);
+}
+async function livePush() {
+  if (!run || !run.live || !run.play) return;
+  const pl = run.play;
+  try { const r = await api.liveProgress(session.token, run.live.code, run.live.team, { room: pl.room, solved: X.solvedCount(pl), penalty: pl.penalty, out: !!pl.out });
+    if (r.status === "ended" && run && run.live) { run.live.ended = true; saveRun(); }
+    if (pl.out && run && run.live) { run.live.place = r.place; run.live.seconds = r.seconds; saveRun(); if (run.phase === "done") escapeDone(); } }
+  catch (e) {}
 }
 function escapeDone() {
+  if (run.live) return liveDone();
   const R = run.result, u = run.unit, E = X.ESCAPES[u], best = X.bestEscape(history, u), record = best == null || R.seconds < best;
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Unit ${u} · escape room</p><h1>You escaped!</h1>
     <div class="panel escstory"><p>${U.esc(E.escaped)}</p></div>
@@ -1079,7 +1147,7 @@ function runName(r) {
 function resumeRun() {
   const r = pausedRun(); if (!r) return;
   const away = Date.now() - r.pausedAt;          // the timer does not count time away
-  r.t0 += away; if (r.readStart) r.readStart += away; if (r.play) r.play.t0 += away; delete r.pausedAt;
+  r.t0 += away; if (r.readStart) r.readStart += away; if (r.play && !r.live) r.play.t0 += away; delete r.pausedAt;   // a live game's clock keeps going
   run = r; saveRun(); route(); top();
 }
 function readGate(paras, onGo, label) {
