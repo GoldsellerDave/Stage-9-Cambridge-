@@ -53,6 +53,26 @@ revoke all on ck_students, ck_tokens, ck_attempts from anon, authenticated;
 alter table ck_students drop constraint if exists ck_students_level_check;
 alter table ck_students add constraint ck_students_level_check check (level between 0 and 3);
 
+-- Teachers and classes. Each class belongs to one teacher, who sees only their own classes.
+-- The admin (the first teacher, set up by seed.sql) sees every class and adds colleagues.
+alter table ck_students add column if not exists is_admin    boolean not null default false;
+alter table ck_students add column if not exists must_change boolean not null default false;  -- one-time password still in use
+create table if not exists ck_classes (
+  code       text primary key,
+  teacher_id uuid references ck_students(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+alter table ck_classes enable row level security;
+revoke all on ck_classes from anon, authenticated;
+-- First run of this version: the first teacher becomes the admin and owns the classes that already exist.
+update ck_students set is_admin = true
+ where id = (select id from ck_students where role = 'teacher' order by created_at, username limit 1)
+   and not exists (select 1 from ck_students where is_admin);
+insert into ck_classes(code, teacher_id)
+  select distinct class_code, (select id from ck_students where is_admin order by created_at limit 1)
+    from ck_students where role = 'student'
+  on conflict (code) do nothing;
+
 -- Monday 00:00 of the current week, school time (Vietnam, UTC+7).
 create or replace function ck_week_start() returns timestamptz
 language sql stable as $$
@@ -91,7 +111,7 @@ begin
   delete from ck_tokens where student_id = s.id and expires_at < now();
   insert into ck_tokens(student_id) values (s.id) returning token into tok;
   return json_build_object('token', tok, 'role', s.role, 'name', s.display_name,
-                           'class_code', s.class_code, 'level', s.level);
+                           'class_code', s.class_code, 'level', s.level, 'must_change', s.must_change);
 end $$;
 
 create or replace function ck_logout(p_token uuid) returns void
@@ -105,7 +125,7 @@ declare s ck_students := ck_auth(p_token);
 begin
   return json_build_object(
     'id', s.id, 'name', s.display_name, 'username', s.username, 'class_code', s.class_code,
-    'role', s.role, 'level', s.level, 'xp_total', s.xp_total,
+    'role', s.role, 'level', s.level, 'xp_total', s.xp_total, 'is_admin', s.is_admin, 'must_change', s.must_change,
     'xp_week', (select coalesce(sum(xp), 0) from ck_attempts where student_id = s.id and created_at >= ck_week_start()),
     'baseline_done', exists(select 1 from ck_attempts where student_id = s.id and mode = 'baseline'));
 end $$;
@@ -149,6 +169,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_auth(p_token); v_class text;
 begin
   v_class := case when s.role = 'teacher' and p_class is not null then p_class else s.class_code end;
+  if s.role = 'teacher' and not ck_can_see(s, v_class) then raise exception 'You can only see your own classes.'; end if;
   return json_build_object(
     'class_code', v_class,
     'week', coalesce((select json_agg(r order by r.xp desc, r.name) from (
@@ -177,17 +198,42 @@ begin
   return s;
 end $$;
 
+-- Can this teacher see this class? The admin sees all; other teachers only their own.
+create or replace function ck_can_see(s ck_students, p_class text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select s.role = 'teacher' and (s.is_admin or exists(select 1 from ck_classes where code = p_class and teacher_id = s.id))
+$$;
+create or replace function ck_require_class(p_token uuid, p_class text) returns ck_students
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token);
+begin
+  if not ck_can_see(s, p_class) then raise exception 'You can only see your own classes.'; end if;
+  return s;
+end $$;
+create or replace function ck_require_student_of(p_token uuid, p_student uuid) returns ck_students
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token); c text;
+begin
+  select class_code into c from ck_students where id = p_student and role = 'student';
+  if c is null or not ck_can_see(s, c) then raise exception 'You can only see students in your own classes.'; end if;
+  return s;
+end $$;
+
+-- The classes this teacher can see, with the owner's name and the number of students.
 create or replace function ck_teacher_classes(p_token uuid) returns json
 language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_require_teacher(p_token);
 begin
-  return coalesce((select json_agg(c order by c) from (
-    select distinct class_code as c from ck_students where role = 'student') x), '[]'::json);
+  return coalesce((select json_agg(r order by r.code) from (
+    select c.code, c.teacher_id = s.id as mine, t.display_name as teacher,
+           (select count(*) from ck_students st where st.class_code = c.code and st.role = 'student')::int as students
+      from ck_classes c left join ck_students t on t.id = c.teacher_id
+     where s.is_admin or c.teacher_id = s.id) r), '[]'::json);
 end $$;
 
 create or replace function ck_teacher_class(p_token uuid, p_class text) returns json
 language plpgsql security definer set search_path = public, extensions as $$
-declare s ck_students := ck_require_teacher(p_token);
+declare s ck_students := ck_require_class(p_token, p_class);
 begin
   return coalesce((select json_agg(r order by r.username) from (
     select st.id, st.display_name as name, st.username, st.level, st.xp_total,
@@ -205,7 +251,7 @@ end $$;
 
 create or replace function ck_teacher_student(p_token uuid, p_student uuid) returns json
 language plpgsql security definer set search_path = public, extensions as $$
-declare s ck_students := ck_require_teacher(p_token);
+declare s ck_students := ck_require_student_of(p_token, p_student);
 begin
   return json_build_object(
     'student', (select json_build_object('id', id, 'name', display_name, 'username', username,
@@ -217,7 +263,7 @@ end $$;
 
 create or replace function ck_teacher_reset_pin(p_token uuid, p_student uuid, p_pin text) returns void
 language plpgsql security definer set search_path = public, extensions as $$
-declare s ck_students := ck_require_teacher(p_token);
+declare s ck_students := ck_require_student_of(p_token, p_student);
 begin
   if p_pin !~ '^[0-9]{4}$' then raise exception 'A PIN must be 4 digits.'; end if;
   update ck_students set pin_hash = crypt(p_pin, gen_salt('bf')), failed_logins = 0, locked_until = null
@@ -249,7 +295,7 @@ revoke all on ck_ai_log from anon, authenticated;
 
 create or replace function ck_teacher_ai_log(p_token uuid, p_class text) returns json
 language plpgsql security definer set search_path = public, extensions as $$
-declare s ck_students := ck_require_teacher(p_token);
+declare s ck_students := ck_require_class(p_token, p_class);
 begin
   return coalesce((select json_agg(r order by r.created_at desc) from (
     select l.id, l.created_at, st.display_name as name, l.text_id, l.level, l.question, l.answer, l.ok, l.hits, l.feedback, l.overruled
@@ -261,13 +307,158 @@ create or replace function ck_teacher_ai_flag(p_token uuid, p_id bigint, p_overr
 language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_require_teacher(p_token);
 begin
-  update ck_ai_log set overruled = p_overruled where id = p_id;
+  update ck_ai_log l set overruled = p_overruled from ck_students st
+   where l.id = p_id and st.id = l.student_id and ck_can_see(s, st.class_code);
+end $$;
+
+/* ---------------- classes and teachers (self-service) ---------------- */
+create or replace function ck_new_pin() returns text
+language sql volatile as $$ select lpad(floor(random() * 10000)::int::text, 4, '0') $$;
+create or replace function ck_new_password() returns text
+language sql volatile as $$
+  select string_agg(substr('abcdefghjkmnpqrstuvwxyz23456789', 1 + floor(random() * 31)::int, 1), '') from generate_series(1, 8)
+$$;
+
+-- Add students to a class, making the class first if it is new. Returns each new student's username and PIN,
+-- for the login sheet: PINs are stored scrambled, so this is the only time they can be shown.
+create or replace function ck_teacher_add_students(p_token uuid, p_class text, p_names jsonb) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token); v_code text := upper(regexp_replace(coalesce(p_class, ''), '\s', '', 'g'));
+        v_owner uuid; v_n int; v_name text; v_pin text; v_user text; out jsonb := '[]';
+begin
+  if v_code !~ '^[A-Z0-9]{2,10}$' then raise exception 'A class code is 2 to 10 letters or numbers, for example 8B4.'; end if;
+  if jsonb_typeof(p_names) <> 'array' or jsonb_array_length(p_names) = 0 then raise exception 'Add at least one name.'; end if;
+  if jsonb_array_length(p_names) > 60 then raise exception 'Add up to 60 names at a time.'; end if;
+  select teacher_id into v_owner from ck_classes where code = v_code;
+  if not found then
+    if exists(select 1 from ck_students where class_code = v_code) then raise exception 'That class code is already used.'; end if;
+    insert into ck_classes(code, teacher_id) values (v_code, s.id);
+  elsif not ck_can_see(s, v_code) then raise exception 'Class % belongs to another teacher. Choose a different code.', v_code;
+  end if;
+  select coalesce(max(substring(username from '-([0-9]+)$')::int), 0) into v_n
+    from ck_students where class_code = v_code and role = 'student';
+  for v_name in select left(trim(x), 80) from jsonb_array_elements_text(p_names) x where trim(x) <> '' loop
+    v_n := v_n + 1; v_pin := ck_new_pin(); v_user := lower(v_code) || '-' || lpad(v_n::text, 2, '0');
+    if exists(select 1 from ck_students where username = v_user) then raise exception 'Username % is already taken.', v_user; end if;
+    insert into ck_students(class_code, username, display_name, pin_hash, role)
+    values (v_code, v_user, v_name, crypt(v_pin, gen_salt('bf')), 'student');
+    out := out || jsonb_build_object('no', v_n, 'name', v_name, 'username', v_user, 'pin', v_pin);
+  end loop;
+  return json_build_object('class_code', v_code, 'students', out);
+end $$;
+
+-- New PINs for a whole class, for a fresh login sheet. Everyone in the class is signed out.
+create or replace function ck_teacher_new_pins(p_token uuid, p_class text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_class(p_token, p_class); r record; v_pin text; out jsonb := '[]';
+begin
+  for r in select id, username, display_name from ck_students where class_code = p_class and role = 'student' order by username loop
+    v_pin := ck_new_pin();
+    update ck_students set pin_hash = crypt(v_pin, gen_salt('bf')), failed_logins = 0, locked_until = null where id = r.id;
+    delete from ck_tokens where student_id = r.id;
+    out := out || jsonb_build_object('no', coalesce(substring(r.username from '-([0-9]+)$')::int, 0), 'name', r.display_name, 'username', r.username, 'pin', v_pin);
+  end loop;
+  return json_build_object('class_code', p_class, 'students', out);
+end $$;
+
+-- Remove one student, with all their work. Cannot be undone.
+create or replace function ck_teacher_remove_student(p_token uuid, p_student uuid) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_student_of(p_token, p_student);
+begin
+  delete from ck_students where id = p_student and role = 'student';
+end $$;
+
+-- Delete a class with all its students and their work. Cannot be undone.
+create or replace function ck_teacher_delete_class(p_token uuid, p_class text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_class(p_token, p_class);
+begin
+  delete from ck_students where class_code = p_class and role = 'student';
+  delete from ck_classes where code = p_class;
+end $$;
+
+-- A teacher changes their own password (and must, after a one-time password).
+create or replace function ck_set_password(p_token uuid, p_old text, p_new text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token);
+begin
+  if s.pin_hash <> crypt(trim(coalesce(p_old, '')), s.pin_hash) then raise exception 'Your current password is not right.'; end if;
+  if length(trim(coalesce(p_new, ''))) < 8 then raise exception 'Choose a password of at least 8 characters.'; end if;
+  update ck_students set pin_hash = crypt(trim(p_new), gen_salt('bf')), must_change = false where id = s.id;
+end $$;
+
+/* admin only */
+create or replace function ck_require_admin(p_token uuid) returns ck_students
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_teacher(p_token);
+begin
+  if not s.is_admin then raise exception 'Only the admin can manage teachers.'; end if;
+  return s;
+end $$;
+
+create or replace function ck_admin_teachers(p_token uuid) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_admin(p_token);
+begin
+  return coalesce((select json_agg(r order by r.is_admin desc, r.name) from (
+    select t.id, t.display_name as name, t.username, t.is_admin, t.must_change, t.id = s.id as me,
+           coalesce((select json_agg(code order by code) from ck_classes where teacher_id = t.id), '[]'::json) as classes
+      from ck_students t where t.role = 'teacher') r), '[]'::json);
+end $$;
+
+-- Add a colleague. Returns a one-time password to pass on; they choose their own at first sign-in.
+create or replace function ck_admin_add_teacher(p_token uuid, p_name text, p_username text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_admin(p_token); v_user text := lower(trim(coalesce(p_username, ''))); v_pw text := ck_new_password();
+begin
+  if length(trim(coalesce(p_name, ''))) < 2 then raise exception 'Type the teacher''s name.'; end if;
+  if v_user !~ '^[a-z][a-z0-9.]{2,29}$' then raise exception 'A username is 3 to 30 letters, numbers or dots, starting with a letter (for example ms.lan).'; end if;
+  if exists(select 1 from ck_students where username = v_user) then raise exception 'That username is already taken.'; end if;
+  insert into ck_students(class_code, username, display_name, pin_hash, role, must_change)
+  values ('TEACHER', v_user, left(trim(p_name), 80), crypt(v_pw, gen_salt('bf')), 'teacher', true);
+  return json_build_object('username', v_user, 'password', v_pw);
+end $$;
+
+-- A new one-time password for a colleague who forgot theirs. They are signed out everywhere.
+create or replace function ck_admin_reset_teacher(p_token uuid, p_teacher uuid) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_admin(p_token); v_pw text := ck_new_password(); v_user text;
+begin
+  update ck_students set pin_hash = crypt(v_pw, gen_salt('bf')), must_change = true, failed_logins = 0, locked_until = null
+   where id = p_teacher and role = 'teacher' and id <> s.id returning username into v_user;
+  if v_user is null then raise exception 'Teacher not found.'; end if;
+  delete from ck_tokens where student_id = p_teacher;
+  return json_build_object('username', v_user, 'password', v_pw);
+end $$;
+
+-- Remove a colleague's account. Their classes and students stay, and the admin can give them to another teacher.
+create or replace function ck_admin_remove_teacher(p_token uuid, p_teacher uuid) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_admin(p_token);
+begin
+  if p_teacher = s.id then raise exception 'You cannot remove your own account.'; end if;
+  delete from ck_students where id = p_teacher and role = 'teacher';
+end $$;
+
+-- Give a class to another teacher.
+create or replace function ck_admin_move_class(p_token uuid, p_class text, p_teacher uuid) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_admin(p_token);
+begin
+  if not exists(select 1 from ck_students where id = p_teacher and role = 'teacher') then raise exception 'Teacher not found.'; end if;
+  update ck_classes set teacher_id = p_teacher where code = p_class;
 end $$;
 
 -- Only the public entry points can be called from the website.
-revoke execute on function ck_auth(uuid), ck_require_teacher(uuid) from public, anon, authenticated;
+revoke execute on function ck_auth(uuid), ck_require_teacher(uuid), ck_require_class(uuid, text), ck_require_student_of(uuid, uuid),
+  ck_require_admin(uuid), ck_can_see(ck_students, text), ck_new_pin(), ck_new_password() from public, anon, authenticated;
 grant execute on function ck_login(text, text), ck_logout(uuid), ck_me(uuid), ck_history(uuid),
   ck_save_attempt(uuid, jsonb), ck_leaderboard(uuid, text), ck_teacher_classes(uuid),
   ck_teacher_class(uuid, text), ck_teacher_student(uuid, uuid), ck_teacher_reset_pin(uuid, uuid, text),
-  ck_teacher_ai_log(uuid, text), ck_teacher_ai_flag(uuid, bigint, boolean)
+  ck_teacher_ai_log(uuid, text), ck_teacher_ai_flag(uuid, bigint, boolean),
+  ck_teacher_add_students(uuid, text, jsonb), ck_teacher_new_pins(uuid, text), ck_teacher_remove_student(uuid, uuid),
+  ck_teacher_delete_class(uuid, text), ck_set_password(uuid, text, text), ck_admin_teachers(uuid),
+  ck_admin_add_teacher(uuid, text, text), ck_admin_reset_teacher(uuid, uuid), ck_admin_remove_teacher(uuid, uuid),
+  ck_admin_move_class(uuid, text, uuid)
   to anon;

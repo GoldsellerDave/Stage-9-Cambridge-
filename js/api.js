@@ -40,7 +40,17 @@ const live = {
   resetPin: (t, id, pin) => rpc("ck_teacher_reset_pin", { p_token: t, p_student: id, p_pin: pin }),
   aiMark,
   aiLog: (t, c) => rpc("ck_teacher_ai_log", { p_token: t, p_class: c }),
-  aiFlag: (t, id, on) => rpc("ck_teacher_ai_flag", { p_token: t, p_id: id, p_overruled: on })
+  aiFlag: (t, id, on) => rpc("ck_teacher_ai_flag", { p_token: t, p_id: id, p_overruled: on }),
+  addStudents: (t, c, names) => rpc("ck_teacher_add_students", { p_token: t, p_class: c, p_names: names }),
+  newPins: (t, c) => rpc("ck_teacher_new_pins", { p_token: t, p_class: c }),
+  removeStudent: (t, id) => rpc("ck_teacher_remove_student", { p_token: t, p_student: id }),
+  deleteClass: (t, c) => rpc("ck_teacher_delete_class", { p_token: t, p_class: c }),
+  setPassword: (t, o, n) => rpc("ck_set_password", { p_token: t, p_old: o, p_new: n }),
+  teachers: t => rpc("ck_admin_teachers", { p_token: t }),
+  addTeacher: (t, name, u) => rpc("ck_admin_add_teacher", { p_token: t, p_name: name, p_username: u }),
+  resetTeacher: (t, id) => rpc("ck_admin_reset_teacher", { p_token: t, p_teacher: id }),
+  removeTeacher: (t, id) => rpc("ck_admin_remove_teacher", { p_token: t, p_teacher: id }),
+  moveClass: (t, c, id) => rpc("ck_admin_move_class", { p_token: t, p_class: c, p_teacher: id })
 };
 
 // AI marking of a short answer by the "grade" Edge Function. Returns { ok, hits, feedback },
@@ -73,7 +83,8 @@ function seed() {
   let n = 0;
   const add = (username, name, role, pin, cls) => { const s = { id: "s" + (++n), username, display_name: name, role, pin, class_code: cls, level: null, xp_total: 0 }; db.students.push(s); return s; };
   add("demo", "Demo Sam", "student", "1234", "DEMO");
-  add("teacher", "Teacher", "teacher", "demo", "TEACHER");
+  add("teacher", "Teacher", "teacher", "demo", "TEACHER").is_admin = true;
+  db.classes = [{ code: "DEMO", teacher_id: "s2" }];
   let r = 7;
   const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
   DEMO_NAMES.forEach((nm, i) => {
@@ -92,10 +103,23 @@ function seed() {
   });
   return db;
 }
-function load() { try { const d = JSON.parse(localStorage.getItem(KEY)); if (d && d.students) return d; } catch (e) {} return seed(); }
+function load() {
+  try { const d = JSON.parse(localStorage.getItem(KEY));
+    if (d && d.students) { if (!d.classes) { const t = d.students.find(x => x.username === "teacher"); if (t) t.is_admin = true; d.classes = [{ code: "DEMO", teacher_id: t && t.id }]; } return d; } } catch (e) {}
+  return seed();
+}
 function store(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
 function auth(db, t) { const id = db.tokens[t]; const s = db.students.find(x => x.id === id); if (!s) throw new Error("Please sign in again."); return s; }
 function teacher(db, t) { const s = auth(db, t); if (s.role !== "teacher") throw new Error("Teacher sign-in needed."); return s; }
+// The same rules as the database: the admin sees every class, other teachers only their own.
+const canSee = (db, s, c) => s.is_admin || db.classes.some(x => x.code === c && x.teacher_id === s.id);
+function ofClass(db, t, c) { const s = teacher(db, t); if (!canSee(db, s, c)) throw new Error("You can only see your own classes."); return s; }
+function ofStudent(db, t, id) { const s = teacher(db, t), k = db.students.find(x => x.id === id && x.role === "student");
+  if (!k || !canSee(db, s, k.class_code)) throw new Error("You can only see students in your own classes."); return s; }
+function admin(db, t) { const s = teacher(db, t); if (!s.is_admin) throw new Error("Only the admin can manage teachers."); return s; }
+const newPin = () => String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+const newPassword = () => Array.from({ length: 8 }, () => "abcdefghjkmnpqrstuvwxyz23456789"[Math.floor(Math.random() * 31)]).join("");
+const numOf = u => +((/-(\d+)$/.exec(u) || [])[1] || 0);
 const xpSince = (db, id, since) => db.attempts.filter(a => a.student_id === id && new Date(a.created_at) >= since).reduce((t, a) => t + a.xp, 0);
 const hist = (db, id) => db.attempts.filter(a => a.student_id === id).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 const pc = a => a.max_score ? Math.floor(a.score * 100 / a.max_score) : 0; // percentage, like the database
@@ -106,12 +130,13 @@ const demo = {
     const db = load(), s = db.students.find(x => x.username === String(u).trim().toLowerCase());
     if (!s || s.pin !== String(p).trim()) throw new Error("Wrong username or PIN.");
     const t = "demo-" + Math.random().toString(36).slice(2); db.tokens[t] = s.id; store(db);
-    return later({ token: t, role: s.role, name: s.display_name, class_code: s.class_code, level: s.level });
+    return later({ token: t, role: s.role, name: s.display_name, class_code: s.class_code, level: s.level, must_change: !!s.must_change });
   },
   async logout(t) { const db = load(); delete db.tokens[t]; store(db); return null; },
   async me(t) {
     const db = load(), s = auth(db, t);
     return later({ id: s.id, name: s.display_name, username: s.username, class_code: s.class_code, role: s.role, level: s.level,
+      is_admin: !!s.is_admin, must_change: !!s.must_change,
       xp_total: s.xp_total, xp_week: xpSince(db, s.id, weekStart()), baseline_done: db.attempts.some(a => a.student_id === s.id && a.mode === "baseline") });
   },
   async history(t) { const db = load(), s = auth(db, t); return later(hist(db, s.id)); },
@@ -127,6 +152,7 @@ const demo = {
   },
   async leaderboard(t, c = null) {
     const db = load(), s = auth(db, t), cls = s.role === "teacher" && c ? c : s.class_code;
+    if (s.role === "teacher" && !canSee(db, s, cls)) throw new Error("You can only see your own classes.");
     const kids = db.students.filter(x => x.class_code === cls && x.role === "student");
     const ws = weekStart();
     const sort = arr => arr.sort((a, b) => b.xp - a.xp || a.name.localeCompare(b.name));
@@ -137,9 +163,15 @@ const demo = {
       week: sort(kids.map(k => ({ name: k.display_name, me: k.id === s.id, xp: xpSince(db, k.id, ws) }))),
       all: sort(kids.map(k => ({ name: k.display_name, me: k.id === s.id, xp: k.xp_total }))), improved });
   },
-  async teacherClasses(t) { const db = load(); teacher(db, t); return later([...new Set(db.students.filter(s => s.role === "student").map(s => s.class_code))].sort()); },
+  async teacherClasses(t) {
+    const db = load(), s = teacher(db, t);
+    return later(db.classes.filter(c => s.is_admin || c.teacher_id === s.id).sort((a, b) => a.code.localeCompare(b.code)).map(c => {
+      const o = db.students.find(x => x.id === c.teacher_id);
+      return { code: c.code, mine: c.teacher_id === s.id, teacher: o ? o.display_name : null,
+               students: db.students.filter(x => x.class_code === c.code && x.role === "student").length }; }));
+  },
   async teacherClass(t, c) {
-    const db = load(); teacher(db, t); const ws = weekStart();
+    const db = load(); ofClass(db, t, c); const ws = weekStart();
     return later(db.students.filter(s => s.class_code === c && s.role === "student").map(s => {
       const h = hist(db, s.id), b = h.filter(a => a.mode === "baseline"), skills = {};
       h.forEach(a => (a.answers || []).forEach(x => { const k = skills[x.skill] = skills[x.skill] || { right: 0, total: 0 }; k.total++; if (x.first_try) k.right++; }));
@@ -149,18 +181,67 @@ const demo = {
     }));
   },
   async teacherStudent(t, id) {
-    const db = load(); teacher(db, t); const s = db.students.find(x => x.id === id);
+    const db = load(); ofStudent(db, t, id); const s = db.students.find(x => x.id === id);
     return later({ student: { id: s.id, name: s.display_name, username: s.username, class_code: s.class_code, level: s.level, xp_total: s.xp_total }, history: hist(db, id) });
   },
   async resetPin(t, id, pin) {
-    const db = load(); teacher(db, t);
+    const db = load(); ofStudent(db, t, id);
     if (!/^[0-9]{4}$/.test(pin)) throw new Error("A PIN must be 4 digits.");
     const s = db.students.find(x => x.id === id); if (s) s.pin = pin; store(db); return null;
   },
   // No AI in demo mode: the keyword marker decides.
   async aiMark() { return null; },
-  async aiLog(t) { teacher(load(), t); return later([]); },
+  async aiLog(t, c) { ofClass(load(), t, c); return later([]); },
   async aiFlag() { return null; },
+  async addStudents(t, c, names) {
+    const db = load(), s = teacher(db, t), code = String(c || "").replace(/\s/g, "").toUpperCase();
+    if (!/^[A-Z0-9]{2,10}$/.test(code)) throw new Error("A class code is 2 to 10 letters or numbers, for example 8B4.");
+    const list = (names || []).map(n => String(n).trim().slice(0, 80)).filter(Boolean);
+    if (!list.length) throw new Error("Add at least one name.");
+    if (list.length > 60) throw new Error("Add up to 60 names at a time.");
+    const cl = db.classes.find(x => x.code === code);
+    if (!cl) db.classes.push({ code, teacher_id: s.id });
+    else if (!canSee(db, s, code)) throw new Error(`Class ${code} belongs to another teacher. Choose a different code.`);
+    let n = Math.max(0, ...db.students.filter(x => x.class_code === code && x.role === "student").map(x => numOf(x.username)));
+    const out = list.map(name => { n++; const pin = newPin(), username = `${code.toLowerCase()}-${String(n).padStart(2, "0")}`;
+      db.students.push({ id: "s" + Date.now().toString(36) + n, username, display_name: name, role: "student", pin, class_code: code, level: null, xp_total: 0 });
+      return { no: n, name, username, pin }; });
+    store(db); return later({ class_code: code, students: out });
+  },
+  async newPins(t, c) {
+    const db = load(); ofClass(db, t, c);
+    const out = db.students.filter(x => x.class_code === c && x.role === "student").sort((a, b) => a.username.localeCompare(b.username))
+      .map(x => { x.pin = newPin(); Object.keys(db.tokens).forEach(k => { if (db.tokens[k] === x.id) delete db.tokens[k]; });
+        return { no: numOf(x.username), name: x.display_name, username: x.username, pin: x.pin }; });
+    store(db); return later({ class_code: c, students: out });
+  },
+  async removeStudent(t, id) { const db = load(); ofStudent(db, t, id);
+    db.students = db.students.filter(x => x.id !== id); db.attempts = db.attempts.filter(a => a.student_id !== id); store(db); return null; },
+  async deleteClass(t, c) { const db = load(); ofClass(db, t, c);
+    const ids = new Set(db.students.filter(x => x.class_code === c && x.role === "student").map(x => x.id));
+    db.students = db.students.filter(x => !ids.has(x.id)); db.attempts = db.attempts.filter(a => !ids.has(a.student_id));
+    db.classes = db.classes.filter(x => x.code !== c); store(db); return null; },
+  async setPassword(t, o, n) { const db = load(), s = teacher(db, t);
+    if (s.pin !== String(o || "").trim()) throw new Error("Your current password is not right.");
+    if (String(n || "").trim().length < 8) throw new Error("Choose a password of at least 8 characters.");
+    s.pin = String(n).trim(); s.must_change = false; store(db); return null; },
+  async teachers(t) { const db = load(), s = admin(db, t);
+    return later(db.students.filter(x => x.role === "teacher").map(x => ({ id: x.id, name: x.display_name, username: x.username, is_admin: !!x.is_admin,
+      must_change: !!x.must_change, me: x.id === s.id, classes: db.classes.filter(c => c.teacher_id === x.id).map(c => c.code).sort() }))
+      .sort((a, b) => b.is_admin - a.is_admin || a.name.localeCompare(b.name))); },
+  async addTeacher(t, name, u) { const db = load(); admin(db, t); const user = String(u || "").trim().toLowerCase(), pw = newPassword();
+    if (String(name || "").trim().length < 2) throw new Error("Type the teacher's name.");
+    if (!/^[a-z][a-z0-9.]{2,29}$/.test(user)) throw new Error("A username is 3 to 30 letters, numbers or dots, starting with a letter (for example ms.lan).");
+    if (db.students.some(x => x.username === user)) throw new Error("That username is already taken.");
+    db.students.push({ id: "t" + Date.now().toString(36), username: user, display_name: String(name).trim().slice(0, 80), role: "teacher", pin: pw, class_code: "TEACHER", must_change: true });
+    store(db); return later({ username: user, password: pw }); },
+  async resetTeacher(t, id) { const db = load(), s = admin(db, t), x = db.students.find(y => y.id === id && y.role === "teacher" && y.id !== s.id);
+    if (!x) throw new Error("Teacher not found."); x.pin = newPassword(); x.must_change = true;
+    Object.keys(db.tokens).forEach(k => { if (db.tokens[k] === id) delete db.tokens[k]; }); store(db); return later({ username: x.username, password: x.pin }); },
+  async removeTeacher(t, id) { const db = load(), s = admin(db, t); if (id === s.id) throw new Error("You cannot remove your own account.");
+    db.students = db.students.filter(x => !(x.id === id && x.role === "teacher")); db.classes.forEach(c => { if (c.teacher_id === id) c.teacher_id = null; }); store(db); return null; },
+  async moveClass(t, c, id) { const db = load(); admin(db, t); if (!db.students.some(x => x.id === id && x.role === "teacher")) throw new Error("Teacher not found.");
+    const cl = db.classes.find(x => x.code === c); if (cl) cl.teacher_id = id; store(db); return null; },
   reset() { try { localStorage.removeItem(KEY); } catch (e) {} }
 };
 
