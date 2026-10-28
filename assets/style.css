@@ -162,6 +162,7 @@ tr.me td{background:var(--gold-bg);font-weight:700}
 .badge.locked{background:var(--card);opacity:.6}
 .chart svg{width:100%;height:auto;display:block}
 .chart text{fill:var(--muted);font-size:11px;font-family:var(--f-body)}
+@media (max-width:640px){ .chart text{font-size:19px} }
 
 /* heat map */
 .heat td.h{text-align:center;font-variant-numeric:tabular-nums;font-size:.82rem;min-width:52px}

@@ -3,7 +3,8 @@
 Adaptive reading practice for Cambridge Lower Secondary Checkpoint English, Stage 9.
 
 - **Baseline:** three short texts (Easier, Core, Harder), 12 questions, no hints. The score sets each student's starting level (0–5 Easier, 6–9 Core, 10–12 Harder).
-- **Practice:** each text comes in three versions with the same paragraphs. Wrong answers get a hint, then a reread with a strategy card, then the easier text. Three right first time in a row moves a student up.
+- **Practice:** each text comes in three versions with the same paragraphs. Wrong answers get a hint, then a reread with a strategy card, then the easier text. Three right first time in a row moves a student up. Units 2 and 3 also have a Challenge (about C1) version in `js/texts-challenge.js`, which students reach only inside a text, after three right first time on Harder.
+- **Reading level:** each baseline and practice text is placed on eight CEFR steps (A2, A2+, B1, B1+, B2, B2+, C1, C1+). The text version gives the band (Easier A2, Core B1, Harder B2, Challenge C1) and about 75% right first time gives the upper step. These are estimates, not an official calibration.
 - **XP and streaks:** 10 / 15 / 20 XP for right first time on Easier / Core / Harder, less after support, bonuses for finishing, levelling up and keeping a weekly streak (2 texts a week).
 - **Class leaderboard:** this week, all time, and most improved (first vs latest baseline).
 - **Progress tracker:** skill bars, level over time, badges and history for each student.

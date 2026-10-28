@@ -1,5 +1,5 @@
 // Shared rendering helpers for the student and teacher pages.
-import { LEVELS, skillStats, badges, weeklyStreak, SKILL_BADGES, SUPPORT_LABEL } from "./engine.js";
+import { LEVELS, BANDS, readingBand, currentBand, textLevel, skillStats, badges, weeklyStreak, SKILL_BADGES, SUPPORT_LABEL } from "./engine.js";
 import { PRACTICE_TEXTS } from "./content.js";
 import { unitWords, wordPattern, missionBadges, MISSION_BADGES } from "./practice.js";
 import { LISTENING } from "./listening.js";
@@ -11,6 +11,8 @@ export function esc(t) {
   return String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
 }
 export function levelName(l) { return l == null ? "Not placed" : LEVELS[l]; }
+// The CEFR step of the latest reading, or the text level if there is none yet.
+export function bandName(history, level) { const b = currentBand(history); return b == null ? levelName(level) : BANDS[b]; }
 export function fmtDate(d) { return d ? new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "–"; }
 export function fmtClock(s) { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 export function fmtTime(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + " min " + (s % 60) + " s"; }
@@ -76,21 +78,27 @@ function medalSVG(on) {
          `<circle cx="14" cy="17" r="8.5" fill="${on ? "var(--gold)" : "var(--line)"}"/><path d="M14 12.5l1.4 2.9 3.1.4-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.4z" fill="var(--surface)"/></svg>`;
 }
 
-// Level after each attempt, drawn as a step line (0 Easier, 1 Core, 2 Harder).
+// Reading level after each baseline and practice text, on eight CEFR steps (A2 to C1+), drawn as a step line.
+// Each CEFR band is a shaded strip; the dot's colour shows the text version it was read on.
+const LEVEL_DOT = ["#2F9E8F", "var(--teal)", "#2F6FB5", "#7B4FC4"];
 export function levelChart(history) {
-  const pts = history.filter(h => h.level_end != null);
+  const pts = history.filter(h => (h.mode === "practice" || h.mode === "baseline") && h.level_end != null).map(h => ({ h, b: readingBand(h), l: textLevel(h) }));
   if (pts.length < 1) return `<p class="note">Your level line appears after your first reading.</p>`;
-  const W = 600, H = 170, L = 64, R = 14, T = 12, B = 28, n = pts.length;
+  const W = 600, H = 270, L = 62, R = 14, T = 12, B = 34, n = pts.length, step = (H - T - B) / 8;
   const x = i => n === 1 ? L + (W - L - R) / 2 : L + i * (W - L - R) / (n - 1);
-  const y = l => T + (2 - l) * (H - T - B) / 2;
+  const y = b => T + (7.5 - b) * step;
   let d = "";
-  pts.forEach((p, i) => { d += i === 0 ? `M${x(i)},${y(p.level_end)}` : `H${x(i)}V${y(p.level_end)}`; });
-  const grid = [0, 1, 2].map(l => `<line x1="${L}" x2="${W - R}" y1="${y(l)}" y2="${y(l)}" stroke="var(--line)" stroke-dasharray="3 4"/><text x="${L - 8}" y="${y(l) + 4}" text-anchor="end">${LEVELS[l]}</text>`).join("");
-  const dots = pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.level_end)}" r="${i === n - 1 ? 6 : 4}" fill="${p.mode === "baseline" ? "var(--orange)" : "var(--teal)"}" stroke="var(--surface)" stroke-width="2"><title>${esc(textTitle(p.text_id))}, ${fmtDate(p.created_at)}: ${LEVELS[p.level_end]}</title></circle>`).join("");
-  const first = `<text x="${x(0)}" y="${H - 8}" text-anchor="${n === 1 ? "middle" : "start"}">${fmtDate(pts[0].created_at)}</text>`;
-  const last = n > 1 ? `<text x="${x(n - 1)}" y="${H - 8}" text-anchor="end">${fmtDate(pts[n - 1].created_at)}</text>` : "";
-  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reading level over time">${grid}<path d="${d}" fill="none" stroke="var(--teal)" stroke-width="2.5"/>${dots}${first}${last}</svg></div>
-    <div class="legend"><span><i style="background:var(--orange);border-radius:50%"></i>Baseline</span><span><i style="background:var(--teal);border-radius:50%"></i>Practice text</span></div>`;
+  pts.forEach((p, i) => { d += i === 0 ? `M${x(i)},${y(p.b)}` : `H${x(i)}V${y(p.b)}`; });
+  const strips = ["A2", "B1", "B2", "C1"].map((c, k) => `<rect x="${L}" y="${T + (3 - k) * 2 * step}" width="${W - L - R}" height="${2 * step}" fill="var(--teal)" opacity="${k % 2 ? 0.05 : 0.11}"/>`).join("");
+  const grid = BANDS.map((name, b) => `<line x1="${L}" x2="${W - R}" y1="${y(b)}" y2="${y(b)}" stroke="var(--line)" stroke-dasharray="2 5"/><text x="${L - 8}" y="${y(b) + 4}" text-anchor="end"${b % 2 ? "" : ' font-weight="700"'}>${name}</text>`).join("");
+  const dots = pts.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.b)}" r="${i === n - 1 ? 6.5 : 4.5}" fill="${p.h.mode === "baseline" ? "var(--orange)" : LEVEL_DOT[p.l]}" stroke="var(--surface)" stroke-width="2"><title>${esc(textTitle(p.h.text_id))}, ${fmtDate(p.h.created_at)}: ${BANDS[p.b]} (${p.h.mode === "baseline" ? "baseline" : LEVELS[p.l] + " text"}, ${p.h.score}/${p.h.max_score})</title></circle>`).join("");
+  const first = `<text x="${x(0)}" y="${H - 8}" text-anchor="${n === 1 ? "middle" : "start"}">${fmtDate(pts[0].h.created_at)}</text>`;
+  const last = n > 1 ? `<text x="${x(n - 1)}" y="${H - 8}" text-anchor="end">${fmtDate(pts[n - 1].h.created_at)}</text>` : "";
+  const used = [...new Set(pts.filter(p => p.h.mode !== "baseline").map(p => p.l))].sort();
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reading level over time, from A2 to C1+">${strips}${grid}<path d="${d}" fill="none" stroke="var(--teal)" stroke-width="2.5"/>${dots}${first}${last}</svg></div>
+    <div class="legend"><span><i style="background:var(--orange);border-radius:50%"></i>Baseline</span>${used.map(l => `<span><i style="background:${LEVEL_DOT[l]};border-radius:50%"></i>${LEVELS[l]} text</span>`).join("")}</div>
+    <p class="note">Each text version covers a lower and an upper step: Easier A2 to A2+, Core B1 to B1+, Harder B2 to B2+, Challenge C1 to C1+. About 75% right first time puts a reading on the upper step.</p>
+`;
 }
 
 export function skillBars(history) {
@@ -104,7 +112,7 @@ export function skillBars(history) {
 export function badgeShelf(history) {
   const got = [...badges(history), ...missionBadges(history)], names = new Set(got.map(b => b.name));
   const all = [{ name: "First steps", why: "Finish the baseline" }, { name: "Off the mark", why: "Finish a practice text" },
-               { name: "Bookworm", why: "Finish 5 practice texts" }, { name: "Top level", why: "Reach the Harder text" },
+               { name: "Bookworm", why: "Finish 5 practice texts" }, { name: "Top level", why: "Reach the Harder text" }, { name: "Challenger", why: "Reach a Challenge (C1) text" },
                { name: "On a roll", why: "Keep a 3-week streak" },
                ...Object.entries(SKILL_BADGES).map(([s, n]) => ({ name: n, why: "10 " + s.toLowerCase() + " questions right first time" })),
                ...Object.entries(MISSION_BADGES).map(([u, n]) => ({ name: n, why: `Complete the Unit ${u} mission` }))];
@@ -115,7 +123,7 @@ export function badgeShelf(history) {
 export function historyTable(history) {
   if (!history.length) return `<p class="note">No readings yet.</p>`;
   return `<div class="tbl"><table><thead><tr><th>Date</th><th>Reading</th><th>Level</th><th class="num">Score</th><th class="num">XP</th></tr></thead><tbody>${
-    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td>${h.mode !== "practice" && h.mode !== "baseline" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== h.level_end && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(h.level_end)}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
+    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td>${h.mode !== "practice" && h.mode !== "baseline" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== textLevel(h) && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(textLevel(h))} · ${BANDS[readingBand(h)]}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 
@@ -124,7 +132,7 @@ export function trackerHTML(history, who) {
   const practice = history.filter(h => h.mode === "practice").length;
   return `<div class="stats">
       <div class="stat gold"><b>${who.xp_total}</b><span>XP in total</span></div>
-      <div class="stat"><b>${levelName(who.level)}</b><span>reading level</span></div>
+      <div class="stat"><b>${bandName(history, who.level)}</b><span>reading level</span></div>
       <div class="stat"><b>${streak} wk</b><span>streak (${thisWeek}/2 this week)</span></div>
       <div class="stat"><b>${practice}</b><span>texts finished</span></div></div>
     <div class="panel"><h3>Skills</h3>${skillBars(history)}</div>
