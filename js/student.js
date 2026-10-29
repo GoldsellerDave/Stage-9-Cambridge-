@@ -576,7 +576,7 @@ function nextSmallQ() {
     run.phase = "done"; run.xpSoFar = 0;
   } else prepQuestion();
   saveRun(); runView(); top();
-  if (run.phase === "done") win ? Cel.big({ icon: "🏅", title: "Mission complete!", sub: `${P.MISSION_BADGES[run.boss]} badge`, xp: run.result.xp }) : Cel.set(run.result.xp);
+  if (run.phase === "done") run.result.win ? Cel.big({ icon: "🏅", title: "Mission complete!", sub: `${P.MISSION_BADGES[run.boss]} badge`, xp: run.result.xp }) : Cel.set(run.result.xp);
 }
 // Per-question state that a question type needs before it is shown.
 function prepQuestion() {
