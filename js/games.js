@@ -569,7 +569,8 @@ export function playDodge(el, { tier = 0, seen = new Map(), missed = new Set(), 
   function makeBubbles() {
     shuffled(cur.opts.map((_, k) => k)).forEach((k, n) => {
       const b = document.createElement("button"); b.type = "button"; b.className = "bub";
-      b.innerHTML = `<span class="gk">${n + 1}</span><span>${esc(cur.opts[k].t)}</span>`;
+      // Long words with no spaces (email addresses) may break after @ and dots instead of spilling out of the bubble.
+      b.innerHTML = `<span class="gk">${n + 1}</span><span class="bt">${esc(cur.opts[k].t).replace(/([@.])(?=\S)/g, "$1<wbr>")}</span>`;
       arena.appendChild(b);
       const o = { k, n, el: b, x: 0, y0: 0, h: 0, ph: Math.random() * 6.28, done: false };
       b.onclick = () => tap(o); bubs.push(o);

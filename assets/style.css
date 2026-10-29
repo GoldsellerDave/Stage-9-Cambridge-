@@ -453,6 +453,7 @@ a.pstep:hover b{color:var(--teal)}
   border:2px solid rgba(255,255,255,.85);border-radius:28px;color:#0B2A4A;font:700 .92rem/1.25 var(--f-text);text-align:left;cursor:pointer;will-change:transform;
   background:radial-gradient(circle at 22% 22%,#fff 0 9%,rgba(255,255,255,.92) 10%,rgba(214,240,255,.9) 55%,rgba(150,210,245,.9));
   box-shadow:0 6px 16px rgba(0,20,50,.35),inset 0 -6px 12px rgba(80,160,220,.35)}
+.bub .bt{min-width:0;overflow-wrap:anywhere}
 .bub .gk{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#1F8FB3;color:#fff;font-size:.75rem}
 .bub:focus-visible{outline:3px solid #FFD54A;outline-offset:2px}
 .bub:disabled{cursor:default}
