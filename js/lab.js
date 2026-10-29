@@ -438,10 +438,11 @@ export function labStartLevel(history, tier = 0) {
 }
 export const seenClips = history => new Set(history.filter(isLabAttempt).flatMap(h => labAnswers(h).map(a => a.lab)));
 // The next question: the wanted level first (then the nearest level), not used in this run, new clips before seen ones.
+// Listening items are keyed by clip, Reading Lab items (rlab.js) by id.
 export function nextLabItem(m, level, used = [], seen = new Set()) {
   for (const l of [level, level - 1, level + 1, level - 2, level + 2].filter(x => x >= 0 && x <= 2)) {
-    const pool = m.items.filter(it => it.level === l && !used.includes(it.clip));
-    if (pool.length) return pool.find(it => !seen.has(it.clip)) || pool[0];
+    const pool = m.items.filter(it => it.level === l && !used.includes(it.clip || it.id));
+    if (pool.length) return pool.find(it => !seen.has(it.clip || it.id)) || pool[0];
   }
   return null;
 }

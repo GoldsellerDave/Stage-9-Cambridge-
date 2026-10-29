@@ -8,7 +8,7 @@ import { weakestTrap, missionForTrap } from "./lab.js";
 
 export const READING_SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
   "Cause and effect", "Writer's purpose", "Writer's view"];
-const AREA_SKILLS = { Reading: READING_SKILLS, Listening: ["Listening"], Vocabulary: ["Vocabulary", "Word game", "Word family", "Word class"], Grammar: ["Grammar"] };
+const AREA_SKILLS = { Reading: [...READING_SKILLS, "Reading Lab"], Listening: ["Listening"], Vocabulary: ["Vocabulary", "Word game", "Word family", "Word class"], Grammar: ["Grammar"] };
 export const AREAS = ["Reading", "Listening", "Vocabulary", "Grammar", "Speed"];
 export const SCORE_MAX = 1000, LAST = 30, MIN_ANSWERS = 3, TOP_WPM = 280;
 const byDate = history => [...history].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
