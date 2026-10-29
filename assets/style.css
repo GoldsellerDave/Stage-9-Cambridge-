@@ -834,3 +834,19 @@ mark.ltrap{background:var(--peach);color:var(--orange);font-weight:700;border-bo
 .celtap{margin:18px 0 0;color:#9FB6CF;font-size:.9rem;animation:celtap 1.6s 1.5s ease-in-out infinite both}
 @keyframes celtap{0%,100%{opacity:.35}50%{opacity:1}}
 @media (prefers-reduced-motion:reduce){ .celrays,.celtap,.celchip{animation:none} .celbadge,.celflash,.celbadge::after{animation-duration:.01s} .celchip{opacity:1} }
+
+/* Results: Strong / Practise next */
+.sumcards{display:grid;gap:12px;grid-template-columns:1fr}
+@media (min-width:640px){.sumcards{grid-template-columns:1fr 1fr}}
+.sumcard{border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sumcard p{margin:0}
+.sumhead{font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:8px}
+.sumcard.good{background:var(--ok-bg);border:2px solid var(--ok-line)} .sumcard.good .sumhead{color:var(--ok)}
+.sumcard.next{background:var(--peach);border:2px solid var(--orange)} .sumcard.next .sumhead{color:var(--orange)}
+.sumchips{display:flex;flex-wrap:wrap;gap:6px}
+.schip{font-weight:700;font-size:.9rem;padding:4px 10px;border-radius:999px;background:var(--card);color:var(--ink)}
+.sumcard.good .schip{border:1px solid var(--ok-line)} .sumcard.next .schip{border:1px solid var(--orange)}
+@media (prefers-reduced-motion:no-preference){
+  .sumcard.flash{animation:sumflash 1.6s ease-in-out infinite}
+  @keyframes sumflash{0%,100%{box-shadow:0 0 0 0 rgba(224,116,63,0)}50%{box-shadow:0 0 0 6px rgba(224,116,63,.45)}}
+}
