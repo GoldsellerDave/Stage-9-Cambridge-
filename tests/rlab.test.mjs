@@ -8,7 +8,9 @@ test("every Reading Lab item: evidence and traps are in the text, options are di
   const ids = new Set();
   for (const m of RL.RLAB) {
     assert.ok(RL.RTRAPS[m.trap], m.id); assert.equal(m.teach.length, 2, m.id);
-    for (const l of [0, 1, 2]) assert.ok(m.items.filter(it => it.level === l).length >= (l ? 4 : 5), `${m.id} level ${l}`);
+    // Each unit has its own 13: 5 Core, 4 Stretch, 4 Challenge.
+    for (const u of RL.RLAB_UNITS) for (const l of [0, 1, 2]) assert.ok(m.items.filter(it => it.u === u && it.level === l).length >= (l ? 4 : 5), `${m.id} unit ${u} level ${l}`);
+    assert.ok(m.items.every(it => RL.RLAB_UNITS.includes(it.u)), m.id);
     for (const it of m.items) {
       assert.ok(!ids.has(it.id) && it.id.startsWith("rlab-"), it.id); ids.add(it.id);
       const text = RL.passageText(it);
@@ -35,6 +37,14 @@ test("the Lab engine picks Reading Lab items by id, new ones first", () => {
   assert.notEqual(b.id, a.id);
   const seen = new Set(m.items.filter(x => x.level === 0).slice(0, 2).map(x => x.id));
   assert.ok(!seen.has(Lab.nextLabItem(m, 0, [], seen).id));
+});
+
+test("a unit's mission only gives that unit's questions", () => {
+  for (const u of RL.RLAB_UNITS) for (const m of RL.RLAB) {
+    const um = RL.unitMission(m, u), used = [];
+    for (let k = 0; k < 6; k++) { const it = Lab.nextLabItem(um, k % 3, used, new Set()); assert.equal(it.u, u); used.push(it.id); }
+  }
+  assert.equal(RL.rItemUnit("rlab-scan-1"), 3); assert.equal(RL.rItemUnit("rlab-scan-4"), 2); assert.equal(RL.rItemUnit("nope"), null);
 });
 
 test("start level, seen items and the reading trap tracker come from saved answers", () => {
