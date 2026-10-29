@@ -501,11 +501,13 @@ export function playDodge(el, { tier = 0, onEnd }) {
   }
   function listen() {
     plays++; audio.currentTime = 0;
-    audio.play().then(() => wave.classList.add("on")).catch(() => tell("The clip didn't start. Tap Replay to hear it."));
+    audio.play().then(() => wave.classList.add("on")).catch(failed);
     rep.disabled = true; setPlays();
   }
   audio.onended = () => { wave.classList.remove("on"); rep.disabled = phase === "play" && plays >= maxPlays(); };
-  audio.onerror = () => { if (cur) tell("The clip didn't load. Check your internet connection."); };
+  // A clip that doesn't start or load does not use up a play, and Replay is ready to try again.
+  function failed() { if (phase !== "play") return; plays = Math.max(0, plays - 1); rep.disabled = false; setPlays(); tell("The clip didn't start. Tap Replay to try again."); }
+  audio.onerror = () => { if (cur) failed(); };
   rep.onclick = () => {
     if (over || !cur) return;
     if (phase === "play") { if (plays >= maxPlays()) return; T += clipSeconds(cur.clip) * 0.5; listen(); }
@@ -545,7 +547,8 @@ export function playDodge(el, { tier = 0, onEnd }) {
     });
     layout(); draw();
   }
-  // Two columns, two rows, staggered. All bubbles rise at the same speed; the answer escapes when it is half out of the top.
+  // Two columns, two rows, staggered. All bubbles rise at the same speed, set so that the answer, wherever it is,
+  // is half out of the top (escapes) exactly when the time is up.
   function layout() {
     const W = arena.clientWidth, H = arena.clientHeight, lane = W / 2;
     const rowH = Math.max(...bubs.map(o => o.el.offsetHeight)) + 14;
@@ -555,7 +558,7 @@ export function playDodge(el, { tier = 0, onEnd }) {
       o.x = Math.min(Math.max(6, col * lane + (lane - w) / 2), W - w - 6);
       o.y0 = H - 20 - o.h - (1 - row) * rowH - (col ? 18 : 0);
     });
-    D = Math.max(...bubs.map(o => o.y0 + o.h / 2));
+    const a = bubs.find(o => o.k === 0); D = a.y0 + a.h / 2;
   }
   function draw() {
     bubs.forEach(o => {
@@ -566,7 +569,7 @@ export function playDodge(el, { tier = 0, onEnd }) {
   }
   const run = () => loop(dt => {
     tt += dt; p += dt / T; draw();
-    const a = bubs.find(o => o.k === 0); if (p >= 1 || a.y0 - p * D < -a.h / 2) escaped();
+    if (p >= 1) escaped();
   });
 
   function endRound() { phase = "end"; stop(); clearTimeout(timer); audio.pause(); wave.classList.remove("on"); bubs.forEach(o => { o.done = true; o.el.disabled = true; }); }
