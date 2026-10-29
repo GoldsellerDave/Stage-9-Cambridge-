@@ -27,8 +27,8 @@ const EFFECTS = [
  {label:"mood",k:["angry","irritab","annoy","mood","sad","low","grumpy","upset","temper","emotion","unhappy"]},
  {label:"anxiety",k:["anxi","worr","stress","nervous","depress","mental"]},
  {label:"illness",k:["ill","sick","immun","infection","cold","disease"]}];
-const PHONE_LIGHT = {label:"light / melatonin",k:["light","screen","bright","daytime","day time","melatonin","hormone","suppress"]};
-const PHONE_ALERT = {label:"keeping the brain busy",k:["alert","awake","busy","active","notification","message","video","scroll","stimulat","hour","one more"]};
+const PHONE_LIGHT = {ask:"What does the light from the screen do?", label:"light / melatonin",k:["light","screen","bright","daytime","day time","melatonin","hormone","suppress"]};
+const PHONE_ALERT = {ask:"What do messages and videos do to your brain?", label:"keeping the brain busy",k:["alert","awake","busy","active","notification","message","video","scroll","stimulat","hour","one more"]};
 const SLEEP_LEVELS = [
  { title:"Why can't teenagers get up?", paras:[
   ["A","It is 6.30 on Monday morning. Maya's alarm rings for the third time. She is very tired. Last night she went to bed at ten o'clock, but she could not sleep until after midnight. Her parents think she is lazy. \"Go to sleep earlier!\" her dad says. But scientists say it is not so simple."],
