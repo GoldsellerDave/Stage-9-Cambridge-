@@ -97,6 +97,7 @@ export function chunks(words, n = CHUNK) { const out = []; for (let i = 0; i < w
 /* ---------------- Trap Dodger data ---------------- */
 // Trap Dodger reuses the Listening Lab clips. Option 0 is the answer; the other options are the traps, and their "why" says why.
 // Every 2 right answers is one level; levels 1-2 use Core clips, 3-4 Stretch and 5-6 Challenge, and the bubbles rise faster.
+const CLIP_SHARE = 0.6;                                                                    // how far up the bubbles get while the clip plays
 export const DODGE_LIVES = 3, DODGE_ROUNDS = 10, DODGE_MAX = 6;
 export const dodgeTier = level => level <= 2 ? 0 : level <= 4 ? 1 : 2;
 export const dodgeLevelFor = tier => 1 + 2 * Math.min(Math.max(tier || 0, 0), 2);         // the first level of a tier
@@ -492,25 +493,25 @@ export function playDodge(el, { tier = 0, onEnd }) {
   const dq = el.querySelector("#dq"), tell = t => { el.querySelector("#gtell").textContent = t; };
   const audio = new Audio(); audio.preload = "auto";
   let level = start, points = 0, hits = 0, misses = 0, streak = 0, round = 0, over = false, stop = () => {}, timer = null;
-  let cur = null, bubs = [], p = 0, T = 10, D = 400, tt = 0, plays = 0, phase = "read";
+  let cur = null, bubs = [], p = 0, D = 400, tt = 0, plays = 0, heard = false, phase = "read";
   const words = [], used = [], t0 = Date.now();
   const maxPlays = () => LAB_PLAYS[cur.tier];
   function setPlays() {
     const left = Math.max(0, maxPlays() - plays);
-    el.querySelector("#dplays").textContent = phase === "end" ? "" : left ? `${left} replay${left > 1 ? "s" : ""} left. A replay slows the bubbles.` : "No replays left.";
+    el.querySelector("#dplays").textContent = phase === "end" ? "" : left ? `${left} replay${left > 1 ? "s" : ""} left. The bubbles wait while it plays.` : "No replays left.";
   }
   function listen() {
     plays++; audio.currentTime = 0;
     audio.play().then(() => wave.classList.add("on")).catch(failed);
     rep.disabled = true; setPlays();
   }
-  audio.onended = () => { wave.classList.remove("on"); rep.disabled = phase === "play" && plays >= maxPlays(); };
+  audio.onended = () => { wave.classList.remove("on"); heard = true; rep.disabled = phase === "play" && plays >= maxPlays(); };
   // A clip that doesn't start or load does not use up a play, and Replay is ready to try again.
   function failed() { if (phase !== "play") return; plays = Math.max(0, plays - 1); rep.disabled = false; setPlays(); tell("The clip didn't start. Tap Replay to try again."); }
   audio.onerror = () => { if (cur) failed(); };
   rep.onclick = () => {
     if (over || !cur) return;
-    if (phase === "play") { if (plays >= maxPlays()) return; T += clipSeconds(cur.clip) * 0.5; listen(); }
+    if (phase === "play") { if (plays >= maxPlays()) return; listen(); }
     else if (phase === "end") { audio.currentTime = 0; audio.play().then(() => wave.classList.add("on")).catch(() => {}); }
     play("tap");
   };
@@ -520,13 +521,12 @@ export function playDodge(el, { tier = 0, onEnd }) {
     if (misses >= DODGE_LIVES) return finish("Out of lives!");
     if (round >= DODGE_ROUNDS) return finish(`${hits} of ${DODGE_ROUNDS} traps dodged!`);
     round++; cur = dodgeItem(dodgeTier(level), used); cur.tier = cur.level || 0; used.push(cur.clip);
-    fb.innerHTML = ""; bubs.forEach(o => o.el.remove()); bubs = []; p = 0; plays = 0; phase = "read";
+    fb.innerHTML = ""; bubs.forEach(o => o.el.remove()); bubs = []; p = 0; plays = 0; heard = false; phase = "read";
     el.querySelector("#dqn").textContent = `Clip ${round} of ${DODGE_ROUNDS} · ${LAB_LEVELS[cur.tier]}`;
     el.querySelector("#dstem").textContent = cur.stem;
     el.querySelector("#glv").textContent = level;
     el.querySelector("#gleft") && (el.querySelector("#gleft").textContent = "");
     audio.src = `audio/listening/${cur.clip}.mp3?v=${AUDIO_V}`; audio.load();
-    T = clipSeconds(cur.clip) + dodgeThink(level);
     makeBubbles();
     rep.disabled = true; rep.textContent = "🔁 Replay"; setPlays();
     tell("Read the question and the bubbles. What kind of answer do you need?");
@@ -547,8 +547,7 @@ export function playDodge(el, { tier = 0, onEnd }) {
     });
     layout(); draw();
   }
-  // Two columns, two rows, staggered. All bubbles rise at the same speed, set so that the answer, wherever it is,
-  // is half out of the top (escapes) exactly when the time is up.
+  // Two columns, two rows, staggered. All bubbles rise together; time is up when the highest one is half out of the top.
   function layout() {
     const W = arena.clientWidth, H = arena.clientHeight, lane = W / 2;
     const rowH = Math.max(...bubs.map(o => o.el.offsetHeight)) + 14;
@@ -558,7 +557,7 @@ export function playDodge(el, { tier = 0, onEnd }) {
       o.x = Math.min(Math.max(6, col * lane + (lane - w) / 2), W - w - 6);
       o.y0 = H - 20 - o.h - (1 - row) * rowH - (col ? 18 : 0);
     });
-    const a = bubs.find(o => o.k === 0); D = a.y0 + a.h / 2;
+    D = Math.min(...bubs.map(o => o.y0 + o.h / 2));
   }
   function draw() {
     bubs.forEach(o => {
@@ -567,8 +566,16 @@ export function playDodge(el, { tier = 0, onEnd }) {
       o.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
     });
   }
+  // The bubbles follow the recording: while it plays they rise only CLIP_SHARE of the way up (and wait while it loads
+  // or is replayed). After it ends they take the thinking time to reach the top.
+  function rise(dt) {
+    if (!audio.paused && !audio.ended) {
+      const d = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : clipSeconds(cur.clip);
+      p = Math.max(p, CLIP_SHARE * Math.min(1, audio.currentTime / d));
+    } else if (heard) p = Math.min(1, Math.max(p, CLIP_SHARE) + (1 - CLIP_SHARE) * dt / dodgeThink(level));
+  }
   const run = () => loop(dt => {
-    tt += dt; p += dt / T; draw();
+    tt += dt; rise(dt); draw();
     if (p >= 1) escaped();
   });
 
