@@ -109,11 +109,20 @@ export function dodgePool(tier) {
   return LAB.flatMap(m => m.items.filter(it => (it.level || 0) === tier && it.opts && it.opts.length >= 3)
     .map(it => ({ ...it, mission: m.id, trap: m.trap })));
 }
+// When the student last heard each clip, in Trap Dodger or in the Listening Lab: clip id → a number that grows
+// with time (oldest first). Clips never heard are not in the map.
+export function dodgeSeen(history) {
+  const seen = new Map(); let n = 0;
+  [...history].sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")))
+    .forEach(h => (h.answers || []).forEach(a => { const c = a.skill === "Trap game" ? a.clip : a.skill === "Listening" && a.lab; if (c) seen.set(c, ++n); }));
+  return seen;
+}
 // The next clip: one not used in this game, from the tier, or from an easier tier when the tier has run out.
-export function dodgeItem(tier, used = [], rnd = Math.random) {
+// Clips the student has never heard come first, then the ones heard longest ago.
+export function dodgeItem(tier, used = [], rnd = Math.random, seen = new Map()) {
   for (let t = tier; t >= 0; t--) {
     const left = dodgePool(t).filter(x => !used.includes(x.clip));
-    if (left.length) return left[Math.floor(rnd() * left.length)];
+    if (left.length) return left.map(x => [(seen.get(x.clip) ?? 0) + rnd() * 0.5, x]).sort((a, b) => a[0] - b[0])[0][1];
   }
   return dodgePool(0)[Math.floor(rnd() * dodgePool(0).length)];
 }
@@ -482,7 +491,7 @@ const SEA = `<div class="sea" aria-hidden="true"><i class="ray r1"></i><i class=
   <svg class="weed" viewBox="0 0 400 70" preserveAspectRatio="none"><path class="wd1" d="M0 70V38q12-16 24 0t24 0 24-6 20 8V70zM300 70V30q14-18 28 0t28-4 22 6 22 2V70z"/>
   <path class="wd2" d="M30 70q-8-26 4-48M44 70q10-30-2-56M352 70q-10-28 2-50M368 70q8-24-4-44M180 70q-6-18 6-30M196 70q8-22-4-36"/>
   <ellipse class="rock" cx="120" cy="66" rx="40" ry="12"/><ellipse class="rock" cx="250" cy="68" rx="30" ry="9"/></svg></div>`;
-export function playDodge(el, { tier = 0, onEnd }) {
+export function playDodge(el, { tier = 0, seen = new Map(), onEnd }) {
   const start = dodgeLevelFor(tier);
   el.innerHTML = `<div class="game dodge">${hud(DODGE_LIVES)}
     <div class="dq" id="dq"><p class="eyebrow" id="dqn"></p><p class="dstem" id="dstem"></p><i class="dread"></i></div>
@@ -521,7 +530,7 @@ export function playDodge(el, { tier = 0, onEnd }) {
     if (over) return;
     if (misses >= DODGE_LIVES) return finish("Out of lives!");
     if (round >= DODGE_ROUNDS) return finish(`${hits} of ${DODGE_ROUNDS} traps dodged!`);
-    round++; cur = dodgeItem(dodgeTier(level), used); cur.tier = cur.level || 0; used.push(cur.clip);
+    round++; cur = dodgeItem(dodgeTier(level), used, Math.random, seen); cur.tier = cur.level || 0; used.push(cur.clip);
     fb.innerHTML = ""; bubs.forEach(o => o.el.remove()); bubs = []; p = 0; plays = 0; heard = false; phase = "read";
     el.querySelector("#dqn").textContent = `Clip ${round} of ${DODGE_ROUNDS} · ${LAB_LEVELS[cur.tier]}`;
     el.querySelector("#dstem").textContent = cur.stem;

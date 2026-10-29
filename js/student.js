@@ -725,7 +725,7 @@ function gameView() {
   $app.querySelectorAll("[data-wpm]").forEach(w => w.onclick = () => { run.wpm = +w.dataset.wpm; S.play("tap"); gameView(); });
   if (run.phase === "play") {
     const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed, dodge: G.playDodge }[run.game];
-    stopGame = play(document.getElementById("gbox"), { unit: run.unit, tier: Lab.labStartLevel(history, P.tierFor(history)), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
+    stopGame = play(document.getElementById("gbox"), { unit: run.unit, tier: Lab.labStartLevel(history, P.tierFor(history)), seen: G.dodgeSeen(history), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
       stopGame = null; if (!run || run.kind !== "game") return;
       run.result = { ...R, xp: G.gameXP(R.hits, history), best };
       run.phase = "done"; S.play(R.points > best ? "win" : "done"); saveRun(); runView(); top();
