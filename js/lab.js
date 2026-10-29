@@ -407,7 +407,7 @@ export const unitTrap = (taskId, k) => (UNIT_TRAPS[taskId] || [])[k] || null;
 // rate (for the bar and the weakest trap) counts a harder question right as more: Stretch 1.5, Challenge 2.
 export function trapStats(history) {
   const out = Object.fromEntries(Object.keys(TRAPS).filter(k => k !== "prime").map(k => [k, { trap: k, total: 0, caught: 0, w: 0 }]));
-  history.forEach(h => (h.answers || []).forEach(a => { const t = a.skill === "Listening" && a.trap && out[a.trap]; if (!t) return;
+  history.forEach(h => (h.answers || []).forEach(a => { const t = (a.skill === "Listening" || a.skill === "Trap game") && a.trap && out[a.trap]; if (!t) return;
     t.total++; if (!a.first_try) { t.caught++; t.w++; } else t.w += 1 + 0.5 * (a.level || 0); }));
   return Object.values(out).map(({ w, ...t }) => ({ ...t, rate: w ? t.caught / w : 0 }));
 }

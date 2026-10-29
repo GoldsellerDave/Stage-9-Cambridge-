@@ -264,7 +264,7 @@ function unitSections(u) {
   if (texts.length) secs.push({ key: "read", label: "Reading", html: `<div class="usec">${me.baseline_done ? "" : `<p class="note">Take the baseline on the Home page first. It sets your reading level.</p>`}
       <div class="tiles">${texts.map(t => aTile("read", `data-text="${t.id}" ${me.baseline_done ? "" : "disabled"}`, t.topic, done.has(t.id) ? "Done before: half XP this time" : t.blurb, done.has(t.id))).join("")}</div>
       </div>` });
-  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${aTile("lab", "data-labhub", "Listening Lab", "Learn the examiner's tricks: 6 short missions")}${listeningFor(u).map(t =>
+  if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${aTile("lab", "data-labhub", "Listening Lab", "Learn the examiner's tricks: 6 short missions")}${gameTile("dodge", u)}${listeningFor(u).map(t =>
       aTile("listen", `data-listen="${t.id}"`, t.topic, `${t.part} · ${done.has(t.id) ? "Done before" : t.blurb}`, done.has(t.id))).join("")}</div></div>` });
   secs.push({ key: "words", label: "Words", html: `<div class="usec"><div><b>${vm.mastered} of ${vm.total} words learned</b><br><span class="note">${lists}</span>
         <div class="bar" style="margin-top:6px"><i style="width:${Math.round(100 * vm.mastered / vm.total)}%;background:var(--teal)"></i></div></div>
@@ -282,7 +282,7 @@ function aTile(ic, attrs, title, note, done = false) {
   return `<button class="atile" style="--hue:${I.hue(ic)}" ${attrs}><span class="ahead">${I.icon(ic, 34)}${done ? `<span class="adone" aria-label="done">${TICK}</span>` : ""}</span>
     <span class="abody"><b>${U.esc(title)}</b><span class="note">${U.esc(note)}</span></span></button>`;
 }
-const GAME_GROUPS = [["Words", ["rain", "train"]], ["Reading", ["speed"]]];
+const GAME_GROUPS = [["Words", ["rain", "train"]], ["Reading", ["speed"]], ["Listening", ["dodge"]]];
 function gameTile(g, u) {
   const x = G.GAMES[g], best = G.bestScore(history, G.gameId(g, u)), locked = g === "speed" && !readTexts(u).length;
   return aTile(g, `data-game="${g}" data-unit="${u}" ${locked ? "disabled" : ""}`, x.name,
@@ -378,7 +378,7 @@ function reviewView() {
 function gamesView() {
   const fu = P.focusUnit(), u = UNITS[gamesUnit] ? gamesUnit : fu;
   $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Games</p><h1>Play and practise</h1>
-    <p class="lede">Games use the words and texts from the unit you choose. You can earn up to ${G.GAME_XP_DAY} XP a day from games.</p></div>
+    <p class="lede">Games use the words and texts from the unit you choose, and Trap Dodger uses the Listening Lab clips. You can earn up to ${G.GAME_XP_DAY} XP a day from games.</p></div>
     <div class="tabs" role="tablist" aria-label="Unit">${SEQUENCE.filter(e => e.kind === "unit").map(e => `<button role="tab" aria-selected="${e.unit === u}" data-gu="${e.unit}">Unit ${e.unit}</button>`).join("")}</div>
     <h2>${U.esc(P.unitTitle(u))}</h2>${gamesHTML(u, true)}</div>`;
   $app.querySelectorAll("[data-gu]").forEach(b => b.onclick = () => { gamesUnit = +b.dataset.gu; S.play("tap"); gamesView(); });
@@ -696,6 +696,11 @@ function gameView() {
        <li>Then answer one question about it. You can't go back, so concentrate!</li>
        <li>Two right in a row and the words come faster. A wrong answer slows them down.</li>
        <li>${G.SPEED_ROUND} paragraphs. Faster speeds earn more points.</li>`
+    : run.game === "dodge"
+    ? `<li>Read the question and the four bubbles. Then listen to the clip.</li>
+       <li>Pop the bubble with the answer before it floats away. The other bubbles are traps: words you hear that are <b>not</b> the answer.</li>
+       <li>Pop early for more points, but a trap or an answer that gets away costs one of your ${G.DODGE_LIVES} lives.</li>
+       <li>${G.DODGE_ROUNDS} clips from the Listening Lab. Every 2 right, the clips get harder and the bubbles faster.</li>`
     : run.game === "rain"
     ? `<li>A meaning falls from the sky. Tap the word that matches it before it reaches the water.</li>
        <li>Catch it high up for more points. A wrong tap loses 5 points.</li>
@@ -719,8 +724,8 @@ function gameView() {
   if (b) b.onclick = () => { S.play("tap"); run.phase = "play"; gameView(); };
   $app.querySelectorAll("[data-wpm]").forEach(w => w.onclick = () => { run.wpm = +w.dataset.wpm; S.play("tap"); gameView(); });
   if (run.phase === "play") {
-    const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed }[run.game];
-    stopGame = play(document.getElementById("gbox"), { unit: run.unit, texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
+    const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed, dodge: G.playDodge }[run.game];
+    stopGame = play(document.getElementById("gbox"), { unit: run.unit, tier: Lab.labStartLevel(history, P.tierFor(history)), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
       stopGame = null; if (!run || run.kind !== "game") return;
       run.result = { ...R, xp: G.gameXP(R.hits, history), best };
       run.phase = "done"; S.play(R.points > best ? "win" : "done"); saveRun(); runView(); top();
@@ -729,7 +734,10 @@ function gameView() {
 }
 function gameDone() {
   const R = run.result, x = G.GAMES[run.game], u = run.unit, record = R.points > R.best;
-  const missed = run.game === "speed"
+  const caught = run.game === "dodge" ? Object.entries(R.words.filter(w => !w.hit).reduce((c, w) => (c[w.trap] = (c[w.trap] || 0) + 1, c), {})).sort((a, b) => b[1] - a[1]) : [];
+  const missed = run.game === "dodge"
+    ? R.words.filter(w => !w.hit).map(w => `<li>${U.esc(w.stem)} <b>${U.esc(w.answer)}</b>${w.picked ? ` <span class="note">(you popped “${U.esc(w.picked)}”)</span>` : ""}</li>`)
+    : run.game === "speed"
     ? R.words.filter(w => !w.hit).map(w => `<li>${U.esc(w.w)} <b>${U.esc(w.answer)}</b></li>`)
     : run.game === "rain"
     ? [...new Set(R.words.filter(w => !w.hit).map(w => w.w))].map(w => P.unitWords(u).find(v => v.w === w)).filter(Boolean)
@@ -737,10 +745,12 @@ function gameDone() {
     : R.words.filter(w => !w.hit).map(w => `<li><b>${U.esc(w.w)}</b> is ${/^[aeiou]/.test(w.pos) ? "an" : "a"} ${w.pos}</li>`);
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished · Unit ${u} ${x.name}</p><h1>${R.points} points</h1>
     ${record ? `<div class="fb ok winbox"><p class="big">New personal best!</p>${R.best ? `<p>Your old best was ${R.best} points.</p>` : ""}</div>` : R.best ? `<p class="note">Your best is ${R.best} points.</p>` : ""}
-    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.hits}</b><span>${{ rain: "words caught", train: "trains on time", speed: `of ${R.words.length} right` }[run.game]}</span></div>
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.hits}</b><span>${{ rain: "words caught", train: "trains on time", speed: `of ${R.words.length} right`, dodge: `of ${R.words.length} clips right` }[run.game]}</span></div>
       <div class="stat"><b>${R.level}</b><span>${run.game === "speed" ? "top speed (wpm)" : "level reached"}</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
     ${R.xp === 0 ? `<p class="note">You have reached today's ${G.GAME_XP_DAY} XP from games. Your points still count for your best score.</p>` : ""}
-    ${missed.length ? `<div class="panel"><b>${{ rain: "Words to learn (they come back in your word review)", train: "Words to look at again", speed: "Questions you missed, with the answers" }[run.game]}</b><ul>${missed.join("")}</ul></div>` : ""}
+    ${caught.length ? `<div class="panel"><b>Traps that caught you</b><ul>${caught.map(([t, n]) => `<li>🪤 ${U.esc(t === "prime" ? "Not reading the question carefully" : Lab.TRAPS[t].name)} × ${n}</li>`).join("")}</ul>
+      ${caught[0][0] !== "prime" ? `<p class="note">The Listening Lab mission “${U.esc(Lab.missionForTrap(caught[0][0]).title)}” shows how to beat this trap.</p>` : ""}</div>` : ""}
+    ${missed.length ? `<div class="panel"><b>${{ rain: "Words to learn (they come back in your word review)", train: "Words to look at again", speed: "Questions you missed, with the answers", dodge: "Clips you missed, with the answers" }[run.game]}</b><ul>${missed.join("")}</ul></div>` : ""}
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
   document.getElementById("again").onclick = () => { const g = run.game; run = null; saveRun(); startGame(g, u); };

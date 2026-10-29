@@ -1,15 +1,19 @@
-// Games: Word Rain (catch each meaning with its word), Word Train (send each word to its word-class station)
-// and Speed Read (a paragraph flashes up a few words at a time, then one question).
-// The pure helpers at the top are tested; playRain and playTrain draw the game into an element and call onEnd with the result.
+// Games: Word Rain (catch each meaning with its word), Word Train (send each word to its word-class station),
+// Speed Read (a paragraph flashes up a few words at a time, then one question) and Trap Dodger (hear a Listening Lab
+// clip, pop the bubble with the answer; the other bubbles are the examiner's traps).
+// The pure helpers at the top are tested; the play* functions draw the game into an element and call onEnd with the result.
 import { unitWords } from "./practice.js";
 import { FAMILIES } from "./families.js";
 import { play } from "./sound.js";
 import { PRACTICE_TEXTS } from "./content.js";
+import { LAB, TRAPS, LAB_LEVELS, LAB_PLAYS, markLine } from "./lab.js";
+import { TIMES, AUDIO_V } from "./listening-times.js";
 
 export const GAMES = {
   rain: { name: "Word Rain", blurb: "Meanings fall from the sky. Tap the word that matches before it lands." },
   train: { name: "Word Train", blurb: "Send each word to the right station: noun, verb, adjective or adverb." },
-  speed: { name: "Speed Read", blurb: "A paragraph flashes past a few words at a time. Answer one question, then go faster." }
+  speed: { name: "Speed Read", blurb: "A paragraph flashes past a few words at a time. Answer one question, then go faster." },
+  dodge: { name: "Trap Dodger", blurb: "Listen and pop the bubble with the answer. The other bubbles are traps!" }
 };
 export const GAME_XP_DAY = 30;           // the most XP games can give in one school day
 export const RAIN_LIVES = 3, RAIN_SECONDS = 120, TRAIN_COUNT = 20;
@@ -44,7 +48,7 @@ export const trainStations = pool => STATIONS.filter(s => pool.some(x => x.pos =
 
 /* ---------------- scores and XP ---------------- */
 const dayNo = t => Math.floor((t + 7 * 3600e3) / 86400e3);        // school time zone (UTC+7)
-export const isGame = id => /^(rain|train|speed)-u\d$/.test(id || "");
+export const isGame = id => /^(rain|train|speed|dodge)-u\d$/.test(id || "");
 export const gameId = (game, unit) => `${game}-u${unit}`;
 export function gamePoints(h) { const a = (h.answers || []).find(x => x.skill === "Game score"); return a ? a.points : 0; }
 export function bestScore(history, id) { return history.filter(h => h.text_id === id).reduce((b, h) => Math.max(b, gamePoints(h)), 0); }
@@ -61,6 +65,8 @@ export function gameAnswers(game, R, unit) {
   const ans = [{ skill: "Game score", game, points: R.points, level: R.level }];
   if (game === "rain") R.words.forEach(x => ans.push({ skill: "Word game", word: x.w, unit, first_try: x.hit }));
   else if (game === "train") R.words.forEach(x => ans.push({ skill: "Word class", word: x.w, unit, pos: x.pos, first_try: x.hit }));
+  // Trap Dodger answers count in the trap tracker (see trapStats in lab.js). picked is the trap bubble popped, if any.
+  else if (game === "dodge") R.words.forEach(x => ans.push({ skill: "Trap game", clip: x.clip, trap: x.trap, level: x.tier, first_try: x.hit, ...(x.picked ? { picked: x.picked } : {}) }));
   else { ans[0].wpm = R.top; R.words.forEach(x => ans.push({ skill: "Speed reading", sub: x.skill, text: x.text, para: x.para, wpm: x.wpm, first_try: x.hit })); }
   return ans;
 }
@@ -87,6 +93,30 @@ export function lastSpeed(history, id) {
   return a && a.wpm ? a.wpm : 130;
 }
 export function chunks(words, n = CHUNK) { const out = []; for (let i = 0; i < words.length; i += n) out.push(words.slice(i, i + n).join(" ")); return out; }
+
+/* ---------------- Trap Dodger data ---------------- */
+// Trap Dodger reuses the Listening Lab clips. Option 0 is the answer; the other options are the traps, and their "why" says why.
+// Every 2 right answers is one level; levels 1-2 use Core clips, 3-4 Stretch and 5-6 Challenge, and the bubbles rise faster.
+export const DODGE_LIVES = 3, DODGE_ROUNDS = 10, DODGE_MAX = 6;
+export const dodgeTier = level => level <= 2 ? 0 : level <= 4 ? 1 : 2;
+export const dodgeLevelFor = tier => 1 + 2 * Math.min(Math.max(tier || 0, 0), 2);         // the first level of a tier
+export const dodgeLevel = (start, hits) => Math.min(start + Math.floor(hits / 2), DODGE_MAX);
+export const dodgeThink = level => Math.max(3, 9 - level);                                // seconds after the clip ends
+export const clipSeconds = clip => { const t = TIMES[clip]; return t && t.length ? t[t.length - 1][1] : 10; };
+export function dodgePool(tier) {
+  return LAB.flatMap(m => m.items.filter(it => (it.level || 0) === tier && it.opts && it.opts.length >= 3)
+    .map(it => ({ ...it, mission: m.id, trap: m.trap })));
+}
+// The next clip: one not used in this game, from the tier, or from an easier tier when the tier has run out.
+export function dodgeItem(tier, used = [], rnd = Math.random) {
+  for (let t = tier; t >= 0; t--) {
+    const left = dodgePool(t).filter(x => !used.includes(x.clip));
+    if (left.length) return left[Math.floor(rnd() * left.length)];
+  }
+  return dodgePool(0)[Math.floor(rnd() * dodgePool(0).length)];
+}
+// Points for a popped answer: more for harder clips, for popping it low down (early), and for a streak.
+export const dodgeGain = (tier, progress, streak) => 10 + 10 * tier + Math.round(10 * Math.max(0, 1 - progress)) + (streak >= 3 ? 5 : 0);
 
 /* ---------------- shared ---------------- */
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -440,4 +470,179 @@ export function playSpeed(el, { unit, texts, level, wpm, onEnd }) {
   }
   ready();
   return () => { over = true; clearTimeout(timer); };
+}
+
+/* ---------------- Trap Dodger ---------------- */
+// Under the sea (fixed colours in both themes). The four options are bubbles that rise while the clip plays.
+// Pop the answer before it escapes at the top. Popping a trap, or letting the answer escape, loses a life.
+const SEA = `<div class="sea" aria-hidden="true"><i class="ray r1"></i><i class="ray r2"></i><i class="ray r3"></i>
+  <i class="fizz f1"></i><i class="fizz f2"></i><i class="fizz f3"></i><i class="fizz f4"></i><i class="fizz f5"></i>
+  <svg class="weed" viewBox="0 0 400 70" preserveAspectRatio="none"><path class="wd1" d="M0 70V38q12-16 24 0t24 0 24-6 20 8V70zM300 70V30q14-18 28 0t28-4 22 6 22 2V70z"/>
+  <path class="wd2" d="M30 70q-8-26 4-48M44 70q10-30-2-56M352 70q-10-28 2-50M368 70q8-24-4-44M180 70q-6-18 6-30M196 70q8-22-4-36"/>
+  <ellipse class="rock" cx="120" cy="66" rx="40" ry="12"/><ellipse class="rock" cx="250" cy="68" rx="30" ry="9"/></svg></div>`;
+export function playDodge(el, { tier = 0, onEnd }) {
+  const start = dodgeLevelFor(tier);
+  el.innerHTML = `<div class="game dodge">${hud(DODGE_LIVES)}
+    <div class="dq" id="dq"><p class="eyebrow" id="dqn"></p><p class="dstem" id="dstem"></p><i class="dread"></i></div>
+    <div class="arena darena" id="arena">${SEA}<div class="dwave" id="dwave" aria-hidden="true">${"<i></i>".repeat(7)}</div><div class="gbanner"></div></div>
+    <div class="row dctl"><button class="btn small alt" id="dreplay" disabled>🔁 Replay</button><span class="note" id="dplays"></span></div>
+    <div id="dfb" aria-live="polite"></div>
+    <p class="note" id="gtell" aria-live="polite"></p></div>`;
+  const arena = el.querySelector("#arena"), wave = el.querySelector("#dwave"), fb = el.querySelector("#dfb"), rep = el.querySelector("#dreplay");
+  const dq = el.querySelector("#dq"), tell = t => { el.querySelector("#gtell").textContent = t; };
+  const audio = new Audio(); audio.preload = "auto";
+  let level = start, points = 0, hits = 0, misses = 0, streak = 0, round = 0, over = false, stop = () => {}, timer = null;
+  let cur = null, bubs = [], p = 0, T = 10, D = 400, tt = 0, plays = 0, phase = "read";
+  const words = [], used = [], t0 = Date.now();
+  const maxPlays = () => LAB_PLAYS[cur.tier];
+  function setPlays() {
+    const left = Math.max(0, maxPlays() - plays);
+    el.querySelector("#dplays").textContent = phase === "end" ? "" : left ? `${left} replay${left > 1 ? "s" : ""} left. A replay slows the bubbles.` : "No replays left.";
+  }
+  function listen() {
+    plays++; audio.currentTime = 0;
+    audio.play().then(() => wave.classList.add("on")).catch(failed);
+    rep.disabled = true; setPlays();
+  }
+  audio.onended = () => { wave.classList.remove("on"); rep.disabled = phase === "play" && plays >= maxPlays(); };
+  // A clip that doesn't start or load does not use up a play, and Replay is ready to try again.
+  function failed() { if (phase !== "play") return; plays = Math.max(0, plays - 1); rep.disabled = false; setPlays(); tell("The clip didn't start. Tap Replay to try again."); }
+  audio.onerror = () => { if (cur) failed(); };
+  rep.onclick = () => {
+    if (over || !cur) return;
+    if (phase === "play") { if (plays >= maxPlays()) return; T += clipSeconds(cur.clip) * 0.5; listen(); }
+    else if (phase === "end") { audio.currentTime = 0; audio.play().then(() => wave.classList.add("on")).catch(() => {}); }
+    play("tap");
+  };
+
+  function next() {
+    if (over) return;
+    if (misses >= DODGE_LIVES) return finish("Out of lives!");
+    if (round >= DODGE_ROUNDS) return finish(`${hits} of ${DODGE_ROUNDS} traps dodged!`);
+    round++; cur = dodgeItem(dodgeTier(level), used); cur.tier = cur.level || 0; used.push(cur.clip);
+    fb.innerHTML = ""; bubs.forEach(o => o.el.remove()); bubs = []; p = 0; plays = 0; phase = "read";
+    el.querySelector("#dqn").textContent = `Clip ${round} of ${DODGE_ROUNDS} · ${LAB_LEVELS[cur.tier]}`;
+    el.querySelector("#dstem").textContent = cur.stem;
+    el.querySelector("#glv").textContent = level;
+    el.querySelector("#gleft") && (el.querySelector("#gleft").textContent = "");
+    audio.src = `audio/listening/${cur.clip}.mp3?v=${AUDIO_V}`; audio.load();
+    T = clipSeconds(cur.clip) + dodgeThink(level);
+    makeBubbles();
+    rep.disabled = true; rep.textContent = "🔁 Replay"; setPlays();
+    tell("Read the question and the bubbles. What kind of answer do you need?");
+    dq.classList.remove("reading"); void dq.offsetWidth; dq.classList.add("reading");
+    timer = setTimeout(() => {
+      if (over) return; phase = "play"; dq.classList.remove("reading");
+      tell("Listen! Pop the bubble with the answer. On a keyboard, press 1 to 4.");
+      listen(); stop = run();
+    }, 4000);
+  }
+  function makeBubbles() {
+    shuffled(cur.opts.map((_, k) => k)).forEach((k, n) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "bub";
+      b.innerHTML = `<span class="gk">${n + 1}</span><span>${esc(cur.opts[k].t)}</span>`;
+      arena.appendChild(b);
+      const o = { k, n, el: b, x: 0, y0: 0, h: 0, ph: Math.random() * 6.28, done: false };
+      b.onclick = () => tap(o); bubs.push(o);
+    });
+    layout(); draw();
+  }
+  // Two columns, two rows, staggered. All bubbles rise at the same speed, set so that the answer, wherever it is,
+  // is half out of the top (escapes) exactly when the time is up.
+  function layout() {
+    const W = arena.clientWidth, H = arena.clientHeight, lane = W / 2;
+    const rowH = Math.max(...bubs.map(o => o.el.offsetHeight)) + 14;
+    bubs.forEach(o => {
+      const col = o.n % 2, row = Math.floor(o.n / 2), w = o.el.offsetWidth;
+      o.h = o.el.offsetHeight;
+      o.x = Math.min(Math.max(6, col * lane + (lane - w) / 2), W - w - 6);
+      o.y0 = H - 20 - o.h - (1 - row) * rowH - (col ? 18 : 0);
+    });
+    const a = bubs.find(o => o.k === 0); D = a.y0 + a.h / 2;
+  }
+  function draw() {
+    bubs.forEach(o => {
+      if (o.done) return;
+      const y = o.y0 - p * D, x = o.x + Math.sin(tt * 1.6 + o.ph) * 6;
+      o.el.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;
+    });
+  }
+  const run = () => loop(dt => {
+    tt += dt; p += dt / T; draw();
+    if (p >= 1) escaped();
+  });
+
+  function endRound() { phase = "end"; stop(); clearTimeout(timer); audio.pause(); wave.classList.remove("on"); bubs.forEach(o => { o.done = true; o.el.disabled = true; }); }
+  function centre(o) { const r = o.el.getBoundingClientRect(), a = arena.getBoundingClientRect(); return [r.left - a.left + r.width / 2, r.top - a.top + r.height / 2]; }
+  function hurt() {
+    arena.classList.remove("hurt"); void arena.offsetWidth; arena.classList.add("hurt");
+    el.querySelectorAll("#glives i").forEach((i, k) => i.classList.toggle("lost", k >= DODGE_LIVES - misses));
+  }
+  function tap(o) {
+    if (over || phase !== "play" || o.done) return;
+    endRound();
+    const [cx, cy] = centre(o), ans = bubs.find(b => b.k === 0);
+    if (o.k === 0) {
+      hits++; streak++; const gain = dodgeGain(cur.tier, p, streak); points += gain;
+      o.el.classList.add("popped"); burst(arena, cx, cy, ["#BFE9FF", "#7FD3FF", "#FFFFFF", "#F6C94A"], 16); floatText(arena, cx, cy - 10, `+${gain}`); play("ok");
+      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, hit: true });
+      const nl = dodgeLevel(start, hits);
+      if (nl > level) {
+        const up = dodgeTier(nl) > dodgeTier(level); level = nl; play("level");
+        banner(el, up ? `Level ${level}: ${LAB_LEVELS[dodgeTier(level)]} clips!` : `Level ${level}: faster bubbles!`);
+        arena.classList.remove("flash"); void arena.offsetWidth; arena.classList.add("flash");
+      }
+      reveal("hit", gain);
+    } else {
+      misses++; streak = 0; play("bad");
+      o.el.classList.add("trapped"); ans.el.classList.add("answer");
+      burst(arena, cx, cy, ["#FF8A3D", "#FFC07A", "#9AA4AE"], 12); floatText(arena, cx, cy - 10, "🪤", "bad"); hurt();
+      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, hit: false, picked: cur.opts[o.k].t });
+      reveal("trap", o.k);
+    }
+    setPoints(el, points); setCombo(el, streak);
+  }
+  function escaped() {
+    if (phase !== "play") return;
+    endRound(); misses++; streak = 0; play("bad"); hurt(); setCombo(el, 0);
+    const ans = bubs.find(b => b.k === 0); ans.el.classList.add("answer", "back");
+    ans.el.style.transform = `translate(${ans.x.toFixed(1)}px,${Math.max(8, ans.y0 * 0.35).toFixed(1)}px)`;
+    words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, hit: false });
+    reveal("escape");
+  }
+  function transcript(it) {
+    return it.lines.map(([who, text]) => `<p><b>${esc(who[0] + who.slice(1).toLowerCase())}:</b> ${markLine(text, it.key, it.traps || []).map(q =>
+      q.kind === "key" ? `<mark class="lkey">${esc(q.t)}</mark>` : q.kind === "trap" ? `<mark class="ltrap" title="${esc(q.label)}">${esc(q.t)}</mark>` : esc(q.t)).join("")}</p>`).join("");
+  }
+  function reveal(kind, x) {
+    rep.disabled = false; rep.textContent = "🔁 Hear it again"; setPlays();
+    const last = misses >= DODGE_LIVES || round >= DODGE_ROUNDS, trap = TRAPS[cur.trap], tname = cur.trap !== "prime" ? ` ${trap.name}.` : "";
+    const head = kind === "hit" ? `<p><strong>Popped! +${x} points.</strong> You dodged the traps.</p>`
+      : kind === "trap" ? `<p><strong>🪤 Trapped!${tname}</strong> “${esc(cur.opts[x].t)}”: ${esc(cur.opts[x].why || "")}</p><p>The answer was <b>${esc(cur.opts[0].t)}</b>.</p>`
+      : `<p><strong>It got away!</strong> The answer was <b>${esc(cur.opts[0].t)}</b>.</p>`;
+    fb.innerHTML = `<div class="fb ${kind === "hit" ? "ok" : "info"} pop">${head}
+      ${kind === "hit" ? `<p>The words that gave you the answer: <mark class="lkey">${esc(cur.key)}</mark></p>`
+        : `<div class="dtrans">${transcript(cur)}</div><p class="note legend"><mark class="lkey">green</mark> gives the answer${(cur.traps || []).length ? ` · <mark class="ltrap">orange</mark> is the trap` : ""}</p>
+           <p class="note">💡 ${esc(trap.tip)}</p>`}</div>
+      <div class="row"><button class="btn" id="dnext">${last ? "See your score" : "Next clip"}</button></div>`;
+    const nb = fb.querySelector("#dnext"); nb.onclick = () => { play("tap"); next(); };
+    tell(misses >= DODGE_LIVES ? "That was your last life." : "");
+    if (kind !== "hit" && misses >= DODGE_LIVES) banner(el, "Out of lives!", "big");
+    nb.focus({ preventScroll: true });
+  }
+  function finish(msg) {
+    if (over) return; over = true; cleanup();
+    fb.innerHTML = ""; banner(el, msg, "big"); rep.disabled = true;
+    if (hits >= DODGE_ROUNDS * 0.7) burst(arena, arena.clientWidth / 2, arena.clientHeight * 0.4, CONFETTI, 28);
+    setTimeout(() => onEnd({ points, hits, misses: words.length - hits, level, words, seconds: Math.round((Date.now() - t0) / 1000) }), 1500);
+  }
+  const key = ev => {
+    if (phase !== "play") return;
+    const n = "1234".indexOf(ev.key), o = bubs.find(b => b.n === n);
+    if (o) { ev.preventDefault(); tap(o); }
+  };
+  document.addEventListener("keydown", key);
+  function cleanup() { stop(); clearTimeout(timer); document.removeEventListener("keydown", key); audio.pause(); wave.classList.remove("on"); }
+  countdown(arena, () => { if (!over) next(); });
+  return () => { over = true; cleanup(); audio.removeAttribute("src"); };
 }

@@ -75,3 +75,38 @@ test("Speed Read speeds up after two right and slows down after a wrong answer",
   const a = G.gameAnswers("speed", { points: 40, level: 160, top: 160, words: [{ hit: true, skill: "Detail", text: "sleep", para: "C", wpm: 130 }] }, 2);
   assert.equal(a[0].wpm, 160); assert.deepEqual(a[1], { skill: "Speed reading", sub: "Detail", text: "sleep", para: "C", wpm: 130, first_try: true });
 });
+
+test("Trap Dodger has clips with audio times for every level", () => {
+  [0, 1, 2].forEach(t => {
+    const pool = G.dodgePool(t);
+    assert.ok(pool.length >= 20, `tier ${t} has ${pool.length}`);
+    pool.forEach(x => {
+      assert.equal(x.level || 0, t);
+      assert.ok(x.stem && x.key && x.trap, x.clip);
+      assert.ok(x.opts.length >= 3 && x.opts.slice(1).every(o => o.why), `${x.clip}: every trap bubble says why`);
+      assert.ok(G.clipSeconds(x.clip) > 1 && G.clipSeconds(x.clip) < 30, x.clip);
+    });
+  });
+});
+
+test("Trap Dodger levels, clips and points", () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map(G.dodgeTier), [0, 0, 1, 1, 2, 2]);
+  assert.deepEqual([0, 1, 2].map(G.dodgeLevelFor), [1, 3, 5]);
+  assert.equal(G.dodgeLevel(1, 0), 1); assert.equal(G.dodgeLevel(1, 3), 2); assert.equal(G.dodgeLevel(5, 9), G.DODGE_MAX);
+  const used = [];
+  for (let i = 0; i < 40; i++) { const x = G.dodgeItem(2, used); assert.ok(!used.includes(x.clip) || used.length >= 83); used.push(x.clip); }
+  assert.ok(used.slice(0, 24).every(c => G.dodgePool(2).some(x => x.clip === c)), "Challenge first, then easier clips");
+  assert.ok(G.dodgeGain(0, 0, 1) > G.dodgeGain(0, 0.9, 1), "earlier pops score more");
+  assert.ok(G.dodgeGain(2, 0.5, 1) > G.dodgeGain(0, 0.5, 1), "harder clips score more");
+  assert.ok(G.isGame("dodge-u3"));
+});
+
+test("Trap Dodger answers feed the trap tracker", async () => {
+  const Lab = await import("../js/lab.js");
+  const R = { points: 50, level: 2, words: [{ clip: "lab-dist-1", trap: "distractor", tier: 0, hit: false, picked: "basketball" }, { clip: "lab-syn-1", trap: "synonym", tier: 0, hit: true }] };
+  const answers = G.gameAnswers("dodge", R, 3);
+  assert.equal(answers[0].skill, "Game score");
+  assert.deepEqual(answers[1], { skill: "Trap game", clip: "lab-dist-1", trap: "distractor", level: 0, first_try: false, picked: "basketball" });
+  const s = Object.fromEntries(Lab.trapStats([{ answers }]).map(t => [t.trap, t]));
+  assert.equal(s.distractor.caught, 1); assert.equal(s.synonym.total, 1);
+});

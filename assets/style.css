@@ -427,6 +427,42 @@ a.pstep:hover b{color:var(--teal)}
 .sstage .opt{border-color:rgba(255,255,255,.12)} .sstage .stem{color:#fff} .sstage .btn{background:#4F7CFF;color:#fff}
 .spara{font-family:var(--f-text);margin:8px 0 0;line-height:1.55}
 .spara mark{background:var(--mark);color:inherit}
+/* Trap Dodger: under the sea (fixed colours in both themes) */
+.dq{position:relative;overflow:hidden;padding:12px 14px;border-radius:16px;background:var(--card);border:1.5px solid var(--line)}
+.dq .eyebrow{margin:0 0 4px;color:#1F8FB3} .dstem{margin:0;font:700 1.08rem/1.35 var(--f-head);color:var(--ink);min-height:1.4em}
+.dread{position:absolute;left:0;bottom:0;height:4px;width:0;background:linear-gradient(90deg,#4FC3F7,#1F8FB3)}
+.dq.reading .dread{animation:dread 4s linear forwards}
+@keyframes dread{from{width:100%}to{width:0}}
+.darena{height:min(52vh,430px);background:linear-gradient(#1C7FB8,#0D4E85 45%,#062849);color:#0B2A4A}
+.sea{position:absolute;inset:0;pointer-events:none}
+.ray{position:absolute;top:-20px;width:70px;height:120%;background:linear-gradient(rgba(255,255,255,.22),transparent 70%);transform-origin:top;animation:sway 7s ease-in-out infinite alternate}
+.ray.r1{left:12%;rotate:14deg} .ray.r2{left:48%;width:46px;rotate:6deg;animation-delay:-3s} .ray.r3{left:78%;width:90px;rotate:-10deg;animation-delay:-5s;opacity:.7}
+@keyframes sway{to{transform:skewX(8deg);opacity:.55}}
+.fizz{position:absolute;bottom:-12px;width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(255,255,255,.55);animation:fizz 6s linear infinite}
+.fizz.f1{left:8%} .fizz.f2{left:30%;scale:.7;animation-delay:-2s;animation-duration:7s} .fizz.f3{left:62%;animation-delay:-4s} .fizz.f4{left:86%;scale:.6;animation-delay:-1s;animation-duration:8s} .fizz.f5{left:45%;scale:1.2;animation-delay:-5s;animation-duration:9s}
+@keyframes fizz{to{transform:translate(10px,-460px);opacity:0}}
+.weed{position:absolute;left:0;right:0;bottom:0;width:100%;height:60px}
+.weed .wd1{fill:#0A3A33} .weed .wd2{fill:none;stroke:#1E7A55;stroke-width:5;stroke-linecap:round} .weed .rock{fill:#0B2E44}
+.dwave{position:absolute;right:12px;top:12px;z-index:3;display:flex;align-items:center;gap:3px;height:26px;padding:0 9px;border-radius:999px;background:rgba(0,0,0,.28)}
+.dwave i{width:3px;height:6px;border-radius:2px;background:#BFE9FF;transition:height .2s}
+.dwave.on i{animation:eq .7s ease-in-out infinite alternate} .dwave.on i:nth-child(2n){animation-delay:-.35s} .dwave.on i:nth-child(3n){animation-delay:-.2s;animation-duration:.5s}
+@keyframes eq{from{height:5px}to{height:20px}}
+.bub{position:absolute;top:0;left:0;z-index:3;display:flex;align-items:center;gap:7px;max-width:calc(50% - 14px);min-height:52px;padding:9px 14px 9px 9px;
+  border:2px solid rgba(255,255,255,.85);border-radius:28px;color:#0B2A4A;font:700 .92rem/1.25 var(--f-text);text-align:left;cursor:pointer;will-change:transform;
+  background:radial-gradient(circle at 22% 22%,#fff 0 9%,rgba(255,255,255,.92) 10%,rgba(214,240,255,.9) 55%,rgba(150,210,245,.9));
+  box-shadow:0 6px 16px rgba(0,20,50,.35),inset 0 -6px 12px rgba(80,160,220,.35)}
+.bub .gk{flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#1F8FB3;color:#fff;font-size:.75rem}
+.bub:focus-visible{outline:3px solid #FFD54A;outline-offset:2px}
+.bub:disabled{cursor:default}
+.bub.popped{animation:popout .45s ease-out forwards}
+.bub.trapped{background:radial-gradient(circle at 22% 22%,#fff 0 9%,#FFE1C7 10%,#FFB98A);border-color:#FF8A3D;animation:shake .35s}
+.bub.answer{background:radial-gradient(circle at 22% 22%,#fff 0 9%,#DFF7E6 10%,#9EE2B3);border-color:#2EAD5B;box-shadow:0 0 0 4px rgba(46,173,91,.45),0 6px 16px rgba(0,20,50,.35)}
+.bub.back{transition:transform .5s ease-out}
+.dctl{align-items:center;gap:10px;margin:0}
+.dtrans{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--surface);font-family:var(--f-text);line-height:1.55}
+.dtrans p{margin:0 0 6px} .dtrans p:last-child{margin:0}
+@media (max-width:430px){ .bub{font-size:.84rem;padding:7px 11px 7px 7px;min-height:46px} .dstem{font-size:1rem} }
+@media (prefers-reduced-motion:reduce){ .ray,.fizz,.dwave.on i,.bub.trapped,.dq.reading .dread{animation:none} .bub.popped{animation:none;opacity:0} .fizz{display:none} }
 @media (prefers-reduced-motion:reduce){
   .cloud,.rainfx,.wave,.lkshine,.duck,.rglow,.rflow,.jring,.hchip.time.low{animation:none}
   .drop.popped,.drop.splash,.gbtn.shake,.arena.hurt,.gcount span,.sflash span.in,.hchip.bump{animation:none}
