@@ -10,12 +10,13 @@ export const SUPPORT_LABEL = { none: "Right first time", hint: "After a hint", r
                                easier: "After easier text", explained: "Explained" };
 
 /* ---------------- marking ---------------- */
-function norm(t) { return " " + String(t).toLowerCase().replace(/[^a-z\s'-]/g, " ").replace(/\s+/g, " ") + " "; }
+function norm(t) { return " " + String(t).toLowerCase().replace(/[^a-z0-9\s'-]/g, " ").replace(/\s+/g, " ") + " "; }
 export function shortHits(answer, groups) {
   const a = norm(answer);
-  return groups.filter(g => g.k.some(k => k.length <= 3
+  // One point can't count twice when two groups share a label (Challenge `extra` groups).
+  return [...new Set(groups.filter(g => g.k.some(k => k.length <= 3
     ? new RegExp("\\b" + k + "(s|ed|ness)?\\b").test(a)
-    : a.includes(k))).map(g => g.label);
+    : a.includes(k))).map(g => g.label))];
 }
 export function mark(q, response) {
   if (q.type === "short") {

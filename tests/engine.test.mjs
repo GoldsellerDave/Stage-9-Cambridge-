@@ -207,3 +207,17 @@ test("unit mini tests: 16 questions in 4 parts, real unit words and grammar poin
   assert.equal(miniXP(13, 16, [...h, { text_id: "mini-u2", score: 12, max_score: 16 }], 2), 13 * 5, "no bonus after passing");
   assert.ok(11 / 16 < MINI_PASS && 12 / 16 >= MINI_PASS);
 });
+
+test("every model answer in a short-answer explanation is accepted", () => {
+  for (const t of PRACTICE_TEXTS) for (const s of t.slots) for (const q of s.q) {
+    if (q.type !== "short" || !q.explain) continue;
+    const list = q.explain.replace(/^[^:]*:\s*/, "").replace(/\.$/, "").split(/;/).map(x => x.trim()).filter(Boolean);
+    for (const a of list) assert.ok(E.shortHits(a, q.groups).length, `${t.id}: "${a}"`);
+  }
+});
+
+test("one point can't count twice when two groups share a label", () => {
+  const groups = [{ label: "name the feeling", k: ["name"] }, { label: "name the feeling", k: ["label"] }];
+  assert.deepEqual(E.shortHits("name and label the feeling", groups), ["name the feeling"]);
+  assert.equal(E.mark({ type: "short", groups, need: 2 }, "name and label the feeling").ok, false);
+});

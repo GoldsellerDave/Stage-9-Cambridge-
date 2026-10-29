@@ -151,7 +151,7 @@ export const BASELINE = [
   ["C","Scientists say this is not a surprise. Exercise helps our mood, and being outside in daylight helps our body clock. Talking to friends is good for us too. Now Tom walks to school even when it rains."]],
   gloss: "mood: how you feel (happy, sad, angry…)",
   qs: [
-   {skill:"Main idea", stem:"What is the text mainly about?", opts:["How walking to school changed Tom's life for the better","Why Tom's mum got a new job","How to walk safely to school","Why Tom does not like rain"]},
+   {skill:"Main idea", stem:"What is the text mainly about?", opts:["How walking to school changed Tom's life for the better","Why Tom's mum got a new job","How to walk safely to school","Why Tom's mum had to stop driving him to school every day"]},
    {skill:"Detail", stem:"How long does Tom's walk to school take?", opts:["Twenty-five minutes","Ten minutes","Two hours","Fifteen minutes"]},
    {skill:"Inference", stem:"How did Tom feel when he first had to walk?", opts:["Unhappy about it","Excited about it","Worried about his mum","Bored with his friends"]},
    {skill:"Writer's view", stem:"What does the writer think about walking to school?", opts:["It is good for you in several ways.","It is a waste of time.","It is only good when the weather is nice.","It is better to go by car."]}]},
@@ -162,9 +162,9 @@ export const BASELINE = [
   ["D","Lena's story has a happy ending. She joined the school drama club, where she met two girls who are now her closest friends. \"I still use social media,\" she says, \"but now I know what a real friend is.\""]],
   gloss: "cope with: deal with a difficult situation successfully",
   qs: [
-   {skill:"Detail", stem:"What was the hardest part of moving for Lena?", opts:["Having nobody to spend time with at school","Studying in a new school","Leaving her online followers","Learning about a new city"]},
+   {skill:"Detail", stem:"What was the hardest part of moving for Lena?", opts:["Having nobody to spend time with at school","Studying in a new school","Leaving her online followers","Finding her way around a city she did not know"]},
    {skill:"Vocabulary in context", stem:"In paragraph C, \"quality\" means…", opts:["how good something is","how many there are","how old something is","how expensive something is"]},
-   {skill:"Writer's purpose", stem:"Why does the writer include the saying \"a problem shared is a problem halved\"?", opts:["To support the idea that talking to friends helps with stress","To show that Lena had many problems","To explain why teenagers have problems","To give advice about exams"]},
+   {skill:"Writer's purpose", stem:"Why does the writer include the saying \"a problem shared is a problem halved\"?", opts:["To support the idea that talking to friends helps with stress","To show that Lena had many problems","To explain why teenagers have more problems than adults","To give advice about exams"]},
    {skill:"Inference", stem:"What can we infer from Lena's last words in paragraph D?", opts:["She now values real friendships more than online followers.","She has stopped using social media.","She wants more followers online.","She still feels lonely at school."]}]},
  { level: 2, title: "In defence of boredom", paras: [
   ["A","Boredom has a poor reputation. Parents treat it as a problem to be solved, schools as a sign that a lesson has failed, and teenagers as something to be avoided at all costs, usually by reaching for a phone. Yet a growing body of research suggests that a little boredom may be exactly what our minds need."],
@@ -173,9 +173,9 @@ export const BASELINE = [
   ["D","None of this means that teachers should set out to bore their students. But the next time you feel the familiar urge to fill a quiet moment, it might be worth resisting it. You may find that your most interesting ideas were simply waiting for some room."]],
   gloss: "directory: a book with a list of names and phone numbers",
   qs: [
-   {skill:"Main idea", stem:"Which statement best summarises the writer's argument?", opts:["Boredom can be useful, but phones mean we rarely experience it.","Boredom is a serious problem that schools must solve.","Teenagers are more bored than adults.","Phones make people more creative."]},
+   {skill:"Main idea", stem:"Which statement best summarises the writer's argument?", opts:["Boredom can be useful, but phones mean we rarely experience it.","Boredom is a serious problem that schools must solve.","Teenagers are bored more often than adults, so they use phones more.","Phones make people more creative."]},
    {skill:"Vocabulary in context", stem:"In paragraph B, \"tedious\" means…", opts:["boring and repetitive","difficult and stressful","short and simple","creative and unusual"]},
-   {skill:"Detail", stem:"According to paragraph B, what did the bored participants do better?", opts:["They thought of more creative uses for an object.","They copied numbers more accurately.","They remembered more phone numbers.","They finished the task more quickly."]},
+   {skill:"Detail", stem:"According to paragraph B, what did the bored participants do better?", opts:["They thought of more creative uses for an object.","They copied numbers more accurately.","They remembered more phone numbers.","They finished the copying task more quickly than the others."]},
    {skill:"Writer's view", stem:"What is the writer's attitude in paragraph D?", opts:["Gently encouraging readers to allow themselves some boredom","Strongly criticising teachers for boring lessons","Worried that boredom harms creativity","Uncertain whether the research is reliable"]}]}
 ];
 // Placement from the baseline score (out of 12): 0–5 Easier, 6–9 Core, 10–12 Harder.

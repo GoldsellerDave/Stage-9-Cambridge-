@@ -22,7 +22,7 @@ export const VOCAB = {
   ["succumb", "to stop resisting something, such as pressure or illness", "Try not to ___ to peer pressure."],
   ["impudent", "rude and not showing respect", "The ___ boy laughed at the teacher's instructions."],
   ["impression", "the opinion or feeling you get about someone or something", "She made a good first ___ at the interview."],
-  ["tell someone off", "to speak angrily to someone because they did something wrong", "My mum will ___ if I come home late."],
+  ["tell someone off", "to speak angrily to someone because they did something wrong", "It's not kind to ___ in front of the whole class."],
   ["are supposed to", "should do something because of a rule or what people expect", "We ___ wear our uniform on Mondays."],
   ["psychology", "the study of the mind and how people think and behave", "She wants to study ___ at university."],
   ["civil", "polite, or relating to ordinary citizens", "Please keep the discussion ___ and calm."],
@@ -66,7 +66,7 @@ export const VOCAB = {
   ["virus", "a tiny living thing that causes illnesses like flu", "The flu ___ spreads quickly in winter."]
  ]],
  3: [[
-  ["eco", "short for ecological: good for the environment (as in eco-tourism)", "We stayed in an ___ lodge powered by the sun."],
+  ["eco", "good for the environment and careful not to harm nature", "We stayed in an ___ lodge powered by the sun."],
   ["windsurfing", "the sport of sailing on a board with a sail", "The wind was perfect for ___."],
   ["waterskiing", "the sport of being pulled across water on skis by a boat", "___ is harder than it looks."],
   ["first-aid", "simple medical help given before a doctor arrives", "Always pack a ___ kit when you go camping."],
@@ -110,7 +110,7 @@ export const VOCAB = {
   ["research", "careful study to discover new facts", "Scientists are doing ___ into a new vaccine."],
   ["receptor", "a part of the body that receives signals, such as light or touch", "Each ___ in the eye reacts to a different colour."],
   ["colour blind", "unable to see the difference between some colours", "My uncle is ___ and can't tell red from green."],
-  ["tetrachromatic", "able to see a much wider range of colours than most people", "A ___ person has four types of colour cells."],
+  ["tetrachromatic", "having four types of colour cells in the eye, not the usual three", "A ___ person may see differences between colours that look the same to everyone else."],
   ["wave length", "the distance between two waves of light or sound", "Red light has a longer ___ than blue light."],
   ["retina", "the part at the back of the eye that senses light", "Light falls on the ___ at the back of the eye."],
   ["influenza", "a common illness with fever, also called flu", "___ spreads quickly in crowded places."],
@@ -181,7 +181,7 @@ export const VOCAB = {
  ], [
   ["valuable", "very useful or important", "Losing taught me a ___ lesson."],
   ["to be put off", "to lose interest or confidence because of something", "Try not ___ by the noisy crowd."],
-  ["all is well", "everything is fine", "After the storm passed, ___."],
+  ["all is well", "everything is fine", "The storm has passed, and ___."],
   ["challenger", "someone who competes against the current winner", "The young ___ beat the champion."],
   ["silhouette", "a dark shape against a light background", "We saw the ___ of the runner against the sunset."],
   ["out of focus", "not clear or sharp", "The photo of the finish line was ___."],

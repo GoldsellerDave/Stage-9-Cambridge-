@@ -7,7 +7,9 @@ const FOOD_FIXES = [
  {label:"cheap healthy food", k:["cheap","price","afford","cost","less expensive"]},
  {label:"beans / lentils / vegetarian", k:["bean","lentil","vegetarian","vegetable","plant"]},
  {label:"less food waste", k:["waste","throw","leftover","bin"]},
- {label:"school meals / education", k:["school","lunch","meal","teach","learn","label"]}];
+ {label:"school meals / education", k:["school","lunch","meal","teach","learn","label"]},
+ {label:"less junk food", k:["junk","fast food","fizzy","burger","sugar"]},
+ {label:"give food to charities", k:["charit","donat","unsold","give away"]}];
 const JUNK_CAUSE = {label:"junk food is cheap / filling", k:["cheap","price","cost","afford","money","poor","poverty","fill"]};
 const JUNK_RESULT = {label:"too many calories, too few nutrients", k:["calorie","nutri","vitamin","fat","sugar","weight","obes","malnutrition","undernourish"]};
 
@@ -110,7 +112,7 @@ const CALM_TIPS = [
  {label:"breathe slowly", k:["breath","breathe"]},
  {label:"count / wait", k:["count","ten","wait","pause"]},
  {label:"name the feeling", k:["name","word","label","say how","say what","i feel"]},
- {label:"walk away", k:["walk away","leave","move away","go away","step away"]},
+ {label:"walk away", k:["away","leave","leaving"]},
  {label:"see the other side (empathy)", k:["empath","other person","their side","other side","their shoes","understand"]}];
 const ANGER_BODY = {label:"body reacts: heart / adrenaline", k:["heart","adrenal","hormone","body","breath","fast","hot","muscle"]};
 const ANGER_THINK = {label:"hard to think clearly", k:["think","brain","decision","control","clearly","sense","regret"]};

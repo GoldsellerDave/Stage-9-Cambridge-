@@ -128,11 +128,11 @@ export const GRAMMAR = [
  { id: "2.4", unit: 2, title: "Must have, might have, can't have", code: "9Ug.14",
    rule: "Use modal + have + past participle to guess about the past. must have = I'm sure it happened. might/may/could have = maybe it happened. can't/couldn't have = I'm sure it didn't happen.",
    items: [
-    ["Her eyes are red. She ___ crying.", "must have been", "can't have been", "must be", "might be have"],
+    ["Her eyes are red. She ___ crying.", "must have been", "can't have been", "must has been", "might be have"],
     ["He ___ the message. He never replied. I'm not sure.", "might not have seen", "must not see", "can't have see", "might not seen"],
     ["You ___ the whole pizza in five minutes! That's impossible.", "can't have eaten", "must have eaten", "can't have eat", "mustn't eaten"],
     ["The ground is wet. It ___ in the night.", "must have rained", "can't have rained", "must rained", "might rain"],
-    ["I can't find my keys. I ___ them at school.", "might have left", "must leave", "can't have left", "might left"],
+    ["I can't find my keys. I'm not sure, but I ___ them at school.", "might have left", "must leave", "can't have left", "might left"],
     ["", "She can't have finished already: she only started ten minutes ago.", "She can't has finished already: she only started ten minutes ago.", "She mustn't have finish already: she only started ten minutes ago.", "She can't finished already: she only started ten minutes ago."]] },
  { id: "2.5", unit: 2, title: "Strong adjectives and intensifiers", code: "9Ug.15",
    rule: "Strong adjectives already mean 'very': furious (very angry), exhausted (very tired), delighted, terrified, starving. Use absolutely, totally or really with strong adjectives, and very, extremely or a bit with normal adjectives. Don't say 'very furious'.",
@@ -153,7 +153,7 @@ export const GRAMMAR = [
     ["It took us an hour to put ___ the tent in the rain.", "up", "off", "away", "on"],
     ["Our hotel was so full that we couldn't check ___ until 3 p.m.", "in", "out", "off", "up"],
     ["I'm really looking forward ___ the school trip.", "to", "for", "at", "on"],
-    ["We spent the whole afternoon ___ in the old town.", "sightseeing", "sight seeing", "seeing sights", "sightsee"]] },
+    ["We spent the whole afternoon ___ in the old town.", "sightseeing", "sight seeing", "sightseeings", "sightsee"]] },
  { id: "3.3", unit: 3, title: "Past continuous passive", code: "9Ug.04",
    rule: "Form: was / were + being + past participle. Use it for an action in progress in the past when the action matters more than who did it (The road was being repaired when we arrived).",
    items: [
