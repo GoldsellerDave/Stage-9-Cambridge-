@@ -17,6 +17,7 @@ export const GAMES = {
 };
 export const GAME_XP_DAY = 30;           // the most XP games can give in one school day
 export const RAIN_LIVES = 3, RAIN_SECONDS = 120, TRAIN_COUNT = 20;
+export const TICK_FROM = 5, TICK_EVERY = 0.5;            // Word Rain: a clock ticks in the last 5 seconds, two ticks a second
 const LEVEL_EVERY = 5;                   // right answers per level
 export const levelAfter = hits => Math.min(1 + Math.floor(hits / LEVEL_EVERY), 8);
 
@@ -208,7 +209,7 @@ export function playRain(el, { unit, onEnd }) {
     <div class="gbtns" id="gbtns">${[0, 1, 2, 3].map(i => `<button class="gbtn" data-i="${i}"><span class="gk">${i + 1}</span><span class="gword"></span></button>`).join("")}</div>
     <p class="note" id="gtell" aria-live="polite">Tap the word that matches the falling meaning. On a keyboard, press 1 to 4.</p></div>`;
   const arena = el.querySelector("#arena"), water = el.querySelector("#water"), btns = [...el.querySelectorAll(".gbtn")];
-  let drops = [], slots = [null, null, null, null], t = 0, sinceSpawn = 99, points = 0, hits = 0, misses = 0, level = 1, over = false, streak = 0, stop = () => {};
+  let drops = [], slots = [null, null, null, null], t = 0, sinceSpawn = 99, points = 0, hits = 0, misses = 0, level = 1, over = false, streak = 0, ticks = 0, stop = () => {};
   const words = [];
   const fallTime = () => Math.max(5, 12 - level);                 // seconds from top to water
   const maxDrops = () => level >= 3 ? 2 : 1;
@@ -270,7 +271,7 @@ export function playRain(el, { unit, onEnd }) {
     btns[k].classList.remove("shake"); void btns[k].offsetWidth; btns[k].classList.add("shake");
   }
   function finish(msg) {
-    if (over) return; over = true; stop();
+    if (over) return; over = true; stop(); arena.classList.remove("ticking");
     // Meanings still falling when the time is up are not counted: the student had no chance to answer them.
     banner(el, msg, "big"); btns.forEach(b => b.disabled = true);
     setTimeout(() => { cleanup(); onEnd({ points, hits, misses, level, words, seconds: Math.round(t) }); }, 1500);
@@ -282,6 +283,8 @@ export function playRain(el, { unit, onEnd }) {
     drops.slice().forEach(d => { d.y += speed * dt; d.el.style.transform = `translate(${d.left}px,${d.y}px)`; if (d.y + d.el.offsetHeight >= ground) land(d); });
     el.querySelector("#glv").textContent = level;
     const tm = el.querySelector("#gtime"); tm.hidden = false; tm.textContent = "⏱ " + fmt(RAIN_SECONDS - t); tm.classList.toggle("low", RAIN_SECONDS - t < 15);
+    const due = Math.floor((TICK_FROM - (RAIN_SECONDS - t)) / TICK_EVERY) + 1;
+    if (due > ticks && t < RAIN_SECONDS) { ticks = due; play(ticks % 2 ? "tick" : "tock"); arena.classList.add("ticking"); }
     if (t >= RAIN_SECONDS) finish("Time's up!");
   });
   btns.forEach((b, k) => b.onclick = () => tap(k));

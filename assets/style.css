@@ -336,6 +336,8 @@ a.pstep:hover b{color:var(--teal)}
 .gbanner.big{font-size:1.25rem;padding:14px 26px;background:linear-gradient(135deg,#2B4C9E,#7B4FC4)}
 /* Word Rain: a sky with a sun (a moon in dark mode), drifting clouds, rain streaks and rising water */
 .rain .arena{height:min(56vh,440px);background:linear-gradient(var(--sky1),var(--sky2))}
+.rain .arena.ticking::after{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;box-shadow:inset 0 0 0 4px rgba(255,90,90,.6),inset 0 0 50px rgba(255,90,90,.35);animation:tickglow .5s ease-in-out infinite alternate}
+@keyframes tickglow{from{opacity:.35}to{opacity:1}}
 .sky{position:absolute;inset:0;pointer-events:none}
 .sun{position:absolute;right:16px;top:14px;width:46px;height:46px;border-radius:50%;background:var(--sun);box-shadow:0 0 0 10px color-mix(in srgb,var(--sun) 30%,transparent),0 0 40px 18px color-mix(in srgb,var(--sun) 45%,transparent)}
 .cloud{position:absolute;width:110px;height:34px;border-radius:20px;background:#fff;opacity:.85;animation:drift 38s linear infinite}
@@ -471,6 +473,7 @@ a.pstep:hover b{color:var(--teal)}
   .drop.popped,.drop.splash,.gbtn.shake,.arena.hurt,.gcount span,.sflash span.in,.hchip.bump{animation:none}
   .drop.popped,.drop.splash{opacity:0}
   .gpart,.puff,.ripple,.arena.flash::after,.arena.hurt::before{display:none}
+  .rain .arena.ticking::after{animation:none}
   .gfloat{animation-duration:.01s;animation-delay:.6s} .needle{transition:none}
 }
 
