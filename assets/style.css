@@ -850,3 +850,5 @@ mark.ltrap{background:var(--peach);color:var(--orange);font-weight:700;border-bo
   .sumcard.flash{animation:sumflash 1.6s ease-in-out infinite}
   @keyframes sumflash{0%,100%{box-shadow:0 0 0 0 rgba(224,116,63,0)}50%{box-shadow:0 0 0 6px rgba(224,116,63,.45)}}
 }
+button.schip{cursor:pointer;font-family:inherit} .sumcard .btn{align-self:flex-start}
+.dwhole{margin:4px 0 12px} .dwhole summary{cursor:pointer;color:var(--teal);font-weight:700}
