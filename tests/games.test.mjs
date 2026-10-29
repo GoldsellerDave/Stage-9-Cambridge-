@@ -137,3 +137,13 @@ test("Trap Dodger brings missed clips back until they are right", () => {
   assert.deepEqual([...G.dodgeMissed(history)], [pool[0]]);
   assert.equal(G.dodgeItem(0, [], Math.random, G.dodgeSeen(history), G.dodgeMissed(history)).clip, pool[0], "the missed clip comes first");
 });
+
+test("Word Rain adds Stretch words for B2 readers and Challenge words at C1", () => {
+  for (let u = 1; u <= 9; u++) {
+    const core = G.rainPool(u), s = G.rainPool(u, 1), c = G.rainPool(u, 2);
+    assert.ok(core.every(x => !x.tier));
+    assert.equal(s.length, core.length + 12); assert.equal(c.length, core.length + 24);
+    assert.ok(s.filter(x => x.tier).every(x => x.tier === 1));
+    assert.equal(new Set(c.map(x => x.w)).size, c.length, `no repeated words in unit ${u}`);
+  }
+});

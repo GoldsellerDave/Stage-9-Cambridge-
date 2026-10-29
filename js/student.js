@@ -706,7 +706,8 @@ function gameView() {
     ? `<li>A meaning falls from the sky. Tap the word that matches it before it reaches the water.</li>
        <li>Catch it high up for more points. A wrong tap loses 5 points.</li>
        <li>Every 5 words you catch, the rain gets faster. From level 3, two meanings fall at once.</li>
-       <li>Three meanings in the water and the game ends. A game lasts up to ${G.RAIN_SECONDS / 60} minutes.</li>`
+       <li>Three meanings in the water and the game ends. A game lasts up to ${G.RAIN_SECONDS / 60} minutes.</li>
+       ${P.tierFor(history) ? `<li>You're a strong reader, so <b>${P.tierFor(history) === 2 ? "Stretch and Challenge" : "Stretch"}</b> words fall too. They are marked on the raindrop.</li>` : ""}`
     : `<li>Each train carries a word. Decide if it is a noun, a verb, an adjective or an adverb.</li>
        <li>Tap that station to set the points <b>before</b> the train reaches the junction.</li>
        <li>When more trains come at once, set the points for the train nearest the junction first.</li>
@@ -726,7 +727,7 @@ function gameView() {
   $app.querySelectorAll("[data-wpm]").forEach(w => w.onclick = () => { run.wpm = +w.dataset.wpm; S.play("tap"); gameView(); });
   if (run.phase === "play") {
     const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed, dodge: G.playDodge }[run.game];
-    stopGame = play(document.getElementById("gbox"), { unit: run.unit, tier: Lab.labStartLevel(history, P.tierFor(history)), seen: G.dodgeSeen(history), missed: G.dodgeMissed(history), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
+    stopGame = play(document.getElementById("gbox"), { unit: run.unit, wordTier: P.tierFor(history), tier: Lab.labStartLevel(history, P.tierFor(history)), seen: G.dodgeSeen(history), missed: G.dodgeMissed(history), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
       stopGame = null; if (!run || run.kind !== "game") return;
       run.result = { ...R, xp: G.gameXP(R.hits, history), best };
       run.phase = "done"; saveRun(); runView(); top(); Cel.set(run.result.xp);

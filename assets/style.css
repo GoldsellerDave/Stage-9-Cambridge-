@@ -357,6 +357,8 @@ a.pstep:hover b{color:var(--teal)}
 .drop::before{content:"";position:absolute;left:14px;top:6px;width:30px;height:7px;border-radius:6px;background:rgba(255,255,255,.9)}
 .drop .dtail{position:absolute;left:50%;top:-22px;width:4px;height:22px;margin-left:-2px;border-radius:2px;background:linear-gradient(transparent,#7FC8F5)}
 .drop span{position:relative}
+.drop .dtier{position:relative;display:block;width:max-content;margin:0 0 4px;padding:1px 7px;border-radius:999px;font-size:.62rem;letter-spacing:.05em;text-transform:uppercase;color:#fff}
+.drop .dtier.t1{background:#C98A0B} .drop .dtier.t2{background:#D9622B}
 .drop.popped{animation:popout .45s ease-out forwards}
 .drop.splash{border-color:#F06565;animation:splash .5s ease-in forwards}
 @keyframes popout{30%{scale:1.15;opacity:1}to{opacity:0;scale:1.5;filter:blur(3px)}}
