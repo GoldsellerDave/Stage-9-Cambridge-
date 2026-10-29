@@ -117,12 +117,26 @@ export function dodgeSeen(history) {
     .forEach(h => (h.answers || []).forEach(a => { const c = a.skill === "Trap game" ? a.clip : a.skill === "Listening" && a.lab; if (c) seen.set(c, ++n); }));
   return seen;
 }
+// Every Trap Dodger clip the student has played, oldest answer first: how often, how often right, the trap bubbles
+// popped, and whether the last try was right. Missed clips (last try wrong) are still to learn.
+export function dodgeLog(history) {
+  const by = new Map(), items = new Map(dodgePool(0).concat(dodgePool(1), dodgePool(2)).map(x => [x.clip, x]));
+  [...history].sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || ""))).forEach(h => (h.answers || []).forEach(a => {
+    if (a.skill !== "Trap game" || !items.has(a.clip)) return;
+    const it = items.get(a.clip), r = by.get(a.clip) || { clip: a.clip, stem: it.stem, answer: it.opts[0].t, trap: it.trap, tier: it.level || 0, tries: 0, right: 0, picked: [] };
+    r.tries++; if (a.first_try) r.right++; if (a.picked && !r.picked.includes(a.picked)) r.picked.push(a.picked);
+    r.last = !!a.first_try; r.at = h.created_at; by.set(a.clip, r);
+  }));
+  return [...by.values()];
+}
+export const dodgeMissed = history => new Set(dodgeLog(history).filter(r => !r.last).map(r => r.clip));
+export const DODGE_REVIEW = 3;                                   // missed clips that come back in one game, at most
 // The next clip: one not used in this game, from the tier, or from an easier tier when the tier has run out.
-// Clips the student has never heard come first, then the ones heard longest ago.
-export function dodgeItem(tier, used = [], rnd = Math.random, seen = new Map()) {
+// Clips missed last time come back first (when missed is given), then clips never heard, then the ones heard longest ago.
+export function dodgeItem(tier, used = [], rnd = Math.random, seen = new Map(), missed = new Set()) {
   for (let t = tier; t >= 0; t--) {
     const left = dodgePool(t).filter(x => !used.includes(x.clip));
-    if (left.length) return left.map(x => [(seen.get(x.clip) ?? 0) + rnd() * 0.5, x]).sort((a, b) => a[0] - b[0])[0][1];
+    if (left.length) return left.map(x => [missed.has(x.clip) ? -1 - rnd() : (seen.get(x.clip) ?? 0) + rnd() * 0.5, x]).sort((a, b) => a[0] - b[0])[0][1];
   }
   return dodgePool(0)[Math.floor(rnd() * dodgePool(0).length)];
 }
@@ -491,7 +505,7 @@ const SEA = `<div class="sea" aria-hidden="true"><i class="ray r1"></i><i class=
   <svg class="weed" viewBox="0 0 400 70" preserveAspectRatio="none"><path class="wd1" d="M0 70V38q12-16 24 0t24 0 24-6 20 8V70zM300 70V30q14-18 28 0t28-4 22 6 22 2V70z"/>
   <path class="wd2" d="M30 70q-8-26 4-48M44 70q10-30-2-56M352 70q-10-28 2-50M368 70q8-24-4-44M180 70q-6-18 6-30M196 70q8-22-4-36"/>
   <ellipse class="rock" cx="120" cy="66" rx="40" ry="12"/><ellipse class="rock" cx="250" cy="68" rx="30" ry="9"/></svg></div>`;
-export function playDodge(el, { tier = 0, seen = new Map(), onEnd }) {
+export function playDodge(el, { tier = 0, seen = new Map(), missed = new Set(), onEnd }) {
   const start = dodgeLevelFor(tier);
   el.innerHTML = `<div class="game dodge">${hud(DODGE_LIVES)}
     <div class="dq" id="dq"><p class="eyebrow" id="dqn"></p><p class="dstem" id="dstem"></p><i class="dread"></i></div>
@@ -530,9 +544,10 @@ export function playDodge(el, { tier = 0, seen = new Map(), onEnd }) {
     if (over) return;
     if (misses >= DODGE_LIVES) return finish("Out of lives!");
     if (round >= DODGE_ROUNDS) return finish(`${hits} of ${DODGE_ROUNDS} traps dodged!`);
-    round++; cur = dodgeItem(dodgeTier(level), used, Math.random, seen); cur.tier = cur.level || 0; used.push(cur.clip);
+    round++; const review = words.filter(w => w.again).length < DODGE_REVIEW ? missed : new Set();
+    cur = dodgeItem(dodgeTier(level), used, Math.random, seen, review); cur.again = review.has(cur.clip); cur.tier = cur.level || 0; used.push(cur.clip);
     fb.innerHTML = ""; bubs.forEach(o => o.el.remove()); bubs = []; p = 0; plays = 0; heard = false; phase = "read";
-    el.querySelector("#dqn").textContent = `Clip ${round} of ${DODGE_ROUNDS} · ${LAB_LEVELS[cur.tier]}`;
+    el.querySelector("#dqn").textContent = `Clip ${round} of ${DODGE_ROUNDS} · ${LAB_LEVELS[cur.tier]}${cur.again ? " · 🔁 you missed this one before" : ""}`;
     el.querySelector("#dstem").textContent = cur.stem;
     el.querySelector("#glv").textContent = level;
     el.querySelector("#gleft") && (el.querySelector("#gleft").textContent = "");
@@ -602,7 +617,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), onEnd }) {
     if (o.k === 0) {
       hits++; streak++; const gain = dodgeGain(cur.tier, p, streak); points += gain;
       o.el.classList.add("popped"); burst(arena, cx, cy, ["#BFE9FF", "#7FD3FF", "#FFFFFF", "#F6C94A"], 16); floatText(arena, cx, cy - 10, `+${gain}`); play("ok");
-      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, hit: true });
+      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: true });
       const nl = dodgeLevel(start, hits);
       if (nl > level) {
         const up = dodgeTier(nl) > dodgeTier(level); level = nl; play("level");
@@ -614,7 +629,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), onEnd }) {
       misses++; streak = 0; play("bad");
       o.el.classList.add("trapped"); ans.el.classList.add("answer");
       burst(arena, cx, cy, ["#FF8A3D", "#FFC07A", "#9AA4AE"], 12); floatText(arena, cx, cy - 10, "🪤", "bad"); hurt();
-      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, hit: false, picked: cur.opts[o.k].t });
+      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: false, picked: cur.opts[o.k].t });
       reveal("trap", o.k);
     }
     setPoints(el, points); setCombo(el, streak);
@@ -624,7 +639,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), onEnd }) {
     endRound(); misses++; streak = 0; play("bad"); hurt(); setCombo(el, 0);
     const ans = bubs.find(b => b.k === 0); ans.el.classList.add("answer", "back");
     ans.el.style.transform = `translate(${ans.x.toFixed(1)}px,${Math.max(8, ans.y0 * 0.35).toFixed(1)}px)`;
-    words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, hit: false });
+    words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: false });
     reveal("escape");
   }
   function transcript(it) {
@@ -635,7 +650,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), onEnd }) {
   function reveal(kind, x) {
     rep.disabled = kind === "hit"; rep.textContent = "🔁 Hear it again"; setPlays();
     const ans = cur.opts[0].t, last = misses >= DODGE_LIVES || round >= DODGE_ROUNDS, trap = TRAPS[cur.trap], tname = cur.trap !== "prime" ? ` ${trap.name}.` : "";
-    const head = kind === "hit" ? `<p><strong>Popped! +${x} points.</strong> You dodged the traps.</p>`
+    const head = kind === "hit" ? `<p><strong>Popped! +${x} points.</strong> ${cur.again ? "You got the one you missed before!" : "You dodged the traps."}</p>`
       : kind === "trap" ? `<p><strong>🪤 Trapped!${tname}</strong> “${esc(cur.opts[x].t)}”: ${esc(cur.opts[x].why || "")}</p><p>The answer was <b>${esc(ans)}</b>${/[.!?]$/.test(ans) ? "" : "."}</p>`
       : `<p><strong>It got away!</strong> The answer was <b>${esc(ans)}</b>${/[.!?]$/.test(ans) ? "" : "."} Look at the transcript to see where you could hear it.</p>`;
     fb.innerHTML = `<div class="fb ${kind === "hit" ? "ok" : "info"} pop">${head}

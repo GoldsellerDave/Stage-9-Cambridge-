@@ -4,6 +4,7 @@ import { api, LIVE, getSession, setSession } from "./api.js";
 import * as U from "./ui.js";
 import { ESCAPES, GUARD_SECONDS } from "./escape.js";
 import { TRAPS, LAB_LEVELS } from "./lab.js";
+import { dodgeLog } from "./games.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -166,6 +167,16 @@ async function boardView() {
   d();
 }
 
+// Trap Dodger: every clip the student has played. Clips still to learn (last try wrong) first; they come back in the student's next games.
+function dodgeHTML(history) {
+  const log = dodgeLog(history).sort((a, b) => (a.last - b.last) || String(b.at).localeCompare(String(a.at)));
+  if (!log.length) return "";
+  const todo = log.filter(r => !r.last).length;
+  return `<div class="panel"><h3>Trap Dodger clips</h3><p class="note">${log.length} clip${log.length === 1 ? "" : "s"} played · ${todo} still to learn. Missed clips come back in the student's next games until they get them right.</p>
+    <div class="tbl"><table><thead><tr><th>Question</th><th>Answer</th><th>Trap</th><th>Popped instead</th><th class="num">Right</th><th>Now</th></tr></thead><tbody>${log.map(r => `<tr>
+      <td>${U.esc(r.stem)}<br><span class="note">${U.esc(LAB_LEVELS[r.tier])}</span></td><td>${U.esc(r.answer)}</td><td>${r.trap === "prime" ? "–" : U.esc(TRAPS[r.trap].name)}</td>
+      <td>${r.picked.map(t => `“${U.esc(t)}”`).join("<br>") || "–"}</td><td class="num" style="white-space:nowrap">${r.right} of ${r.tries}</td><td style="white-space:nowrap">${r.last ? "✓ Got it" : "✗ To learn"}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
 async function studentView(id) {
   $app.innerHTML = `<p class="note">Loading…</p>`;
   let d; try { d = await api.teacherStudent(session.token, id); } catch (e) { $app.innerHTML = `<p class="err">${U.esc(e.message)}</p>`; return; }
@@ -173,6 +184,7 @@ async function studentView(id) {
   $app.innerHTML = `<div class="narrow pop"><div class="row"><button class="linkbtn" style="color:var(--teal)" id="back">← Class ${U.esc(s.class_code)}</button></div>
     <div class="hero"><p class="eyebrow">${U.esc(s.username)}</p><h1>${U.esc(s.name)}</h1></div>
     ${U.trackerHTML(d.history, s, { links: false })}
+    ${dodgeHTML(d.history)}
     <form class="panel" id="pin"><h3>Reset PIN</h3><p class="note">Use this if the student forgets their PIN. They will be signed out on their devices.</p>
       <div class="row"><input type="tel" id="np" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN" style="max-width:12em"><button class="btn small" type="submit">Set PIN</button></div>
       <p class="note" id="pm" aria-live="polite"></p></form>
