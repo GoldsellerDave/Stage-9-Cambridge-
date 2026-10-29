@@ -269,6 +269,7 @@ export function playRain(el, { unit, onEnd }) {
     if (hit) return pop(hit, k);
     points = Math.max(0, points - 5); streak = 0; setCombo(el, 0); setPoints(el, points); play("bad");
     btns[k].classList.remove("shake"); void btns[k].offsetWidth; btns[k].classList.add("shake");
+    clearTimeout(btns[k]._t); btns[k]._t = setTimeout(() => btns[k].classList.remove("shake"), 400);
   }
   function finish(msg) {
     if (over) return; over = true; stop(); arena.classList.remove("ticking");
