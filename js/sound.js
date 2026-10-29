@@ -14,7 +14,16 @@ function audio() {
   if (ctx.state === "suspended") ctx.resume();
   return ctx;
 }
-// [frequency Hz, start s, length s, wave, volume]
+// [frequency Hz, start s, length s, wave, volume], or ["noise", start s, length s, volume, high-pass Hz] for a hiss (cymbal)
+const C4 = 261.63, st = k => +(C4 * Math.pow(2, k / 12)).toFixed(2);       // semitones from middle C
+// Finishing a set: coin pings while the XP counts up, then a ding.
+const COINS = [...Array.from({ length: 9 }, (_, i) => [[988, i * .085, .06, "square", .045], [1319, i * .085 + .03, .08, "square", .045]]).flat(),
+  [st(24), .85, .5, "sine", .18], [st(31), .85, .5, "sine", .12]];
+// A big milestone (whole listening section, mission, unit test): an 8-bit victory tune with a bass line and a cymbal shimmer.
+const ARCADE = [...[[0, 0], [4, .1], [7, .2], [12, .3], [7, .45], [12, .55], [16, .7], [19, .85], [16, 1.0], [24, 1.15]].map(([k, s]) => [st(k + 12), s, .12, "square", .06]),
+  ...[[-12, 0], [-5, .3], [-12, .6], [-5, .9]].map(([k, s]) => [st(k), s, .25, "triangle", .25]),
+  ...[12, 16, 19, 24].map(k => [st(k + 12), 1.35, .9, "square", .04]), [st(-12), 1.35, .9, "triangle", .3],
+  ...Array.from({ length: 6 }, (_, i) => ["noise", 1.35 + i * .1, .08, .06, 5000])];
 const SOUNDS = {
   tap:   [[880, 0, 0.04, "triangle", 0.05]],
   flip:  [[520, 0, 0.06, "triangle", 0.06], [780, 0.05, 0.06, "triangle", 0.05]],
@@ -34,13 +43,16 @@ const SOUNDS = {
   click: [[1800, 0, 0.02, "square", 0.08], [900, 0.03, 0.05, "square", 0.06]],
   creak: [[140, 0, 0.5, "sawtooth", 0.05], [190, 0.15, 0.45, "sawtooth", 0.04]],
   glint: [[1568, 0, 0.08, "sine", 0.08], [2093, 0.07, 0.18, "sine", 0.08]],
-  dark:  [[220, 0, 0.3, "sawtooth", 0.06], [110, 0.2, 0.4, "sawtooth", 0.06]]
+  dark:  [[220, 0, 0.3, "sawtooth", 0.06], [110, 0.2, 0.4, "sawtooth", 0.06]],
+  coins: COINS,
+  arcade: ARCADE
 };
 export function play(name) {
   if (!soundOn() || !SOUNDS[name]) return;
   const c = audio(); if (!c) return;
   const t0 = c.currentTime + 0.01;
   SOUNDS[name].forEach(([f, start, len, type, vol]) => {
+    if (f === "noise") return hiss(c, t0 + start, len, type, vol);      // ["noise", start, length, volume, high-pass]
     const o = c.createOscillator(), g = c.createGain();
     o.type = type; o.frequency.value = f;
     g.gain.setValueAtTime(0.0001, t0 + start);
@@ -49,6 +61,15 @@ export function play(name) {
     o.connect(g).connect(c.destination);
     o.start(t0 + start); o.stop(t0 + start + len + 0.05);
   });
+}
+
+function hiss(c, at, len, vol, hp) {
+  const n = Math.floor(c.sampleRate * len), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  src.buffer = buf; f.type = "highpass"; f.frequency.value = hp;
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+  src.connect(f).connect(g).connect(c.destination); src.start(at); src.stop(at + len + 0.05);
 }
 
 export const canSpeak = typeof window !== "undefined" && "speechSynthesis" in window;
