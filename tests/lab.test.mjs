@@ -78,3 +78,15 @@ test("adaptive lab: level up, rescue, next question, start level, weighted traps
   assert.deepEqual([easy.total, hard.total, easy.caught], [2, 2, 1]); assert.ok(hard.rate < easy.rate);
   assert.equal(Lab.labXP([{ skill: "Listening", support: "none", level: 2 }, { skill: "Listening", support: "none", level: 1 }]), 20 + 15 + 10);
 });
+
+test("teacher view: mission summary with rescues, and the class list overview", () => {
+  const ans = [[0, true], [0, true], [1, false], [1, false], [0, true], [0, true]].map(([level, first_try], k) => ({ skill: "Listening", lab: `c${k}`, level, first_try }));
+  ans[5].next = 1;
+  assert.deepEqual(Lab.labSummary(ans), { start: 0, peak: 1, end: 1, rescues: 1 });
+  assert.equal(Lab.labSummary([{ skill: "Listening strategy" }]), null);
+  // 2 missed at the very end is no rescue (the mission is over).
+  assert.equal(Lab.labSummary(ans.map((a, k) => ({ ...a, first_try: k < 4 }))).rescues, 0);
+  const h = [{ mode: "listening", text_id: "lab-numbers", created_at: "2026-10-29", answers: ans }, { mode: "listening", text_id: "l3-short", answers: [] }];
+  assert.deepEqual(Lab.labOverview(h), { missions: 1, peak: 1, now: 1 });
+  assert.equal(Lab.labOverview([]), null);
+});

@@ -6,7 +6,7 @@ import { unitWords, wordPattern } from "./practice.js";
 import { LISTENING } from "./listening.js";
 import { trailStops, trailHere } from "./trail.js";
 import { icon } from "./icons.js";
-import { TRAPS, trapStats, weakestTrap, missionForTrap, labMission } from "./lab.js";
+import { TRAPS, trapStats, weakestTrap, missionForTrap, labMission, isLabAttempt, labSummary, LAB_LEVELS } from "./lab.js";
 
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
                        "Cause and effect", "Writer's purpose", "Writer's view", "Vocabulary", "Grammar", "Listening"];
@@ -173,10 +173,13 @@ export function trophyCabinet(history) {
       return `<div class="trophy${on ? "" : " locked"}" title="${esc(on ? got.get(b.name) : b.why)}">${medalSVG(on)}<b>${esc(b.name)}</b><span>${esc(on ? got.get(b.name) : b.why)}</span></div>`; }).join("")}</div></div>`; }).join("");
 }
 
+// Listening Lab levels for one mission: the start level, the highest level if higher, and any strategy rescues.
+const labLevels = L => `<span class="lvchip lv${L.start}">${LAB_LEVELS[L.start]}</span>${L.peak > L.start ? ` → <span class="lvchip lv${L.peak}">${LAB_LEVELS[L.peak]}</span>` : ""}${
+  L.rescues ? ` <span class="note">${L.rescues} strategy rescue${L.rescues > 1 ? "s" : ""}</span>` : ""}`;
 export function historyTable(history) {
   if (!history.length) return `<p class="note">No readings yet.</p>`;
   return `<div class="tbl"><table><thead><tr><th>Date</th><th>Reading</th><th>Level</th><th class="num">Score</th><th class="num">XP</th></tr></thead><tbody>${
-    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td>${h.mode !== "practice" && h.mode !== "baseline" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== textLevel(h) && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(textLevel(h))} · ${BANDS[readingBand(h)]}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
+    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td>${isLabAttempt(h) && labSummary(h.answers) ? labLevels(labSummary(h.answers)) : h.mode !== "practice" && h.mode !== "baseline" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== textLevel(h) && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(textLevel(h))} · ${BANDS[readingBand(h)]}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 
