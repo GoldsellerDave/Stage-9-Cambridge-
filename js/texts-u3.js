@@ -7,8 +7,8 @@ const VISITOR_DAMAGE = [
  {label:"feet / steps", k:["feet","foot","step","walk","wear"]},
  {label:"touching", k:["touch","hand"]},
  {label:"breath / humidity", k:["breath","humid","wet","water","heat","warm","air","moist"]}];
-const NO_MONEY = {label:"no money", k:["money","income","pay","fund","cash","afford","spend"]};
-const DECAY = {label:"neglect / damage", k:["neglect","look after","looked after","repair","fall","crumble","damage","leak","broken","break","ruin"]};
+const NO_MONEY = {ask:"What do these places not get when tourists stay away?", label:"no money", k:["money","income","pay","fund","cash","afford","spend"]};
+const DECAY = {ask:"What happens to the buildings then?", label:"neglect / damage", k:["neglect","look after","looked after","repair","fall","crumble","damage","leak","broken","break","ruin"]};
 
 const CROWDS_LEVELS = [
  { title:"Too many tourists?", paras:[
@@ -110,8 +110,8 @@ const CAMP_RULES = [
  {label:"fires only in the fire area", k:["fire","burn","cook","stove"]},
  {label:"no music after nine", k:["quiet","noise","loud","music"]},
  {label:"don't feed animals", k:["feed","food","animal","monkey"]}];
-const BUG_CAUSE = {label:"mosquitoes / insects", k:["mosquito","insect","bug","bite","bitten"]};
-const BUG_RESULT = {label:"repellent", k:["repellent","spray","cream","sleeve","cover"]};
+const BUG_CAUSE = {ask:"What came out near the river?", label:"mosquitoes / insects", k:["mosquito","insect","bug","bite","bitten"]};
+const BUG_RESULT = {ask:"What did the family use?", label:"repellent", k:["repellent","spray","cream","sleeve","cover"]};
 
 const CAMP_LEVELS = [
  { title:"Two nights without Wi-Fi", paras:[
@@ -213,8 +213,8 @@ const ACTIVE_BENEFITS = [
  {label:"confidence", k:["confiden","brave","believe","proud","self"]},
  {label:"friends", k:["friend","people","social","team","together"]},
  {label:"less screen time", k:["screen","phone","device","online"]}];
-const RISK = {label:"risk of injury", k:["injur","hurt","accident","fall","fell","danger","risk","wound","safe"]};
-const TRAINED = {label:"trained staff / first aid", k:["first aid","first-aid","train","qualif","instructor","staff","coach"]};
+const RISK = {ask:"What often happens to people on active holidays?", label:"risk of injury", k:["injur","hurt","accident","fall","fell","danger","risk","wound","safe"]};
+const TRAINED = {ask:"What can the staff do about it?", label:"trained staff / first aid", k:["first aid","first-aid","train","qualif","instructor","staff","coach","treat","look after","take care","nurse","doctor","medic"]};
 
 const ACTIVE_LEVELS = [
  { title:"Holidays that keep you moving", paras:[
@@ -288,9 +288,9 @@ const ACTIVE_SLOTS = [
   {type:"short", stem:"Why do good camps have staff with first-aid training?", groups:[RISK, TRAINED], need:1,
    hint:"Look in paragraph E. What sometimes happens to people?", focus:"People sometimes fall and hurt themselves.",
    explain:"Possible answer: because people sometimes fall and hurt themselves, so staff need to help them."},
-  {type:"short", stem:"Explain why well-run camps employ staff with first-aid training.", groups:[RISK, TRAINED], need:2,
+  {type:"short", stem:"Explain why well-run camps employ staff with first-aid training: what often happens, and how do the staff help?", groups:[RISK, TRAINED], need:2,
    hint:"Paragraph E: find \"which is why\". What comes before it?", focus:"Falls and minor injuries are common, which is why well-run camps employ staff with first-aid training"},
-  {type:"short", stem:"Explain why reputable camps insist on first-aid qualifications.", groups:[RISK, TRAINED], need:2,
+  {type:"short", stem:"Explain why reputable camps insist on first-aid qualifications: what is common, and what can qualified staff do?", groups:[RISK, TRAINED], need:2,
    hint:"Paragraph E: what is \"an accepted part of learning\"? Link it to the staff.", focus:"Falls and minor injuries are an accepted part of learning, which is why reputable camps insist on staff with first-aid qualifications"}]},
  {skill:"Writer's purpose", para:"E", q:[
   {stem:"Why does the writer tell the story about the storm?", opts:["To show that good camps keep people safe.","To show that the camp was boring.","To explain how storms start.","To show that table tennis is popular."],
@@ -316,8 +316,8 @@ const MONKEY_RULES = [
  {label:"don't touch", k:["touch","hand"]},
  {label:"keep your distance", k:["distance","metre","meter","far","away","close","near","space"]},
  {label:"don't stare", k:["stare","eye","look"]}];
-const WARM = {label:"cold winter", k:["cold","snow","winter","freez","temperature"]};
-const CALM = {label:"warm / less stress", k:["warm","heat","stress","relax","calm","hot"]};
+const WARM = {ask:"How do the baths help with the cold?", label:"cold winter", k:["cold","snow","winter","freez","temperature"]};
+const CALM = {ask:"What do the baths do to the monkeys' stress?", label:"warm / less stress", k:["warm","heat","stress","relax","calm","hot"]};
 
 const MONKEY_LEVELS = [
  { title:"The monkeys who love hot baths", paras:[

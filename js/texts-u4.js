@@ -8,8 +8,8 @@ const ORYX_HELP = [
  {label:"released / returned", k:["release","return","sent back","back to","reintroduc","set free","free"]},
  {label:"herders as rangers", k:["herder","ranger","guard","local","protect","watch"]},
  {label:"protected area", k:["law","sanctuary","protected area","reserve","banned","ban"]}];
-const HUNT_CAUSE = {label:"hunters / poachers", k:["hunt","poach","shoot","shot","kill","gun"]};
-const HUNT_HOW = {label:"cars and guns", k:["car","truck","vehicle","gun","rifle","jeep","drive","fast","easy"]};
+const HUNT_CAUSE = {ask:"Who killed the oryx?", label:"hunters / poachers", k:["hunt","poach","shoot","shot","kill","gun"]};
+const HUNT_HOW = {ask:"What new things did they use?", label:"cars and guns", k:["car","truck","vehicle","gun","rifle","jeep","drive","fast","easy"]};
 
 const ORYX_LEVELS = [
  { title:"Back from the brink", paras:[
@@ -111,8 +111,8 @@ const COLOUR_FACTS = [
  {label:"more common in men / boys", k:["men","man","boy","male","12"]},
  {label:"caused by genes", k:["gene","genetic","inherit","born","parent","family"]},
  {label:"a receptor doesn't work normally", k:["receptor","cone","work","retina"]}];
-const GENE_X = {label:"gene on the X chromosome", k:["x chromosome","the x","one x","an x","chromosome","gene"]};
-const TWO_COPIES = {label:"women have two copies", k:["two","second","both","backup","back-up","other copy","another"]};
+const GENE_X = {ask:"Where is the gene for red and green?", label:"gene on the X chromosome", k:["x chromosome","the x","one x","an x","chromosome","gene"]};
+const TWO_COPIES = {ask:"Why are women usually protected?", label:"women have two copies", k:["two","second","both","backup","back-up","other copy","another"]};
 
 const COLOUR_LEVELS = [
  { title:"How many colours can you see?", paras:[
@@ -214,8 +214,8 @@ const STOP_SPREAD = [
  {label:"clean water", k:["clean water","water","pump","drink"]},
  {label:"wash hands / hygiene", k:["wash","hand","soap","hygien"]},
  {label:"vaccines / immunity", k:["vaccin","immun","injection"]}];
-const WATER_SOURCE = {label:"contaminated water / pump", k:["water","pump","contaminat","dirty","drink"]};
-const WATER_RESULT = {label:"people got ill", k:["ill","sick","cholera","disease","died","die","death"]};
+const WATER_SOURCE = {ask:"What was wrong with the water from the pump?", label:"contaminated water / pump", k:["water","pump","contaminat","dirty","drink"]};
+const WATER_RESULT = {ask:"What happened to the people who drank it?", label:"people got ill", k:["ill","sick","cholera","disease","died","die","death"]};
 
 const DISEASE_LEVELS = [
  { title:"How diseases spread", paras:[
@@ -317,8 +317,8 @@ const SAMI_SKILLS = [
  {label:"find cars / objects", k:["car","object","wall","door","pole","post","tree","bush","obstacle"]},
  {label:"tell objects apart / size", k:["size","shape","how big","differ","tell","which","hard","soft","material"]},
  {label:"ride a bike / sport", k:["bike","bicycle","ball","cycle"]}];
-const SOUND_OUT = {label:"sends out a click / sound", k:["click","sound","noise","call","ping","tongue","squeak"]};
-const ECHO_BACK = {label:"listens to the echo", k:["echo","bounce","come back","comes back","return","reflect"]};
+const SOUND_OUT = {ask:"What do you send out?", label:"sends out a click / sound", k:["click","sound","noise","call","ping","tongue","squeak"]};
+const ECHO_BACK = {ask:"What comes back, and what does the brain do with it?", label:"listens to the echo", k:["echo","bounce","come back","comes back","return","reflect"]};
 
 const ECHO_LEVELS = [
  { title:"Seeing with sound", paras:[

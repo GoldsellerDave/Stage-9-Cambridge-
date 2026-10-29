@@ -190,7 +190,7 @@ active: { level: { title: "Learning to fall", paras: [
     "Paragraph C: “The attraction goes well beyond physical fitness.” Look for confidence, friendships and screens.", "friendships are forged quickly, and screen time plummets"),
   Q("What does the detail “recalls with a grin” suggest about Minh's attitude to his failures?", ["He sees falling as a normal, even enjoyable, part of learning.", "He is embarrassed by how often he fell.", "He believes he was simply unlucky.", "He blames the instructors for his falls."],
     "Would someone embarrassed by eleven falls grin? Compare his words at the end of paragraph F.", "he recalls with a grin"),
-  S("Explain why reputable camps insist on staff with first-aid qualifications.", 2,
+  S("Explain why reputable camps insist on staff with first-aid qualifications: what is accepted as normal, and what can such staff do?", 2,
     "Paragraph E: what is “an accepted part of the learning process”? Link it to the staff.", "which is precisely why reputable camps insist on staff with first-aid qualifications"),
   Q("What does Minh's comment “Nobody argued” contribute to paragraph E?", ["It confirms that cancelling was obviously sensible, even to the campers.", "It suggests the campers were too afraid to complain.", "It shows that the instructors were very strict.", "It hints that the campers were disappointed with the camp."],
     "Read the next sentence: what did the lake look like? What does that say about the decision?", "“Nobody argued,” Minh admits."),
