@@ -2045,7 +2045,7 @@ async function check(text) {
     run.fb = { kind: "explained" }; S.play("info");
   } else {
     const partial = ai && ai.feedback ? ai.feedback
-      : q.type === "short" && m.hits.length ? `You have ${m.hits.length} good point${m.hits.length > 1 ? "s" : ""}. You need ${q.need} different points.` : null;
+      : q.type === "short" && m.hits.length ? shortNudge(q, m.hits) : null;
     run.fb = { kind: "bad", wrong: run.pick, partial }; S.play("bad");
   }
   saveRun(); runView();
@@ -2092,3 +2092,10 @@ function practiceDone() {
 }
 
 route();
+
+// Partial short answer: say how many points count, and for cause-and-effect questions ask about the missing part.
+function shortNudge(q, hits) {
+  const missing = q.groups.find(g => g.ask && !hits.includes(g.label));
+  return `You have ${hits.length} good point${hits.length > 1 ? "s" : ""}. You need ${q.need} different points.`
+    + (missing ? ` Your answer doesn't say this yet: ${missing.ask}` : " Add a point about something different.");
+}

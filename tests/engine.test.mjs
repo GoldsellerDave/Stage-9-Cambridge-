@@ -221,3 +221,8 @@ test("one point can't count twice when two groups share a label", () => {
   assert.deepEqual(E.shortHits("name and label the feeling", groups), ["name the feeling"]);
   assert.equal(E.mark({ type: "short", groups, need: 2 }, "name and label the feeling").ok, false);
 });
+
+test("cause-and-effect short answers can ask about the missing part", () => {
+  for (const t of PRACTICE_TEXTS) for (const s of t.slots) for (const q of s.q)
+    if (q.type === "short" && q.groups.length === q.need && q.need > 1) assert.ok(q.groups.every(g => g.ask), `${t.id}: ${q.stem}`);
+});

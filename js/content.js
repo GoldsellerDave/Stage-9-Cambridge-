@@ -14,7 +14,7 @@ export const STRATEGY = {
  "Vocabulary in context":{name:"Working out a word from context",steps:["Cover the word. What kind of word would fit in the gap?","Look at the words around it. Is the meaning positive or negative?","Put each option into the sentence in place of the word.","Choose the one that keeps the meaning of the sentence."]},
  "Detail: two points":{name:"Collecting points for a short answer",steps:["Find the paragraph the question points to.","List every separate point you can find, one per line.","Write two different points in your own short words.","Check they are two different ideas, not the same idea twice."]},
  "Inference":{name:"Reading between the lines",steps:["The answer is not written directly in the text.","Find the clue: what does the person say or do?","Clue + what you know = your idea.","Choose the answer the clues support, not one that is only true in real life."]},
- "Cause and effect":{name:"Explaining cause and effect",steps:["Look for linking words: so, because, as a result, also.","Find the cause (the phone) and what it leads to.","Write it as: X happens, so Y happens.","Use words from the text if you are not sure."]},
+ "Cause and effect":{name:"Explaining cause and effect",steps:["Look for linking words: so, because, as a result, also.","Find the cause and what it leads to (the effect). Many answers need both.","Write it as: X happens, so Y happens.","Use words from the text if you are not sure."]},
  "Writer's purpose":{name:"Working out why the writer includes something",steps:["Ask: what does this part do? Give evidence? Give an example? Solve a problem?","Look at what came before. Was it a problem or a solution?","Cross out answers about a different paragraph.","Choose the answer that says what the paragraph does, not only what it says."]},
  "Writer's view":{name:"Finding the writer's opinion",steps:["Look for opinion words: should, unfair, mistaken, usually not.","Ask: whose side is the writer on?","Watch for answers that are too strong (always, entirely, never).","Choose the answer that matches the writer's words in the last paragraph."]}
 };
@@ -27,8 +27,8 @@ const EFFECTS = [
  {label:"mood",k:["angry","irritab","annoy","mood","sad","low","grumpy","upset","temper","emotion","unhappy"]},
  {label:"anxiety",k:["anxi","worr","stress","nervous","depress","mental"]},
  {label:"illness",k:["ill","sick","immun","infection","cold","disease"]}];
-const PHONE_LIGHT = {label:"light / melatonin",k:["light","screen","bright","daytime","day time","melatonin","hormone","suppress"]};
-const PHONE_ALERT = {label:"keeping the brain busy",k:["alert","awake","busy","active","notification","message","video","scroll","stimulat","hour","one more"]};
+const PHONE_LIGHT = {ask:"What does the light from the screen do?", label:"light / melatonin",k:["light","screen","bright","daytime","day time","melatonin","hormone","suppress"]};
+const PHONE_ALERT = {ask:"What do messages and videos do to your brain?", label:"keeping the brain busy",k:["alert","awake","busy","active","notification","message","video","scroll","stimulat","hour","one more"]};
 const SLEEP_LEVELS = [
  { title:"Why can't teenagers get up?", paras:[
   ["A","It is 6.30 on Monday morning. Maya's alarm rings for the third time. She is very tired. Last night she went to bed at ten o'clock, but she could not sleep until after midnight. Her parents think she is lazy. \"Go to sleep earlier!\" her dad says. But scientists say it is not so simple."],

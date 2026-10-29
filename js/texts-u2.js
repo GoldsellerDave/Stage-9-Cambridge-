@@ -10,8 +10,8 @@ const FOOD_FIXES = [
  {label:"school meals / education", k:["school","lunch","meal","teach","learn","label"]},
  {label:"less junk food", k:["junk","fast food","fizzy","burger","sugar"]},
  {label:"give food to charities", k:["charit","donat","unsold","give away"]}];
-const JUNK_CAUSE = {label:"junk food is cheap / filling", k:["cheap","price","cost","afford","money","poor","poverty","fill"]};
-const JUNK_RESULT = {label:"too many calories, too few nutrients", k:["calorie","nutri","vitamin","fat","sugar","weight","obes","malnutrition","undernourish"]};
+const JUNK_CAUSE = {ask:"Why do families on low incomes buy this food?", label:"junk food is cheap / filling", k:["cheap","price","cost","afford","money","poor","poverty","fill"]};
+const JUNK_RESULT = {ask:"What does this food have too much of, and too little of?", label:"too many calories, too few nutrients", k:["calorie","nutri","vitamin","fat","sugar","weight","obes","malnutrition","undernourish"]};
 
 const FOOD_LEVELS = [
  { title:"Too much and not enough", paras:[
@@ -114,8 +114,8 @@ const CALM_TIPS = [
  {label:"name the feeling", k:["name","word","label","say how","say what","i feel"]},
  {label:"walk away", k:["away","leave","leaving"]},
  {label:"see the other side (empathy)", k:["empath","other person","their side","other side","their shoes","understand"]}];
-const ANGER_BODY = {label:"body reacts: heart / adrenaline", k:["heart","adrenal","hormone","body","breath","fast","hot","muscle"]};
-const ANGER_THINK = {label:"hard to think clearly", k:["think","brain","decision","control","clearly","sense","regret"]};
+const ANGER_BODY = {ask:"What happens in the body (heart, adrenaline)?", label:"body reacts: heart / adrenaline", k:["heart","adrenal","hormone","body","breath","fast","hot","muscle"]};
+const ANGER_THINK = {ask:"What happens to the way we think?", label:"hard to think clearly", k:["think","brain","decision","control","clearly","sense","regret"]};
 
 const ANGER_LEVELS = [
  { title:"Keeping your cool", paras:[
@@ -218,8 +218,8 @@ const DEFENCES = [
  {label:"stomach acid", k:["stomach","acid"]},
  {label:"white blood cells", k:["white","blood cell","cell"]},
  {label:"fever", k:["fever","temperature","hot"]}];
-const ANTI_CAUSE = {label:"colds are viruses", k:["virus","viral"]};
-const ANTI_RESULT = {label:"antibiotics only kill bacteria", k:["bacteri","only work","don't work","do not work","doesn't work","does not work","can't","cannot","no effect","useless"]};
+const ANTI_CAUSE = {ask:"What kind of germ causes a cold?", label:"colds are viruses", k:["virus","viral"]};
+const ANTI_RESULT = {ask:"What do antibiotics kill?", label:"antibiotics only kill bacteria", k:["bacteri","only work","don't work","do not work","doesn't work","does not work","can't","cannot","no effect","useless"]};
 
 const GERM_LEVELS = [
  { title:"Your body's defence force", paras:[
