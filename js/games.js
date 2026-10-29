@@ -3,6 +3,7 @@
 // clip, pop the bubble with the answer; the other bubbles are the examiner's traps).
 // The pure helpers at the top are tested; the play* functions draw the game into an element and call onEnd with the result.
 import { unitWords } from "./practice.js";
+import { extraWords } from "./vocab-extra.js";
 import { FAMILIES } from "./families.js";
 import { play } from "./sound.js";
 import { PRACTICE_TEXTS } from "./content.js";
@@ -22,7 +23,10 @@ const LEVEL_EVERY = 5;                   // right answers per level
 export const levelAfter = hits => Math.min(1 + Math.floor(hits / LEVEL_EVERY), 8);
 
 /* ---------------- data ---------------- */
-export function rainPool(unit) { return unitWords(unit).map(x => ({ w: x.w, def: x.def, unit })); }
+// Word Rain: the unit's syllabus words, plus its Stretch words for B2 readers (tier 1) and Stretch + Challenge words at C1 (tier 2).
+export function rainPool(unit, tier = 0) {
+  return [...unitWords(unit), ...(tier > 0 ? extraWords(unit, tier) : [])].map(x => ({ w: x.w, def: x.def, unit, ...(x.extra ? { tier: x.tier } : {}) }));
+}
 
 // Word Train uses the word families. Words that can be two classes (respect, monitor, permit, -ing and -ed forms) are left out,
 // because a word alone, without a sentence, would not tell the student which class is meant.
@@ -201,8 +205,8 @@ function banner(el, text, cls = "") {
 }
 
 /* ---------------- Word Rain ---------------- */
-export function playRain(el, { unit, onEnd }) {
-  const pool = rainPool(unit), cards = deck(pool);
+export function playRain(el, { unit, wordTier = 0, onEnd }) {
+  const pool = rainPool(unit, wordTier), cards = deck(pool);
   el.innerHTML = `<div class="game rain">${hud(RAIN_LIVES)}
     <div class="arena" id="arena"><div class="sky" aria-hidden="true"><i class="sun"></i><i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i><i class="rainfx"></i></div>
       <div class="water" id="water"><i class="wave w1"></i><i class="wave w2"></i></div><div class="gbanner"></div></div>
@@ -229,7 +233,7 @@ export function playRain(el, { unit, onEnd }) {
   }
   function spawn() {
     const x = cards.next(drops.map(d => d.x.w));
-    const d = document.createElement("div"); d.className = "drop"; d.innerHTML = `<i class="dtail"></i><span>${esc(x.def)}</span>`;
+    const d = document.createElement("div"); d.className = "drop"; d.innerHTML = `<i class="dtail"></i>${x.tier ? `<b class="dtier t${x.tier}">${x.tier === 2 ? "Challenge" : "Stretch"}</b>` : ""}<span>${esc(x.def)}</span>`;
     arena.appendChild(d);
     const left = Math.random() * Math.max(0, arena.clientWidth - d.offsetWidth);
     drops.push({ x, el: d, y: -d.offsetHeight, left }); setButtons(); sinceSpawn = 0;
