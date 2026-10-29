@@ -733,6 +733,17 @@ mark.lkey{background:var(--ok-bg);color:var(--ok);font-weight:700;border-bottom:
 mark.ltrap{background:var(--peach);color:var(--orange);font-weight:700;border-bottom:2px dashed var(--orange);padding:0 2px;border-radius:3px}
 .ltrans .legend{font-family:var(--f-body)} .trapnotes{margin:6px 0 0;padding-left:1.2em} .trapnotes li{margin:.2em 0}
 .traptip{margin:.4em 0 0}
+.lvchip{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:2px 8px;border-radius:999px;border:1.5px solid currentColor;vertical-align:middle;white-space:nowrap}
+.lvchip.lv0{color:var(--teal);background:var(--mint)} .lvchip.lv1{color:var(--gold);background:var(--gold-bg)} .lvchip.lv2{color:var(--orange);background:var(--peach)}
+.qhead .lvchip{margin-left:auto;margin-right:8px}
+.labdots i.done.l1{background:var(--gold)} .labdots i.done.l2{background:var(--orange)} .labdots i.now{box-shadow:0 0 0 2px var(--gold) inset;background:var(--gold-bg)}
+.lvup,.lvdown{margin:0 0 10px;padding:10px 14px;border-radius:12px;font-weight:600}
+.lvup{background:var(--gold-bg);border:2px solid var(--gold)} .lvup b{color:var(--gold)}
+.lvdown{background:var(--mint);border:2px solid var(--teal)}
+.lvpath{display:flex;flex-wrap:wrap;gap:8px;list-style:none;padding:0;margin:4px 0 8px}
+.lvpath li{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:4.6em;padding:6px 8px;border-radius:10px;font-size:.75rem;font-weight:700;border:2px solid var(--line)}
+.lvpath li span{font-size:1.1rem} .lvpath li.lv0{color:var(--teal)} .lvpath li.lv1{color:var(--gold)} .lvpath li.lv2{color:var(--orange)}
+.lvpath li:not(.ok){opacity:.7;border-style:dashed} .lvpath li.ok{border-color:currentColor}
 .traps{display:flex;flex-direction:column;gap:8px}
 .trap{display:grid;grid-template-columns:9.5em 1fr auto auto;gap:10px;align-items:center}
 .trap .sbar i{background:linear-gradient(90deg,#F0A07A,var(--orange))} .trap.weak .tname{color:var(--orange);font-weight:700}

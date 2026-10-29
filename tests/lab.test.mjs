@@ -46,3 +46,35 @@ test("trap tracker, weakest trap, XP and transcript marks", () => {
   assert.deepEqual(p.map(x => x.kind || ""), ["", "trap", "", "key", ""]);
   assert.equal(p.map(x => x.t).join(""), "Last year it left at quarter past eight, but now at quarter to eight.");
 });
+
+test("adaptive lab: every mission has Core, Stretch and Challenge questions, and enough for a mission", () => {
+  for (const m of Lab.LAB) {
+    const n = [0, 1, 2].map(l => m.items.filter(it => it.level === l).length);
+    assert.ok(n[0] >= 5 && n[1] >= 4 && n[2] >= 4, `${m.id} ${n}`);
+  }
+  assert.equal(Lab.LAB_CLIPS.length, Lab.LAB.reduce((t, m) => t + m.items.length, 0));
+});
+
+test("adaptive lab: level up, rescue, next question, start level, weighted traps and XP", () => {
+  let st = { level: 0, rightRow: 0, wrongRow: 0 };
+  st = Lab.labStep(st, true); assert.equal(st.up, false);
+  st = Lab.labStep(st, true); assert.deepEqual([st.up, st.level], [true, 1]);
+  st = Lab.labStep(Lab.labStep({ level: 2, rightRow: 0 }, true), true); assert.deepEqual([st.up, st.level], [false, 2]);
+  st = Lab.labStep({ level: 1, rightRow: 1 }, false); assert.equal(st.rescue, false); assert.equal(st.rightRow, 0);
+  st = Lab.labStep(st, false); assert.deepEqual([st.rescue, st.level, st.wrongRow], [true, 1, 0]);
+  const m = Lab.labMission("lab-distractor");
+  const a = Lab.nextLabItem(m, 2, []); assert.equal(a.level, 2);
+  const challenge = m.items.filter(it => it.level === 2).map(it => it.clip);
+  assert.equal(Lab.nextLabItem(m, 2, challenge).level, 1);
+  assert.notEqual(Lab.nextLabItem(m, 2, [], new Set([challenge[0]])).clip, challenge[0]);
+  assert.equal(Lab.labStartLevel([], 1), 1);
+  const h = [{ mode: "listening", text_id: "lab-distractor", created_at: "2026-10-29T09:00", answers: [{ skill: "Listening", lab: "x", level: 1, next: 2 }] },
+    { mode: "listening", text_id: "lab-numbers", created_at: "2026-10-28T09:00", answers: [{ skill: "Listening", lab: "y", level: 0, next: 0 }] }];
+  assert.equal(Lab.labStartLevel(h, 0), 2);
+  assert.equal(Lab.labPeak(h[0].answers), 1);
+  // A Challenge question right counts double, so the same caught count looks less weak.
+  const easy = Lab.trapStats([{ answers: [{ skill: "Listening", trap: "synonym", first_try: false }, { skill: "Listening", trap: "synonym", first_try: true }] }]).find(t => t.trap === "synonym");
+  const hard = Lab.trapStats([{ answers: [{ skill: "Listening", trap: "synonym", first_try: false }, { skill: "Listening", trap: "synonym", first_try: true, level: 2 }] }]).find(t => t.trap === "synonym");
+  assert.deepEqual([easy.total, hard.total, easy.caught], [2, 2, 1]); assert.ok(hard.rate < easy.rate);
+  assert.equal(Lab.labXP([{ skill: "Listening", support: "none", level: 2 }, { skill: "Listening", support: "none", level: 1 }]), 20 + 15 + 10);
+});
