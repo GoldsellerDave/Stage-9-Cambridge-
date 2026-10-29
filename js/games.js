@@ -98,6 +98,7 @@ export function chunks(words, n = CHUNK) { const out = []; for (let i = 0; i < w
 // Trap Dodger reuses the Listening Lab clips. Option 0 is the answer; the other options are the traps, and their "why" says why.
 // Every 2 right answers is one level; levels 1-2 use Core clips, 3-4 Stretch and 5-6 Challenge, and the bubbles rise faster.
 const CLIP_SHARE = 0.6;                                                                    // how far up the bubbles get while the clip plays
+const AUTO_NEXT = 2500;                                                                   // ms before the next clip after a right answer
 export const DODGE_LIVES = 3, DODGE_ROUNDS = 10, DODGE_MAX = 6;
 export const dodgeTier = level => level <= 2 ? 0 : level <= 4 ? 1 : 2;
 export const dodgeLevelFor = tier => 1 + 2 * Math.min(Math.max(tier || 0, 0), 2);         // the first level of a tier
@@ -618,22 +619,25 @@ export function playDodge(el, { tier = 0, onEnd }) {
     reveal("escape");
   }
   function transcript(it) {
-    return it.lines.map(([who, text]) => `<p><b>${esc(who[0] + who.slice(1).toLowerCase())}:</b> ${markLine(text, it.key, it.traps || []).map(q =>
+    return it.lines.map(([who, text]) => `<p><b>${esc(who.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()))}:</b> ${markLine(text, it.key, it.traps || []).map(q =>
       q.kind === "key" ? `<mark class="lkey">${esc(q.t)}</mark>` : q.kind === "trap" ? `<mark class="ltrap" title="${esc(q.label)}">${esc(q.t)}</mark>` : esc(q.t)).join("")}</p>`).join("");
   }
+  // A right answer moves on by itself after a short pause. A trap or an escape explains why and waits for "Next clip".
   function reveal(kind, x) {
-    rep.disabled = false; rep.textContent = "🔁 Hear it again"; setPlays();
-    const last = misses >= DODGE_LIVES || round >= DODGE_ROUNDS, trap = TRAPS[cur.trap], tname = cur.trap !== "prime" ? ` ${trap.name}.` : "";
+    rep.disabled = kind === "hit"; rep.textContent = "🔁 Hear it again"; setPlays();
+    const ans = cur.opts[0].t, last = misses >= DODGE_LIVES || round >= DODGE_ROUNDS, trap = TRAPS[cur.trap], tname = cur.trap !== "prime" ? ` ${trap.name}.` : "";
     const head = kind === "hit" ? `<p><strong>Popped! +${x} points.</strong> You dodged the traps.</p>`
-      : kind === "trap" ? `<p><strong>🪤 Trapped!${tname}</strong> “${esc(cur.opts[x].t)}”: ${esc(cur.opts[x].why || "")}</p><p>The answer was <b>${esc(cur.opts[0].t)}</b>.</p>`
-      : `<p><strong>It got away!</strong> The answer was <b>${esc(cur.opts[0].t)}</b>.</p>`;
+      : kind === "trap" ? `<p><strong>🪤 Trapped!${tname}</strong> “${esc(cur.opts[x].t)}”: ${esc(cur.opts[x].why || "")}</p><p>The answer was <b>${esc(ans)}</b>${/[.!?]$/.test(ans) ? "" : "."}</p>`
+      : `<p><strong>It got away!</strong> The answer was <b>${esc(ans)}</b>${/[.!?]$/.test(ans) ? "" : "."} Look at the transcript to see where you could hear it.</p>`;
     fb.innerHTML = `<div class="fb ${kind === "hit" ? "ok" : "info"} pop">${head}
       ${kind === "hit" ? `<p>The words that gave you the answer: <mark class="lkey">${esc(cur.key)}</mark></p>`
         : `<div class="dtrans">${transcript(cur)}</div><p class="note legend"><mark class="lkey">green</mark> gives the answer${(cur.traps || []).length ? ` · <mark class="ltrap">orange</mark> is the trap` : ""}</p>
            <p class="note">💡 ${esc(trap.tip)}</p>`}</div>
-      <div class="row"><button class="btn" id="dnext">${last ? "See your score" : "Next clip"}</button></div>`;
-    const nb = fb.querySelector("#dnext"); nb.onclick = () => { play("tap"); next(); };
+      ${kind === "hit" ? `<div class="dauto"><i style="animation-duration:${AUTO_NEXT}ms"></i></div><p class="note">${last ? "Adding up your score…" : "Next clip coming…"}</p>`
+        : `<div class="row"><button class="btn" id="dnext">${last ? "See your score" : "Next clip"}</button></div>`}`;
     tell(misses >= DODGE_LIVES ? "That was your last life." : "");
+    if (kind === "hit") { timer = setTimeout(next, AUTO_NEXT); return; }
+    const nb = fb.querySelector("#dnext"); nb.onclick = () => { play("tap"); next(); };
     if (kind !== "hit" && misses >= DODGE_LIVES) banner(el, "Out of lives!", "big");
     nb.focus({ preventScroll: true });
   }

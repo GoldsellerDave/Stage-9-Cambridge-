@@ -459,6 +459,9 @@ a.pstep:hover b{color:var(--teal)}
 .bub.answer{background:radial-gradient(circle at 22% 22%,#fff 0 9%,#DFF7E6 10%,#9EE2B3);border-color:#2EAD5B;box-shadow:0 0 0 4px rgba(46,173,91,.45),0 6px 16px rgba(0,20,50,.35)}
 .bub.back{transition:transform .5s ease-out}
 .dctl{align-items:center;gap:10px;margin:0}
+.dauto{height:6px;margin-top:8px;border-radius:3px;background:rgba(46,173,91,.2);overflow:hidden}
+.dauto i{display:block;height:100%;width:0;background:#2EAD5B;animation:dauto linear forwards}
+@keyframes dauto{to{width:100%}}
 .dtrans{margin-top:8px;padding:10px 12px;border-radius:12px;background:var(--surface);font-family:var(--f-text);line-height:1.55}
 .dtrans p{margin:0 0 6px} .dtrans p:last-child{margin:0}
 @media (max-width:430px){ .bub{font-size:.84rem;padding:7px 11px 7px 7px;min-height:46px} .dstem{font-size:1rem} }
