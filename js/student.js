@@ -162,7 +162,8 @@ async function draw() {
   if (view === "review") return reviewView();
   if (view === "games") return gamesView();
   if (view === "lab") return labHubView();
-  if (view === "rlab") return rlabHubView();
+  const rv = /^rlab(?:-(\d))?$/.exec(view);
+  if (rv) return rlabHubView(rv[1] ? +rv[1] : rlUnitNow());
   const m = /^unit-(\d)(?:\/(\w+))?$/.exec(view);
   if (m) return unitView(+m[1], m[2]);
   return homeView();
@@ -265,7 +266,7 @@ function unitSections(u) {
   const lists = VOCAB[u].map((l, i) => `List ${i + 1}: ${l.length} words`).join(" · ");
   const secs = [{ key: "mission", label: "Mission", html: missionHTML(u) }];
   if (texts.length) secs.push({ key: "read", label: "Reading", html: `<div class="usec">${me.baseline_done ? "" : `<p class="note">Take the baseline on the Home page first. It sets your reading level.</p>`}
-      <div class="tiles">${RL.RLAB_UNITS.includes(u) ? aTile("lab", "data-rlabhub", "Reading Lab", "Beat the tricks in Checkpoint reading: 8 short missions") : ""}${texts.map(t => aTile("read", `data-text="${t.id}" ${me.baseline_done ? "" : "disabled"}`, t.topic, done.has(t.id) ? "Done before: half XP this time" : t.blurb, done.has(t.id))).join("")}</div>
+      <div class="tiles">${RL.RLAB_UNITS.includes(u) ? aTile("lab", `data-rlabhub="${u}"`, "Reading Lab", "Beat the tricks in Checkpoint reading: 8 short missions") : ""}${texts.map(t => aTile("read", `data-text="${t.id}" ${me.baseline_done ? "" : "disabled"}`, t.topic, done.has(t.id) ? "Done before: half XP this time" : t.blurb, done.has(t.id))).join("")}</div>
       </div>` });
   if (listeningFor(u).length) secs.push({ key: "listen", label: "Listening", html: `<div class="usec"><div class="tiles">${aTile("lab", "data-labhub", "Listening Lab", "Learn the examiner's tricks: 6 short missions")}${gameTile("dodge", u)}${listeningFor(u).map(t =>
       aTile("listen", `data-listen="${t.id}"`, t.topic, `${t.part} · ${done.has(t.id) ? "Done before" : t.blurb}`, done.has(t.id))).join("")}</div></div>` });
@@ -398,8 +399,8 @@ function bindActivities() {
   $app.querySelectorAll("[data-listen]").forEach(btn => btn.onclick = () => startListening(btn.dataset.listen));
   $app.querySelectorAll("[data-lab]").forEach(btn => btn.onclick = () => startLab(btn.dataset.lab));
   $app.querySelectorAll("[data-labhub]").forEach(btn => btn.onclick = () => { location.hash = "#lab"; });
-  $app.querySelectorAll("[data-rlab]").forEach(btn => btn.onclick = () => startRLab(btn.dataset.rlab));
-  $app.querySelectorAll("[data-rlabhub]").forEach(btn => btn.onclick = () => { location.hash = "#rlab"; });
+  $app.querySelectorAll("[data-rlab]").forEach(btn => btn.onclick = () => startRLab(btn.dataset.rlab, +(btn.dataset.ru || rlUnitNow())));
+  $app.querySelectorAll("[data-rlabhub]").forEach(btn => btn.onclick = () => { location.hash = `#rlab-${btn.dataset.rlabhub}`; });
   $app.querySelectorAll("[data-cards]").forEach(btn => btn.onclick = () => startCards(+btn.dataset.cards));
   $app.querySelectorAll("[data-family]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.family;
     startSmall("vocab", `family-u${u}`, `Unit ${u} word families`, P.familySet(u)); });
@@ -1477,26 +1478,35 @@ function labDoneView() {
 // adaptive engine as the Listening Lab: two teaching cards, then 6 questions; 2 right first time in a row moves up a level,
 // 2 missed in a row brings a strategy rescue, then a level down. After each answer the text lights up the evidence (green)
 // and the trap (orange), and a gap is filled with the right answer. Saved as mode "vocab" (see rlab.js).
-function rlabHubView() {
-  const att = id => history.filter(h => h.text_id === id);
+// Each unit has its own questions (it.u): Unit 2 Well-being, Unit 3 Tourism. The trap tracker and the start level are shared.
+const RL_TOPIC = { 2: "Well-being", 3: "Tourism" };
+let rlLastUnit = null;
+const rlUnitNow = () => rlLastUnit || (RL.RLAB_UNITS.includes(P.focusUnit()) ? P.focusUnit() : RL.RLAB_UNITS[0]);
+const rlRunUnit = () => run.unit || RL.rItemUnit(run.seq[0]) || RL.RLAB_UNITS[0];
+function rlabHubView(u) {
+  if (!RL.RLAB_UNITS.includes(u)) u = rlUnitNow();
+  rlLastUnit = u;
+  const att = id => history.filter(h => h.text_id === id && (h.answers || []).some(a => a.skill === "Reading Lab" && RL.rItemUnit(a.rlab) === u));
   const best = id => { const s = att(id).map(h => h.score); return s.length ? Math.max(...s) : null; };
   const peak = id => Math.max(0, ...att(id).map(h => RL.rlabPeak(h.answers || [])));
   const start = RL.rlabStartLevel(history, P.tierFor(history));
-  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Reading</p><h1>Reading Lab</h1>
-      <p class="lede">Learn the tricks in Checkpoint reading questions, and how to beat them. Eight short missions, one for each kind of question, with texts on Well-being (Unit 2) and Tourism (Unit 3).</p>
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Reading · Unit ${u}: ${RL_TOPIC[u]}</p><h1>Reading Lab</h1>
+      <p class="lede">Learn the tricks in Checkpoint reading questions, and how to beat them. Eight short missions, one for each kind of question, with texts on ${RL_TOPIC[u]}.</p>
       <p class="note">The questions change with you. Get 2 right first time in a row and you move up: Core, Stretch, then Challenge. You start your next mission on ${lvChip(start)}.</p></div>
+    <div class="tabs" role="tablist" aria-label="Unit">${RL.RLAB_UNITS.map(x => `<button role="tab" aria-selected="${x === u}" data-rlu="${x}">Unit ${x}: ${RL_TOPIC[x]}</button>`).join("")}</div>
     <div class="tiles">${RL.RLAB.map(m => { const b = best(m.id);
-      return aTile("lab", `data-rlab="${m.id}"`, `${m.n}. ${m.title}`, b != null ? `Best: ${b} of ${Lab.MISSION_LEN} · reached ${labLevel(peak(m.id))}` : `${m.part} · ${m.blurb}`, b != null); }).join("")}</div>
-    <div class="panel"><h3>Your reading trap tracker</h3>${U.rTrapsHTML(history)}</div></div>`;
+      return aTile("lab", `data-rlab="${m.id}" data-ru="${u}"`, `${m.n}. ${m.title}`, b != null ? `Best: ${b} of ${Lab.MISSION_LEN} · reached ${labLevel(peak(m.id))}` : `${m.part} · ${m.blurb}`, b != null); }).join("")}</div>
+    <div class="panel"><h3>Your reading trap tracker</h3><p class="note">For both units.</p>${U.rTrapsHTML(history)}</div></div>`;
   bindActivities();
+  $app.querySelectorAll("[data-rlu]").forEach(b => b.onclick = () => { location.hash = `#rlab-${b.dataset.rlu}`; });
 }
-function startRLab(id) {
+function startRLab(id, unit = rlUnitNow()) {
   const level = RL.rlabStartLevel(history, P.tierFor(history));
-  run = { kind: "rlab", id, phase: "teach", card: 0, i: 0, st: {}, results: [], t0: Date.now(), orders: {}, level, start: level, rightRow: 0, wrongRow: 0, seq: [] };
+  run = { kind: "rlab", id, unit, phase: "teach", card: 0, i: 0, st: {}, results: [], t0: Date.now(), orders: {}, level, start: level, rightRow: 0, wrongRow: 0, seq: [] };
   rlPick(); saveRun(); route(); top();
 }
 const rlM = () => RL.rlabMission(run.id);
-function rlPick() { run.seq[run.i] = Lab.nextLabItem(rlM(), run.level, run.seq.slice(0, run.i), RL.seenRItems(history)).id; }
+function rlPick() { run.seq[run.i] = Lab.nextLabItem(RL.unitMission(rlM(), rlRunUnit()), run.level, run.seq.slice(0, run.i), RL.seenRItems(history)).id; }
 const rlItem = (i = run.i) => rlM().items.find(x => x.id === run.seq[i]);
 // A gap: an empty line before the answer, the right answer after it.
 const rlGap = (t, fill) => U.esc(t).split("___").join(fill != null ? `<b class="rgap fill">${U.esc(fill)}</b>` : `<span class="rgap" role="img" aria-label="gap"></span>`);
@@ -1541,7 +1551,7 @@ function rlRunView() {
   if (run.phase === "rescue") return rlRescueView();
   if (run.phase === "teach") {
     const c = m.teach[run.card], eg = c.eg, last = run.card === m.teach.length - 1;
-    $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Reading Lab · Mission ${m.n} of ${RL.RLAB.length} · Checkpoint ${U.esc(m.part)}</p><h1>${U.esc(m.title)}</h1>
+    $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Reading Lab · Unit ${rlRunUnit()} · Mission ${m.n} of ${RL.RLAB.length} · Checkpoint ${U.esc(m.part)}</p><h1>${U.esc(m.title)}</h1>
       <div class="panel labteach"><p class="eyebrow">Tip ${run.card + 1} of ${m.teach.length}</p><h2>${U.esc(c.h)}</h2><p>${U.esc(c.p)}</p>
         <div class="labeg"><p class="egrow"><span class="chip">Text</span> ${rlGap(eg.text)}</p>${eg.opt ? `<p class="egrow"><span class="chip">Option</span> ${U.esc(eg.opt)}</p>` : ""}${eg.note ? `<p class="note">${U.esc(eg.note)}</p>` : ""}</div></div>
       <div class="row">${run.card ? `<button class="btn alt" id="lprev">Back</button>` : ""}<button class="btn" id="lnext">${last ? `Start the ${n} questions` : "Next tip"}</button></div></div>`;
@@ -1553,7 +1563,7 @@ function rlRunView() {
   const tag = run.i === n - 1 ? "Checkpoint challenge" : run.i < 2 && !it.level ? "Spot the trap" : "Practice";
   const flash = run.flash === "up" ? `<div class="lvup pop"><b>⬆ Level up!</b> 2 in a row. You're on ${lvChip(run.level)} now. The texts and options are harder.</div>`
     : run.flash === "down" ? `<div class="lvdown">Back to ${lvChip(run.level)} to practise the strategy. Get 2 right in a row to move up again.</div>` : "";
-  let h = `<div class="narrow pop"><p class="eyebrow">Reading Lab · ${U.esc(m.title)}</p>
+  let h = `<div class="narrow pop"><p class="eyebrow">Reading Lab · Unit ${rlRunUnit()} · ${U.esc(m.title)}</p>
     <div class="labdots">${Array.from({ length: n }, (_, k) => `<i class="${k < run.i ? `done l${rlItem(k).level}` : k === run.i ? "now" : ""}"></i>`).join("")}</div>${flash}
     <div class="qcard"><div class="qhead"><span class="tag">${tag}</span>${lvChip(it.level)}<span class="qnum">${run.i + 1} of ${n}</span></div>
     <div class="rbox">${rlPassage(it, s.done)}</div>
@@ -1616,8 +1626,8 @@ function rlDoneView() {
       : `<div class="fb ok winbox"><p class="big">No traps caught you!</p></div>`}
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row">${next ? `<button class="btn" id="lnextm">Next mission: ${U.esc(next.title)}</button>` : ""}<button class="btn alt" id="lhub">Back to the Reading Lab</button></div></div>`;
-  const nm = document.getElementById("lnextm"); if (nm) nm.onclick = () => { run = null; saveRun(); startRLab(next.id); };
-  document.getElementById("lhub").onclick = () => { run = null; saveRun(); location.hash = "#rlab"; route(); top(); };
+  const nm = document.getElementById("lnextm"); if (nm) nm.onclick = () => { const u = rlRunUnit(); run = null; saveRun(); startRLab(next.id, u); };
+  document.getElementById("lhub").onclick = () => { const u = rlRunUnit(); run = null; saveRun(); location.hash = `#rlab-${u}`; route(); top(); };
   saveAttempt({ mode: "vocab", text_id: m.id, level_start: run.start ?? 0, level_end: null, score: R.score, max_score: main.length,
                 xp: R.xp, seconds: R.seconds, answers: run.results.map(({ item, ...r }) => r) });
 }
@@ -1731,7 +1741,7 @@ function runName(r) {
   if (r.kind === "mini") return `${M.MINI[r.unit].title} (question ${r.qi + 1} of ${M.miniQuestions(r.unit).length})`;
   if (r.kind === "listen") return `Listening: ${LISTENING.find(t => t.id === r.id).topic}`;
   if (r.kind === "lab") return `Listening Lab: ${Lab.labMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
-  if (r.kind === "rlab") return `Reading Lab: ${RL.rlabMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
+  if (r.kind === "rlab") return `Reading Lab, Unit ${r.unit || RL.rItemUnit(r.seq[0]) || 2}: ${RL.rlabMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
   if (r.kind === "escape") return `Unit ${r.unit} escape room${r.play ? ` (room ${r.play.room + 1} of ${r.game.rooms.length})` : ""}`;
   return U.textTitle(r.textId);
