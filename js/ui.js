@@ -7,9 +7,10 @@ import { LISTENING } from "./listening.js";
 import { trailStops, trailHere } from "./trail.js";
 import { icon } from "./icons.js";
 import { TRAPS, trapStats, weakestTrap, missionForTrap, labMission, isLabAttempt, labSummary, LAB_LEVELS } from "./lab.js";
+import { RTRAPS, rTrapStats, weakestRTrap, rMissionForTrap, rlabMission } from "./rlab.js";
 
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
-                       "Cause and effect", "Writer's purpose", "Writer's view", "Vocabulary", "Grammar", "Listening"];
+                       "Cause and effect", "Writer's purpose", "Writer's view", "Reading Lab", "Vocabulary", "Grammar", "Listening"];
 
 export function esc(t) {
   return String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
@@ -25,6 +26,7 @@ export function textTitle(id) {
   const l = LISTENING.find(x => x.id === id); if (l) return `Listening: ${l.topic}`;
   if (id === "baseline") return "Baseline";
   const lab = labMission(id); if (lab) return `Listening Lab: ${lab.title}`;
+  const rlab = rlabMission(id); if (rlab) return `Reading Lab: ${rlab.title}`;
   const c = CHECKS.find(x => x.id === id); if (c) return c.title;
   if (id === "vocab-review") return "Word review";
   let m = /^vocab-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} vocabulary`;
@@ -195,6 +197,7 @@ export function trackerHTML(history, who, opts = {}) {
     <div class="panel"><h3>Skills</h3>${skillBars(history)}</div>
     <div class="panel"><h3>Reading level over time</h3>${levelChart(history)}</div>
     <div class="panel"><h3>Road to Checkpoint</h3><p class="note">Each unit ends with a checkpoint. Pass all nine to reach the finish post.</p>${roadSVG(history, opts)}</div>
+    <div class="panel"><h3>Reading traps</h3>${rTrapsHTML(history, opts)}</div>
     <div class="panel"><h3>Listening traps</h3>${trapsHTML(history, opts)}</div>
     <div class="panel"><h3>Trophy cabinet</h3>${trophyCabinet(history)}</div>
     <div class="panel"><h3>History</h3>${historyTable(history)}</div>`;
@@ -215,6 +218,18 @@ export function boardTable(rows, unit) {
   return `<div class="tbl"><table><thead><tr><th>#</th><th>Name</th><th class="num">${unit === "gain" ? "% points gained" : "XP"}</th></tr></thead><tbody>${
     rows.map((r, i) => `<tr class="${r.me ? "me" : ""}"><td class="rank">${i < 3 && (r.xp || r.gain) > 0 ? `<span class="medal m${i + 1}">${i + 1}</span>` : i + 1}</td><td>${esc(r.name)}${r.me ? " (you)" : ""}</td><td class="num">${unit === "gain" ? (r.gain > 0 ? "+" : "") + r.gain : r.xp}</td></tr>`).join("")
   }</tbody></table></div>`;
+}
+
+// The reading trap tracker: Reading Lab answers per kind of question, the same way as the listening one.
+export function rTrapsHTML(history, { links = true } = {}) {
+  const stats = rTrapStats(history), weak = weakestRTrap(history);
+  if (!stats.some(t => t.total)) return `<p class="note">No Reading Lab questions yet. ${links ? "Open the Reading Lab from the Reading tab of Unit 2 or 3." : ""}</p>`;
+  return `<div class="traps">${stats.map(t => { const p = t.total ? Math.round(100 * t.rate) : null, m = rMissionForTrap(t.trap);
+    return `<div class="trap${t.trap === weak ? " weak" : ""}"><span class="tname">${esc(RTRAPS[t.trap].name)}</span>
+      <span class="sbar"><i style="width:${p ?? 0}%"></i></span>
+      <span class="note">${t.total ? `Caught ${t.caught} of ${t.total}` : "Not met yet"}</span>
+      ${links && m ? `<button class="btn small alt" data-rlab="${m.id}">${t.trap === weak ? "Practise this" : "Mission"}</button>` : ""}</div>`; }).join("")}</div>
+    ${weak ? `<p class="note">${esc(RTRAPS[weak].name)} catch ${links ? "you" : "this student"} most often. ${esc(RTRAPS[weak].tip)}</p>` : ""}`;
 }
 
 // The trap tracker: how often each examiner's trick caught the student (listening answers not right first time).
