@@ -3,7 +3,7 @@
 import { api, LIVE, getSession, setSession } from "./api.js";
 import * as U from "./ui.js";
 import { ESCAPES, GUARD_SECONDS } from "./escape.js";
-import { TRAPS } from "./lab.js";
+import { TRAPS, LAB_LEVELS } from "./lab.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -71,6 +71,8 @@ function ago(d) {
   return days === 0 ? "Today" : days === 1 ? "Yesterday" : days + " days ago";
 }
 
+// Listening Lab column: level now, best level if higher, and missions done out of 6.
+const labCell = L => !L ? "–" : `<span class="lvchip lv${L.now}">${LAB_LEVELS[L.now]}</span>${L.peak > L.now ? ` <span class="note">best ${LAB_LEVELS[L.peak]}</span>` : ""} <span class="note">${L.missions}/6</span>`;
 function draw() {
   const placed = rows.filter(r => r.level != null);
   const lv = [0, 1, 2, 3].map(l => placed.filter(r => r.level === l).length);
@@ -87,12 +89,12 @@ function draw() {
       <div class="stat gold"><b>${rows.reduce((t, r) => t + r.xp_week, 0)}</b><span>class XP this week</span></div></div>
     <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"], ["live", "Team escape room"], ["ai", "AI marking"], ["manage", "Manage class"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
   if (tab === "overview") {
-    h += `<div class="tbl"><table><thead><tr><th>Student</th><th>Username</th><th>Level</th><th class="num" title="First baseline and latest baseline or Checkpoint check, as a percentage">Baseline / check</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
+    h += `<div class="tbl"><table><thead><tr><th>Student</th><th>Username</th><th>Level</th><th class="num" title="First baseline and latest baseline or Checkpoint check, as a percentage">Baseline / check</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th title="Listening Lab: the level the next mission starts on, the best level reached and missions done">Listening Lab</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
       rows.map(r => { const w = weakest(r.skills || {});
         return `<tr><td><button class="linkbtn" style="color:var(--teal);text-align:left" data-s="${r.id}">${U.esc(r.name)}</button></td><td>${U.esc(r.username)}</td>
           <td><span class="lvl">${U.levelName(r.level)}</span></td>
           <td class="num">${r.baseline_first == null ? "–" : r.baseline_latest !== r.baseline_first ? `${r.baseline_first}% → ${r.baseline_latest}%` : r.baseline_first + "%"}</td>
-          <td class="num">${r.xp_week}</td><td class="num">${r.xp_total}</td><td class="num">${r.texts_done}</td><td>${ago(r.last_active)}</td>
+          <td class="num">${r.xp_week}</td><td class="num">${r.xp_total}</td><td class="num">${r.texts_done}</td><td>${labCell(r.lab)}</td><td>${ago(r.last_active)}</td>
           <td>${w ? `${U.esc(w.s)} (${w.p}%)` : "–"}</td></tr>`; }).join("")
     }</tbody></table></div>
     ${needHelp.length ? `<div class="panel"><h3>Not active for 2 weeks or more</h3><p style="margin:0">${needHelp.map(r => U.esc(r.name)).join(", ")}</p></div>` : ""}`;

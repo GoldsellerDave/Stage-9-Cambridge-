@@ -453,6 +453,21 @@ export function labStep(state, firstTry) {
   return { level, up, rescue, rightRow, wrongRow };
 }
 export const labPeak = answers => answers.filter(a => a.skill === "Listening").reduce((p, a) => Math.max(p, a.level || 0), 0);
+// One mission for the teacher: { start, peak, end, rescues }. Rescues are replayed from the answers (2 missed in a row,
+// not on the last question). null if the attempt has no Lab answers.
+export function labSummary(answers = []) {
+  const a = answers.filter(x => x.skill === "Listening" && x.lab); if (!a.length) return null;
+  let st = { level: a[0].level || 0 }, rescues = 0;
+  a.forEach((x, k) => { st = labStep(st, x.first_try); if (st.rescue && k < a.length - 1) rescues++; });
+  const last = a[a.length - 1];
+  return { start: a[0].level || 0, peak: labPeak(a), end: last.next ?? last.level ?? 0, rescues };
+}
+// The class list: missions done, the highest level reached and the level the next mission starts on (ck_teacher_class.lab).
+export function labOverview(history) {
+  const h = history.filter(x => isLabAttempt(x) && labSummary(x.answers));
+  if (!h.length) return null;
+  return { missions: new Set(h.map(x => x.text_id)).size, peak: Math.max(...h.map(x => labSummary(x.answers).peak)), now: labStartLevel(h) };
+}
 
 // Splits a line of the transcript into plain, key and trap parts for highlighting.
 export function markLine(text, key, traps = []) {

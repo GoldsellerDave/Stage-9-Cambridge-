@@ -250,7 +250,16 @@ begin
       (select coalesce(json_object_agg(trap, json_build_object('caught', c_, 'total', t_)), '{}'::json) from (
          select e->>'trap' as trap, count(*) filter (where not coalesce((e->>'first_try')::boolean, false)) as c_, count(*) as t_
            from ck_attempts a, jsonb_array_elements(a.answers) e
-          where a.student_id = st.id and e->>'skill' = 'Listening' and e->>'trap' is not null group by 1) k2) as traps
+          where a.student_id = st.id and e->>'skill' = 'Listening' and e->>'trap' is not null group by 1) k2) as traps,
+      -- Listening Lab levels: missions done, highest level reached, and the level the next mission starts on
+      (select json_build_object('missions', count(distinct a.text_id), 'peak', coalesce(max((e->>'level')::int), 0),
+         'now', (select coalesce((e2->>'next')::int, (e2->>'level')::int, 0)
+                   from ck_attempts a2, jsonb_array_elements(a2.answers) with ordinality x2(e2, n2)
+                  where a2.student_id = st.id and a2.mode = 'listening' and a2.text_id like 'lab-%' and e2->>'skill' = 'Listening' and e2 ? 'lab'
+                  order by a2.created_at desc, n2 desc limit 1))
+         from ck_attempts a, jsonb_array_elements(a.answers) e
+        where a.student_id = st.id and a.mode = 'listening' and a.text_id like 'lab-%' and e->>'skill' = 'Listening' and e ? 'lab'
+       having count(*) > 0) as lab
     from ck_students st where st.class_code = p_class and st.role = 'student') r), '[]'::json);
 end $$;
 
