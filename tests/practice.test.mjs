@@ -238,9 +238,11 @@ test("vocab and grammar tiers: Core floor, harder tasks for B2 and C1, moving in
 
 import { EXTRA, extraWords } from "../js/vocab-extra.js";
 import { VOCAB as CORE } from "../js/vocab.js";
-test("extra Stretch and Challenge words: on the unit theme lists, 8 + 8, one gap, not already core", () => {
-  for (const u of [2, 3, 4]) {
-    assert.equal(EXTRA[u].stretch.length, 8); assert.equal(EXTRA[u].challenge.length, 8);
+test("extra Stretch and Challenge words: on the unit theme lists, 12 + 12 for every unit, one gap, not already core, no repeats", () => {
+  const all = Object.values(EXTRA).flatMap(e => [...e.stretch, ...e.challenge]).map(x => x[0].toLowerCase());
+  assert.equal(new Set(all).size, all.length, "an extra word appears twice");
+  for (const u of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+    assert.equal(EXTRA[u].stretch.length, 12); assert.equal(EXTRA[u].challenge.length, 12);
     const core = new Set(CORE[u].flat().map(x => x[0]));
     [...EXTRA[u].stretch, ...EXTRA[u].challenge].forEach(([w, d, ex]) => { assert.ok(!core.has(w), w); assert.equal(ex.split("___").length, 2, w); assert.ok(d.length > 5); });
     let k = 1; const rnd = () => ((k = (k * 9301 + 49297) % 233280) / 233280);
@@ -249,5 +251,5 @@ test("extra Stretch and Challenge words: on the unit theme lists, 8 + 8, one gap
     const ch = P.vocabSet({ unit: u, n: 10, rnd, tier: 2 });
     assert.equal(ch.filter(q => q.extra).length, 4); assert.equal(ch.length, 10);
   }
-  assert.equal(extraWords(2, 1).length, 8);
+  assert.equal(extraWords(2, 1).length, 12);
 });
