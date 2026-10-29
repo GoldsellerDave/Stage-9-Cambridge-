@@ -217,7 +217,7 @@ export function boardTable(rows, unit) {
 export function trapsHTML(history, { links = true } = {}) {
   const stats = trapStats(history), weak = weakestTrap(history);
   if (!stats.some(t => t.total)) return `<p class="note">No listening questions with traps yet. Try the Listening Lab or a unit listening task.</p>`;
-  return `<div class="traps">${stats.map(t => { const p = t.total ? Math.round(100 * t.caught / t.total) : null, m = missionForTrap(t.trap);
+  return `<div class="traps">${stats.map(t => { const p = t.total ? Math.round(100 * t.rate) : null, m = missionForTrap(t.trap);
     return `<div class="trap${t.trap === weak ? " weak" : ""}"><span class="tname">${esc(TRAPS[t.trap].name)}</span>
       <span class="sbar"><i style="width:${p ?? 0}%"></i></span>
       <span class="note">${t.total ? `Caught ${t.caught} of ${t.total}` : "Not met yet"}</span>

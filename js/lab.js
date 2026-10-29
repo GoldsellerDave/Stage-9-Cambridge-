@@ -191,6 +191,201 @@ export const LAB = [
       hint: "She gives one good point, then \"But…\". What about clothes?", key: "for clothes I'd still rather go to a real shop", traps: [["It's convenient, of course", "true, but not the whole opinion"]] }] }
 ];
 
+/* ---------------- Stretch (level 1) and Challenge (level 2) clips ----------------
+   Stretch: longer clips, two or more traps, closer options. Challenge: Checkpoint level or above, answers implied,
+   three speakers, subtle paraphrase, heard once (once more after a wrong answer). */
+const HEAD = "bm_george";
+const EXTRA = {
+"lab-prime": [
+  { level: 1, clip: "lab-prime-s1", stem: "What does Carlos need to bring on the first day of the course?", keys: ["What", "Carlos", "bring", "first day"], type: "a thing or activity",
+    predict: [["a notebook", true], ["at nine", false], ["his passport", true], ["Room 4", false]],
+    lines: [["TEACHER", "Welcome to the summer photography course, Carlos. You don't need a camera on the first day. We'll lend you one."], ["CARLOS", "Great. Should I bring my laptop?"],
+            ["TEACHER", "Not until week two. On Monday just bring a notebook, because we'll be planning your first project."]],
+    voices: { TEACHER: WOMAN, CARLOS: B2 },
+    opts: [{ t: "a notebook" }, { t: "a camera", why: "They will lend him one." }, { t: "his laptop", why: "Not until week two." }, { t: "a packed lunch", why: "Lunch isn't mentioned." }],
+    hint: "Three things are mentioned. Which one is for Monday, the first day?", key: "On Monday just bring a notebook", traps: [["You don't need a camera", "they lend him one"], ["Not until week two", "the laptop comes later"]] },
+  { level: 1, clip: "lab-prime-s2", stem: "How long will the train journey take on Saturday?", keys: ["How long", "train", "journey", "Saturday"], type: "a time",
+    predict: [["three hours", true], ["the station", false], ["ninety minutes", true], ["£12", false]],
+    lines: [["GIRL", "How long does the train to the coast take? Two hours?"], ["MUM", "Usually it's about an hour and a half. But on Saturday there are engineering works, so we have to change at Bristol. The website says it'll take three hours in total."],
+            ["GIRL", "Three hours? I'll download a film, then."]],
+    voices: { GIRL: T1, MUM },
+    opts: [{ t: "three hours" }, { t: "two hours", why: "That was the girl's guess." }, { t: "an hour and a half", why: "That's the usual time. Is Saturday usual?" }, { t: "four hours", why: "Four isn't said." }],
+    hint: "The question says Saturday. What's different about Saturday?", key: "it'll take three hours in total", traps: [["Two hours?", "her guess"], ["about an hour and a half", "the usual time"]] },
+  { level: 1, clip: "lab-prime-s3", stem: "Why has Ella stopped going to the gym?", keys: ["Why", "Ella", "stopped", "gym"], type: "a reason",
+    predict: [["it's too expensive", true], ["on Mondays", false], ["she was injured", true], ["with her sister", false]],
+    lines: [["ELLA", "People think I gave up the gym because of the price, but actually my membership was a birthday present, so it was free. The truth is, I hurt my knee playing basketball, and the doctor told me to rest it for a couple of months."]],
+    voices: { ELLA: T3 },
+    opts: [{ t: "She hurt her knee." }, { t: "It was too expensive.", why: "That's what people think, but it was free." }, { t: "She got bored.", why: "She doesn't say she was bored." }, { t: "She plays basketball instead.", why: "Basketball is how it happened, not why she stopped." }],
+    hint: "Listen for \"The truth is\".", key: "I hurt my knee", traps: [["because of the price", "what people think"]] },
+  { level: 1, clip: "lab-prime-s4", stem: "Who is going to cook dinner tonight?", keys: ["Who", "cook", "dinner", "tonight"], type: "a person",
+    predict: [["Dad", true], ["pasta", false], ["the boy", true], ["at seven", false]],
+    lines: [["SON", "Is Mum cooking tonight?"], ["DAD", "She was going to, but she's working late. I'd cook, but I've got a meeting at seven."], ["SON", "So who's making dinner?"],
+            ["DAD", "You are! Grandma's recipe is on the fridge."]],
+    voices: { SON: B1, DAD },
+    opts: [{ t: "the boy" }, { t: "his mum", why: "She's working late." }, { t: "his dad", why: "He has a meeting." }, { t: "his grandma", why: "Only her recipe is there." }],
+    hint: "Each person is ruled out. Who is left?", key: "You are!", traps: [["She was going to", "Mum is working late"], ["I'd cook", "Dad has a meeting"], ["Grandma's recipe", "only her recipe"]] },
+  { level: 2, clip: "lab-prime-c1", stem: "What is the main reason Zara recommends the hostel?", keys: ["main reason", "Zara", "recommends", "hostel"], type: "a reason",
+    predict: [["it's cheap", true], ["it's near the station", true], ["last summer", false], ["the manager", false]],
+    lines: [["ZARA", "Look, the hostel isn't the cheapest in town, and it's a twenty-minute walk from the station, which is a pain with a suitcase. But the staff organise free walking tours every morning, and that's how I met most of the friends I travelled with afterwards. For me, that made it worth every penny."]],
+    voices: { ZARA: T2 },
+    opts: [{ t: "You can meet other travellers there." }, { t: "It is very cheap.", why: "She says it isn't the cheapest." }, { t: "It is close to the station.", why: "It's a twenty-minute walk: is that close?" }, { t: "The rooms are comfortable.", why: "The rooms aren't mentioned." }],
+    hint: "She gives two bad points first. What made it \"worth every penny\"?", key: "that's how I met most of the friends I travelled with", traps: [["isn't the cheapest in town", "a bad point"], ["a twenty-minute walk from the station", "a bad point"]] },
+  { level: 2, clip: "lab-prime-c2", stem: "What has the band decided to change for the next concert?", keys: ["band", "decided", "change", "next concert"], type: "a thing or activity",
+    predict: [["the place", true], ["the start time", true], ["very angry", false], ["Mr Lee", false]],
+    lines: [["DRUMMER", "Everyone complained the hall was too hot last time. Should we move to the sports centre?"], ["SINGER", "The sound in the sports centre is awful. I'd rather keep the hall and just start later, when it's cooler."],
+            ["MANAGER", "Starting later won't work. The caretaker locks up at ten. Let's keep the hall and the time, but hire some big fans."], ["SINGER", "Fine. Fans it is."]],
+    voices: { DRUMMER: T1, SINGER: B2, MANAGER: MAN },
+    opts: [{ t: "They will bring fans to cool the hall." }, { t: "They will move to the sports centre.", why: "The sound there is awful." }, { t: "They will start later.", why: "The caretaker locks up at ten." }, { t: "They will play in a smaller hall.", why: "They keep the same hall." }],
+    hint: "Two ideas are rejected. What does the manager suggest?", key: "hire some big fans", traps: [["move to the sports centre", "the sound is awful"], ["just start later", "the caretaker locks up"]] },
+  { level: 2, clip: "lab-prime-c3", stem: "How does Jack feel about his exam results?", keys: ["How", "Jack", "feel", "exam results"], type: "a feeling",
+    predict: [["relieved", true], ["proud", true], ["in July", false], ["maths", false]],
+    lines: [["FRIEND", "So? Did you get the grades you needed?"], ["JACK", "Well, maths was lower than I wanted, to be honest. But I got exactly what I needed for the science course, so I can stop worrying now. I didn't sleep at all last night!"]],
+    voices: { FRIEND: T2, JACK: B1 },
+    opts: [{ t: "relieved" }, { t: "disappointed", why: "Only maths was lower. Did he get what he needed?" }, { t: "nervous", why: "He was nervous last night. And now?" }, { t: "surprised", why: "He doesn't sound surprised." }],
+    hint: "\"I can stop worrying now.\" Which feeling is that?", key: "so I can stop worrying now", traps: [["maths was lower than I wanted", "one subject only"], ["I didn't sleep at all last night", "how he felt before"]] },
+  { level: 2, clip: "lab-prime-c4", stem: "How much does the family spend at the boat trip ticket office altogether?", keys: ["How much", "family", "spend", "altogether"], type: "a number or price",
+    predict: [["£48", true], ["£60", true], ["two hours", false], ["the harbour", false]],
+    lines: [["DAD", "Two adults and two children for the boat trip, please."], ["WOMAN", "Adults are twenty pounds and children are ten. Oh, but there's a family ticket for fifty pounds that covers all four of you."],
+            ["DAD", "Perfect, we'll take that. And two bottles of water, please."], ["WOMAN", "That's another two pounds for both. So fifty-two pounds altogether."]],
+    voices: { DAD, WOMAN },
+    opts: [{ t: "£52" }, { t: "£60", why: "That's four separate tickets. Did they buy those?" }, { t: "£50", why: "That's the ticket only. What else did he buy?" }, { t: "£54", why: "How much were both bottles of water?" }],
+    hint: "Listen for the family ticket, then add the water.", key: "So fifty-two pounds altogether", traps: [["Adults are twenty pounds and children are ten", "separate tickets"], ["a family ticket for fifty pounds", "the ticket only"]] }],
+"lab-synonym": [
+  { level: 1, clip: "lab-syn-s1", stem: "Why does Omar prefer the new library?", lines: [["OMAR", "The old library had more books, I'll admit. But the new one stays open until nine, so I can study there after football practice."]], voices: { OMAR: B2 },
+    opts: [{ t: "He can use it later in the evening." }, { t: "It has more books.", why: "The old library had more books." }, { t: "It's closer to the football pitch.", why: "Distance isn't mentioned." }, { t: "It's quieter.", why: "Noise isn't mentioned." }],
+    hint: "\"Open until nine\": which option says that in other words?", key: "stays open until nine", traps: [["The old library had more books", "about the old library"]] },
+  { level: 1, clip: "lab-syn-s2", stem: "What did Hana find difficult on the school exchange?", lines: [["HANA", "The family were lovely, and I got used to the food in a couple of days. What I struggled with was how quickly everyone spoke. I could read the signs, but I missed half of what people said to me."]], voices: { HANA: T1 },
+    opts: [{ t: "understanding what people said" }, { t: "getting used to the food", why: "That only took a couple of days." }, { t: "living with the host family", why: "She says they were lovely." }, { t: "reading signs", why: "She could read the signs." }],
+    hint: "\"Struggled with\" means found difficult. What comes after it?", key: "how quickly everyone spoke", traps: [["got used to the food", "not a problem"], ["I could read the signs", "not a problem"]] },
+  { level: 1, clip: "lab-syn-s3", stem: "What does the radio presenter say about this year's festival?", lines: [["PRESENTER", "If you went to the festival last year, you'll remember the long queues for food. This year the organisers have doubled the number of stalls, so you shouldn't have to wait nearly as long. Tickets, however, cost the same as before."]], voices: { PRESENTER: MAN },
+    opts: [{ t: "People won't wait as long for food." }, { t: "Tickets are more expensive.", why: "They cost the same as before." }, { t: "There are fewer food stalls.", why: "The number has doubled." }, { t: "The queues will be longer.", why: "Long queues were last year." }],
+    hint: "Last year or this year? Listen for \"This year\".", key: "you shouldn't have to wait nearly as long", traps: [["the long queues for food", "last year"], ["cost the same as before", "the price hasn't changed"]] },
+  { level: 1, clip: "lab-syn-s4", stem: "Why was the football match stopped?", lines: [["REPORTER", "The match was stopped in the second half. Despite reports on social media, nobody was hurt, and the heavy rain had finished by then. The referee simply couldn't see the far end of the pitch because of thick fog coming in from the river."]], voices: { REPORTER: WOMAN },
+    opts: [{ t: "It was hard to see." }, { t: "A player was injured.", why: "Nobody was hurt." }, { t: "It was raining heavily.", why: "The rain had finished." }, { t: "The river flooded the pitch.", why: "Something came from the river, but was it water?" }],
+    hint: "Two reasons are ruled out. What couldn't the referee do?", key: "couldn't see the far end of the pitch", traps: [["nobody was hurt", "ruled out"], ["the heavy rain had finished", "ruled out"]] },
+  { level: 2, clip: "lab-syn-c1", stem: "What is Mr Patel's view of the new timetable?", lines: [["MR PATEL", "I wouldn't say the new timetable is perfect. Some lessons are now straight after lunch, when students are half asleep. But on balance, having longer lessons means we can finish experiments properly, which we could never do before."]], voices: { "MR PATEL": MAN },
+    opts: [{ t: "Generally positive, despite some problems" }, { t: "Completely negative", why: "Listen to \"on balance\"." }, { t: "He has no opinion either way.", why: "He clearly has an opinion." }, { t: "Lessons should be shorter.", why: "He likes the longer lessons." }],
+    hint: "\"On balance\" introduces his overall view.", key: "on balance, having longer lessons means we can finish experiments properly", traps: [["I wouldn't say the new timetable is perfect", "a small problem, not his overall view"]] },
+  { level: 2, clip: "lab-syn-c2", stem: "What surprised Leila about the mountain village?", lines: [["LEILA", "Everyone said it would be freezing up there, and they were right. I needed three jumpers!"], ["GUIDE", "And what did you think of the people?"],
+      ["LEILA", "Everyone was friendly, as I'd heard. The thing I really didn't see coming was that hardly anyone had a car. People walked everywhere, or rode horses."]], voices: { LEILA: T3, GUIDE: WOMAN2 },
+    opts: [{ t: "how few people drove" }, { t: "how cold it was", why: "Everyone said it would be freezing, so she expected it." }, { t: "how friendly people were", why: "She'd heard that before, so she expected it." }, { t: "how many horses were for sale", why: "Nothing is for sale." }],
+    hint: "\"Didn't see coming\" means surprised. What comes after it?", key: "hardly anyone had a car", traps: [["they were right", "expected, not a surprise"], ["as I'd heard", "expected, not a surprise"]] },
+  { level: 2, clip: "lab-syn-c3", stem: "What does the scientist say about the new bridge?", lines: [["SCIENTIST", "Many people assume the bridge will damage the river, and frankly, that was my worry too at first. Having studied it for two years, though, I can tell you the fish population has, if anything, grown since it was built."]], voices: { SCIENTIST: WOMAN2 },
+    opts: [{ t: "It hasn't harmed the wildlife in the river." }, { t: "It has damaged the river.", why: "That was the worry. What did she find?" }, { t: "There are fewer fish now.", why: "The fish population has grown." }, { t: "It took two years to build.", why: "Two years is how long she studied it." }],
+    hint: "Listen for \"though\": what did her study show?", key: "the fish population has, if anything, grown", traps: [["will damage the river", "what people assume"], ["for two years", "how long she studied"]] },
+  { level: 2, clip: "lab-syn-c4", stem: "Why is Sofia giving up her part-time job?", lines: [["SOFIA", "It's not that I don't like the café. The money's fine, and my boss is really flexible. It's just that with exams starting in May, I can't afford to lose three evenings a week."]], voices: { SOFIA: T2 },
+    opts: [{ t: "She needs more time to study." }, { t: "She doesn't like the café.", why: "She says it's not that." }, { t: "She isn't paid enough.", why: "\"Can't afford\" here is about time, not money. The money's fine." }, { t: "Her boss isn't flexible.", why: "She says her boss is really flexible." }],
+    hint: "\"It's just that…\" gives the real reason. What is starting in May?", key: "with exams starting in May", traps: [["The money's fine", "ruled out"], ["my boss is really flexible", "ruled out"]] }],
+"lab-distractor": [
+  { level: 1, clip: "lab-dist-s1", stem: "What will Tom buy for his sister's birthday?", lines: [["TOM", "It's my sister's birthday on Friday. I thought about a book, but she reads everything on her phone."], ["FRIEND", "What about concert tickets?"],
+      ["TOM", "Too expensive. I was thinking of a scarf, but she's got loads."], ["FRIEND", "She loves cooking, doesn't she? A recipe book?"], ["TOM", "That's still a book! No, I'll get her a cooking class. She'll love it."]], voices: { TOM: B1, FRIEND: T1 },
+    opts: [{ t: "a cooking class" }, { t: "a book", why: "She reads on her phone." }, { t: "concert tickets", why: "They're too expensive." }, { t: "a scarf", why: "She has loads." }],
+    hint: "Four presents are mentioned. Which one does he decide on at the end?", key: "I'll get her a cooking class", traps: [["I thought about a book", "she reads on her phone"], ["concert tickets", "too expensive"], ["a scarf", "she has loads"]] },
+  { level: 1, clip: "lab-dist-s2", stem: "What time will the friends see the film?", lines: [["MIA", "The film's at six, right?"], ["SAM", "It was, but they've added an earlier showing at half past four."], ["MIA", "I've got piano until five."],
+      ["SAM", "OK, then let's stick with the original time. I'll book seats for six."]], voices: { MIA: T2, SAM: B2 },
+    opts: [{ t: "6.00" }, { t: "4.30", why: "Mia has piano then." }, { t: "5.00", why: "That's when piano finishes." }, { t: "5.30", why: "Half past five isn't said." }],
+    hint: "Listen for \"stick with the original time\". What was the original time?", key: "I'll book seats for six", traps: [["half past four", "the earlier showing"], ["piano until five", "her lesson"]] },
+  { level: 1, clip: "lab-dist-s3", stem: "Where will the class go on their end-of-year trip?", lines: [["TEACHER", "Right, the results of the vote are in. The theme park got the most votes, but it's closed for repairs in June. The zoo came second, but we went there last year. So we'll go with the third choice, the beach, as long as the weather's good."]], voices: { TEACHER: MAN },
+    opts: [{ t: "the beach" }, { t: "the theme park", why: "It's closed in June." }, { t: "the zoo", why: "They went there last year." }, { t: "the museum", why: "The museum isn't mentioned." }],
+    hint: "The first two choices are ruled out. Listen for \"So\".", key: "the third choice, the beach", traps: [["The theme park got the most votes", "closed in June"], ["The zoo came second", "went last year"]] },
+  { level: 1, clip: "lab-dist-s4", stem: "What will Anna do first after school?", lines: [["MUM", "Anna, homework first, then you can see your friends."], ["ANNA", "But they're only at the park until five! Can't I go now and do my homework later?"],
+      ["MUM", "Hmm. Take the dog for a walk on the way, then, and you can go to the park. Homework at six."], ["ANNA", "Deal!"]], voices: { MUM, ANNA: T3 },
+    opts: [{ t: "walk the dog" }, { t: "do her homework", why: "That was Mum's first plan. What did they agree?" }, { t: "go straight to the park", why: "What does she do on the way?" }, { t: "tidy her room", why: "Her room isn't mentioned." }],
+    hint: "The plan changes. What does Anna do on the way to the park?", key: "Take the dog for a walk on the way", traps: [["homework first", "Mum's first plan"], ["Homework at six", "later"]] },
+  { level: 2, clip: "lab-dist-c1", stem: "Which club does Max finally join?", lines: [["TEACHER", "Max, you've signed up for chess, drama and robotics. You can only choose one."], ["MAX", "Chess, then. I've played since I was six."],
+      ["FRIEND", "But chess is on Thursdays, when we've got football training."], ["MAX", "Oh, right. Drama's on Thursdays too. I suppose that leaves robotics."], ["TEACHER", "Good choice. That's on Tuesdays."]], voices: { TEACHER: WOMAN, MAX: B2, FRIEND: B1 },
+    opts: [{ t: "robotics" }, { t: "chess", why: "It clashes with football training." }, { t: "drama", why: "It's on Thursdays too." }, { t: "football", why: "Football isn't one of the clubs he signed up for." }],
+    hint: "Two clubs clash with something. Which one is left?", key: "I suppose that leaves robotics", traps: [["Chess, then", "clashes with football"], ["Drama's on Thursdays too", "clashes too"]] },
+  { level: 2, clip: "lab-dist-c2", stem: "What will the weather be like on Sunday afternoon?", lines: [["PRESENTER", "It'll be a wet start to the weekend, with heavy rain on Saturday. Sunday morning will be cloudy, and although some forecasts are showing showers, we think they'll stay out at sea. By the afternoon the cloud should clear, giving long sunny spells."]], voices: { PRESENTER: WOMAN2 },
+    opts: [{ t: "mostly sunny" }, { t: "rainy", why: "Heavy rain is on Saturday." }, { t: "cloudy", why: "That's Sunday morning." }, { t: "showery", why: "The showers should stay out at sea." }],
+    hint: "Listen for the day and the time of day together.", key: "giving long sunny spells", traps: [["heavy rain on Saturday", "Saturday"], ["Sunday morning will be cloudy", "the morning"], ["some forecasts are showing showers", "they'll stay at sea"]] },
+  { level: 2, clip: "lab-dist-c3", stem: "What does Nina spend most of her time doing at the animal shelter now?", lines: [["NINA", "When I started at the shelter, I mostly cleaned the cages, which wasn't much fun. These days the younger volunteers do that. I sometimes help at the front desk when it's busy, but what I spend most of my time on now is training the dogs, so they're easier to rehome."]], voices: { NINA: T1 },
+    opts: [{ t: "training dogs" }, { t: "cleaning cages", why: "That was when she started." }, { t: "working at the front desk", why: "Only sometimes, when it's busy." }, { t: "finding homes for the animals", why: "That's the reason for her work, not what she does." }],
+    hint: "\"Most of my time\" and \"now\" are the key words.", key: "training the dogs", traps: [["cleaned the cages", "when she started"], ["help at the front desk", "only sometimes"], ["easier to rehome", "the reason"]] },
+  { level: 2, clip: "lab-dist-c4", stem: "How will the boys get home after the match?", lines: [["LUKE", "Dad, can you pick us up after the match?"], ["DAD", "I'll be at work. Just get the bus."], ["JOE", "The last bus goes at half past nine, and the match finishes at ten."],
+      ["DAD", "Ah. Then wait in the stadium café and I'll come for you after work. It's on my way."], ["LUKE", "Thanks, Dad!"]], voices: { LUKE: B1, JOE: B2, DAD },
+    opts: [{ t: "Dad will collect them." }, { t: "by bus", why: "The last bus leaves before the match ends." }, { t: "They will walk.", why: "Walking isn't mentioned." }, { t: "by taxi", why: "A taxi isn't mentioned." }],
+    hint: "Dad changes his answer. Why can't they get the bus?", key: "I'll come for you after work", traps: [["Just get the bus", "the last bus is too early"]] }],
+"lab-herring": [
+  { level: 1, clip: "lab-herr-s1", stem: "What did Jamal do last weekend?", lines: [["FRIEND", "Did you go to the climbing centre at the weekend?"], ["JAMAL", "That's next weekend. I was supposed to go to my cousin's wedding, but it was moved, so I ended up helping my dad paint the kitchen."], ["FRIEND", "Fun!"]], voices: { FRIEND: T2, JAMAL: B2 },
+    opts: [{ t: "He painted a room." }, { t: "He went climbing.", why: "That's next weekend." }, { t: "He went to a wedding.", why: "The wedding was moved." }, { t: "He visited his cousin.", why: "Did the wedding happen?" }],
+    hint: "Check when each thing happens. Listen for \"I ended up\".", key: "helping my dad paint the kitchen", traps: [["That's next weekend", "the future"], ["my cousin's wedding", "it was moved"]] },
+  { level: 1, clip: "lab-herr-s2", stem: "What does Rosa's brother study at university?", lines: [["ROSA", "I'm hoping to study law, like my mum did. My brother was always told he should do medicine, but he chose history in the end, and now he wants to be a museum guide."]], voices: { ROSA: T1 },
+    opts: [{ t: "history" }, { t: "law", why: "That's Rosa's plan, and her mum's subject." }, { t: "medicine", why: "That's what he was told to do." }, { t: "tourism", why: "He wants to be a guide, but what does he study?" }],
+    hint: "The question is about the brother. Listen for \"in the end\".", key: "he chose history in the end", traps: [["study law", "Rosa's plan"], ["medicine", "what he was told"]] },
+  { level: 1, clip: "lab-herr-s3", stem: "Where does the airport coach usually leave from?", lines: [["ANNOUNCER", "Please note that because of building work, tomorrow's coach to the airport will leave from the bus station on King Street. Normally, of course, it leaves from outside the town hall, and it will be back there from Monday."]], voices: { ANNOUNCER: WOMAN2 },
+    opts: [{ t: "outside the town hall" }, { t: "the bus station", why: "That's only tomorrow." }, { t: "King Street", why: "That's where the bus station is, for tomorrow." }, { t: "the airport", why: "That's where the coach goes." }],
+    hint: "The question says \"usually\". Listen for \"Normally\".", key: "it leaves from outside the town hall", traps: [["the bus station on King Street", "tomorrow only"]] },
+  { level: 1, clip: "lab-herr-s4", stem: "Who taught Lily to swim?", lines: [["LILY", "My mum's a swimming teacher, so everyone assumes she taught me. Actually, she was too busy teaching other people's children! It was my grandad who took me to the pool every Sunday until I could swim."]], voices: { LILY: T3 },
+    opts: [{ t: "her grandfather" }, { t: "her mum", why: "That's what everyone assumes." }, { t: "a teacher at school", why: "School isn't mentioned." }, { t: "her dad", why: "Her dad isn't mentioned." }],
+    hint: "Listen for \"Actually\" and \"It was…\".", key: "It was my grandad", traps: [["My mum's a swimming teacher", "what everyone assumes"]] },
+  { level: 2, clip: "lab-herr-c1", stem: "What will the woman do differently in her garden next year?", lines: [["GARDENER", "This year I grew tomatoes, beans and potatoes. The tomatoes were a disaster because of the cold spring, but I'll still plant them again. Next year, though, I won't bother with potatoes. They take up so much space, and they're cheap in the shops. I'll use that space for strawberries."]], voices: { GARDENER: WOMAN2 },
+    opts: [{ t: "grow strawberries instead of potatoes" }, { t: "stop growing tomatoes", why: "She'll still plant them again." }, { t: "grow more beans", why: "Nothing changes for the beans." }, { t: "plant potatoes earlier", why: "Will she plant potatoes at all?" }],
+    hint: "This year or next year? What does she stop, and what replaces it?", key: "I'll use that space for strawberries", traps: [["The tomatoes were a disaster", "she'll still plant them"]] },
+  { level: 2, clip: "lab-herr-c2", stem: "Which part of the school trip did Ali enjoy most?", lines: [["TEACHER", "Ali, everyone's saying the castle was the best part."], ["ALI", "It was great, but the guide talked for ages. For me, it was the boat trip back. We saw seals!"],
+      ["TEACHER", "I thought you'd say the picnic."], ["ALI", "That was good too, but nothing beats seals."]], voices: { TEACHER: MAN, ALI: B1 },
+    opts: [{ t: "the boat trip" }, { t: "the castle", why: "That's everyone else's opinion." }, { t: "the picnic", why: "That's the teacher's guess." }, { t: "the guide's talk", why: "The guide talked for ages." }],
+    hint: "Three people's views. Which one is Ali's?", key: "it was the boat trip back", traps: [["the castle was the best part", "everyone else"], ["the picnic", "the teacher's guess"]] },
+  { level: 2, clip: "lab-herr-c3", stem: "Why did the restaurant close, according to the owner?", lines: [["OWNER", "The newspaper said we closed because we'd lost customers, and it's true that last winter was quiet. But by the summer we were full every night. No, the real reason is that the landlord wanted to double the rent, and no restaurant can survive that."]], voices: { OWNER: MAN },
+    opts: [{ t: "The rent became too high." }, { t: "It lost its customers.", why: "That's the newspaper's reason. Is the owner's the same?" }, { t: "It was always quiet.", why: "Only last winter. In summer it was full." }, { t: "The owner wanted to retire.", why: "Retiring isn't mentioned." }],
+    hint: "\"According to the owner\": listen for \"the real reason\".", key: "the landlord wanted to double the rent", traps: [["we'd lost customers", "the newspaper's claim"], ["last winter was quiet", "only last winter"]] },
+  { level: 2, clip: "lab-herr-c4", stem: "What will Maria do when she leaves school?", lines: [["DAD", "Have you decided about university?"], ["MARIA", "I'm still going, but not straight away. Most of my friends are going travelling for a year, but I'd rather earn some money first, so I'm going to work at Aunt Sofia's hotel for a year."], ["DAD", "Sensible."]], voices: { DAD, MARIA: T2 },
+    opts: [{ t: "work for a year" }, { t: "go straight to university", why: "She's going, but not straight away." }, { t: "go travelling", why: "That's her friends' plan." }, { t: "open a hotel", why: "She'll work at her aunt's hotel." }],
+    hint: "The question is about leaving school, so what comes first?", key: "work at Aunt Sofia's hotel for a year", traps: [["not straight away", "university comes later"], ["Most of my friends are going travelling", "her friends"]] }],
+"lab-numbers": [
+  { level: 1, clip: "lab-num-s1", stem: "Which room is the Year 9 exam in?", lines: [["TEACHER", "The exam is in Room 213. Sorry, no, that's the room for Year 8. Year 9 are in Room 231, on the second floor."]], voices: { TEACHER: MAN },
+    opts: [{ t: "231" }, { t: "213", why: "That's Year 8's room." }, { t: "23", why: "Listen to all three numbers." }, { t: "321", why: "Listen to the order of the numbers." }],
+    hint: "Listen for \"Sorry, no\".", key: "Year 9 are in Room 231", traps: [["Room 213", "Year 8's room"]] },
+  { level: 1, clip: "lab-num-s2", stem: "How many people came to the school concert?", lines: [["TEACHER", "We printed three hundred tickets and sold all of them, and then another fifty people paid at the door. So a record three hundred and fifty people came!"]], voices: { TEACHER: WOMAN2 },
+    opts: [{ t: "350" }, { t: "300", why: "Those are the tickets sold before. Who else came?" }, { t: "50", why: "Those are only the people who paid at the door." }, { t: "315", why: "Fifteen or fifty?" }],
+    hint: "Add the people who paid at the door.", key: "three hundred and fifty people came", traps: [["three hundred tickets", "before the concert"], ["another fifty", "extra only"]] },
+  { level: 1, clip: "lab-num-s3", stem: "What is the name of the girl's street?", lines: [["GIRL", "We live at number fourteen, Thornley Road."], ["MAN", "How do you spell that?"], ["GIRL", "T, H, O, R, N, L, E, Y. Thornley."]], voices: { GIRL: T1, MAN },
+    opts: [{ t: "Thornley" }, { t: "Thornly", why: "Count the letters at the end again." }, { t: "Thorneley", why: "Is there an E after the N?" }, { t: "Thornlee", why: "Listen to the last two letters again." }],
+    hint: "Write each letter as she says it.", key: "T, H, O, R, N, L, E, Y", traps: [] },
+  { level: 1, clip: "lab-num-s4", stem: "What time does the second half of the match start?", lines: [["COACH", "Kick-off is at half past two. Each half is forty-five minutes, and the break in the middle is fifteen minutes."]], voices: { COACH: MAN },
+    opts: [{ t: "3.30" }, { t: "3.15", why: "That's when the first half ends. Add the break." }, { t: "2.45", why: "Forty-five minutes is a whole half." }, { t: "4.15", why: "That's when the match ends." }],
+    hint: "Kick-off, plus one half, plus the break.", key: "the break in the middle is fifteen minutes", traps: [["Kick-off is at half past two", "the first half"]] },
+  { level: 2, clip: "lab-num-c1", stem: "How old is Ben's sister?", lines: [["BEN", "I'm fourteen, and my brother's four years older than me. My sister is exactly half his age."]], voices: { BEN: B2 },
+    opts: [{ t: "9" }, { t: "18", why: "That's the brother's age." }, { t: "7", why: "Half of Ben's age. Is she half Ben's age?" }, { t: "10", why: "Work out the brother's age first." }],
+    hint: "Work out the brother's age first, then halve it.", key: "My sister is exactly half his age", traps: [["four years older than me", "the brother"]] },
+  { level: 2, clip: "lab-num-c2", stem: "When is Sam's dentist appointment now?", lines: [["RECEPTIONIST", "Hello, this is Smile Dental calling for Sam Price. Your appointment on Tuesday the third at ten fifteen has had to be moved. The dentist can see you on Thursday the fifth instead, at the same time. If that's not convenient, please give us a call."]], voices: { RECEPTIONIST: WOMAN },
+    opts: [{ t: "Thursday 5th at 10.15" }, { t: "Tuesday 3rd at 10.15", why: "That's the old appointment." }, { t: "Thursday 5th at 10.50", why: "\"The same time\": what was the time?" }, { t: "Tuesday 5th at 10.15", why: "Check the day again." }],
+    hint: "The day changes. Does the time change?", key: "Thursday the fifth instead, at the same time", traps: [["Tuesday the third at ten fifteen", "the old appointment"]] },
+  { level: 2, clip: "lab-num-c3", stem: "How much change does the boy get?", lines: [["BOY", "Two sandwiches and an orange juice, please."], ["MAN", "Sandwiches are three fifty each, and the juice is two pounds. That's nine pounds."], ["BOY", "Here's a twenty."],
+      ["MAN", "Oh, wait, the juice is free with two sandwiches today. So that's seven pounds, and here's your change."]], voices: { BOY: B1, MAN },
+    opts: [{ t: "£13" }, { t: "£11", why: "That's the change from nine pounds. Did the price change?" }, { t: "£7", why: "That's the price, not the change." }, { t: "£9", why: "That's the first price." }],
+    hint: "Find the final price, then take it away from twenty.", key: "So that's seven pounds", traps: [["That's nine pounds", "before the free juice"]] },
+  { level: 2, clip: "lab-num-c4", stem: "What is the email address for the photo competition?", lines: [["TEACHER", "Send your photos to m dot Hughes, that's H, U, G, H, E, S, at riverside school dot org. Riverside school is all one word."]], voices: { TEACHER: WOMAN2 },
+    opts: [{ t: "m.hughes@riversideschool.org" }, { t: "m.huges@riversideschool.org", why: "Count the letters in the name again." }, { t: "mhughes@riversideschool.org", why: "Listen for \"dot\" after the m." }, { t: "m.hughes@riverside.school.org", why: "\"All one word\": is there a dot in the middle?" }],
+    hint: "Listen for \"dot\", the spelling, and \"all one word\".", key: "H, U, G, H, E, S", traps: [] }],
+"lab-opinion": [
+  { level: 1, clip: "lab-op-s1", stem: "What does Kai think of the new rule about phones at lunch?", lines: [["KAI", "At first I thought banning phones at lunch was ridiculous. But honestly? People actually talk to each other now, and I've joined the chess club. I wouldn't want to go back."]], voices: { KAI: B1 },
+    opts: [{ t: "He now supports it." }, { t: "He thinks it's ridiculous.", why: "That was at first. And now?" }, { t: "He wants phones back at lunch.", why: "He wouldn't want to go back." }, { t: "He doesn't care either way.", why: "He has a clear opinion." }],
+    hint: "His opinion changes. Listen to the end.", key: "I wouldn't want to go back", traps: [["At first I thought banning phones at lunch was ridiculous", "his first opinion"]] },
+  { level: 1, clip: "lab-op-s2", stem: "How does Mrs Green feel about the students' poster?", lines: [["MRS GREEN", "Well, the poster is very colourful, and I can see you've spent a lot of time on it. I'm just not sure where your information comes from, and some of the facts look a bit… surprising."]], voices: { "MRS GREEN": WOMAN },
+    opts: [{ t: "She has doubts about the facts." }, { t: "She thinks it's excellent.", why: "Listen to what comes after the praise." }, { t: "She thinks it's too colourful.", why: "Colourful is a good point for her." }, { t: "She thinks they didn't work hard.", why: "She says they spent a lot of time on it." }],
+    hint: "Teachers often praise first. Listen for \"I'm just not sure\".", key: "I'm just not sure where your information comes from", traps: [["the poster is very colourful", "polite praise first"]] },
+  { level: 1, clip: "lab-op-s3", stem: "What do the two friends disagree about?", lines: [["AVA", "The ending was so sad! I cried."], ["LEO", "Same. I thought the middle was a bit slow, though."], ["AVA", "Really? I couldn't put it down."]], voices: { AVA: T3, LEO: B2 },
+    opts: [{ t: "the middle of the book" }, { t: "the ending", why: "Leo says \"Same\": they agree." }, { t: "the main character", why: "Characters aren't mentioned." }, { t: "the length of the book", why: "Length isn't mentioned." }],
+    hint: "\"Same\" means agree. \"Really?\" shows disagreement. What is it about?", key: "I thought the middle was a bit slow", traps: [["The ending was so sad", "they agree on this"]] },
+  { level: 1, clip: "lab-op-s4", stem: "Why does the speaker talk about her grandmother?", lines: [["SPEAKER", "People say cooking takes too long. My grandmother fed a family of seven every day and still had time to run a shop. It's not about time. It's about planning."]], voices: { SPEAKER: WOMAN2 },
+    opts: [{ t: "to show that busy people can still cook" }, { t: "to say her grandmother was a great cook", why: "That isn't her point." }, { t: "to complain about cooking", why: "She's defending cooking." }, { t: "to describe her big family", why: "The family is an example, not the point." }],
+    hint: "What point does the example support? Listen to the last sentence.", key: "It's about planning", traps: [["fed a family of seven", "an example, not the point"]] },
+  { level: 2, clip: "lab-op-c1", stem: "What is Daniel's opinion of the new sports stadium?", lines: [["DANIEL", "Nobody can deny it's an impressive building. But whether a town this size needed something so enormous, when the swimming pool has been closed for two years, is another question."]], voices: { DANIEL: MAN },
+    opts: [{ t: "The money could have been better spent." }, { t: "He's proud of the impressive building.", why: "He admits it's impressive, but…" }, { t: "The town needed a bigger stadium.", why: "He questions whether it needed one so big." }, { t: "The swimming pool should stay closed.", why: "He's unhappy that it's closed." }],
+    hint: "\"Is another question\" means he doubts it. What does he compare the stadium with?", key: "is another question", traps: [["Nobody can deny it's an impressive building", "he admits this, but…"]] },
+  { level: 2, clip: "lab-op-c2", stem: "What is the girl's attitude to her brother's cooking?", lines: [["GIRL", "Oh, my brother's cooking is always an adventure. Last night he made pasta that was somehow burnt and raw at the same time. Still, at least he tries, which is more than I do!"]], voices: { GIRL: T1 },
+    opts: [{ t: "She jokes about it, but she's glad he tries." }, { t: "She thinks he's a great cook.", why: "\"An adventure\" is a joke here: the pasta was burnt and raw." }, { t: "She refuses to eat it.", why: "She doesn't say that." }, { t: "She cooks better than him.", why: "She says she doesn't even try." }],
+    hint: "Listen to \"Still, at least…\".", key: "at least he tries", traps: [["always an adventure", "a joke, not praise"]] },
+  { level: 2, clip: "lab-op-c3", stem: "What does the head teacher think about the uniform survey?", lines: [["HEAD", "Seventy per cent of students voted to get rid of ties, and I take that seriously. Parents, however, were split down the middle. So rather than make a decision now, I'd like the student council to suggest a compromise."]], voices: { HEAD },
+    opts: [{ t: "More discussion is needed before deciding." }, { t: "Ties should go straight away.", why: "He takes it seriously, but does he decide now?" }, { t: "Students' views don't matter.", why: "He says he takes them seriously." }, { t: "Parents agree with the students.", why: "Parents were split." }],
+    hint: "Listen for \"rather than…\".", key: "rather than make a decision now", traps: [["I take that seriously", "he listens, but doesn't decide"], ["split down the middle", "not agreement"]] },
+  { level: 2, clip: "lab-op-c4", stem: "How does Sara feel about moving to a new school?", lines: [["FRIEND", "Are you excited about the new school?"], ["SARA", "Everyone keeps asking me that. I mean, the art department is amazing, and it's much closer to home. I just… I've been with you lot since I was five, you know?"]], voices: { FRIEND: T3, SARA: T2 },
+    opts: [{ t: "sad about leaving her friends" }, { t: "excited about the art department", why: "That's a good point, but listen to how she finishes." }, { t: "worried about the journey", why: "It's closer to home." }, { t: "angry with her parents", why: "Her parents aren't mentioned." }],
+    hint: "Good points first, then \"I just…\". What is she really feeling?", key: "I've been with you lot since I was five", traps: [["the art department is amazing", "a good point, not her feeling"], ["much closer to home", "a good point"]] }]
+};
+for (const m of LAB) { m.items.forEach(it => { if (it.level == null) it.level = 0; }); m.items.push(...(EXTRA[m.id] || [])); }
+
 export const LAB_CLIPS = LAB.flatMap(m => m.items.map(it => ({ id: it.clip, lines: it.lines, voices: it.voices })));
 export const labMission = id => LAB.find(m => m.id === id);
 export const isLab = id => /^lab-/.test(id || "") && !!labMission(id);
@@ -209,21 +404,56 @@ export const UNIT_TRAPS = {
 export const unitTrap = (taskId, k) => (UNIT_TRAPS[taskId] || [])[k] || null;
 
 // The trap tracker: listening answers with a trap tag, counted per trap. caught = not right first time.
+// rate (for the bar and the weakest trap) counts a harder question right as more: Stretch 1.5, Challenge 2.
 export function trapStats(history) {
-  const out = Object.fromEntries(Object.keys(TRAPS).filter(k => k !== "prime").map(k => [k, { trap: k, total: 0, caught: 0 }]));
-  history.forEach(h => (h.answers || []).forEach(a => { if (a.skill === "Listening" && a.trap && out[a.trap]) { out[a.trap].total++; if (!a.first_try) out[a.trap].caught++; } }));
-  return Object.values(out);
+  const out = Object.fromEntries(Object.keys(TRAPS).filter(k => k !== "prime").map(k => [k, { trap: k, total: 0, caught: 0, w: 0 }]));
+  history.forEach(h => (h.answers || []).forEach(a => { const t = a.skill === "Listening" && a.trap && out[a.trap]; if (!t) return;
+    t.total++; if (!a.first_try) { t.caught++; t.w++; } else t.w += 1 + 0.5 * (a.level || 0); }));
+  return Object.values(out).map(({ w, ...t }) => ({ ...t, rate: w ? t.caught / w : 0 }));
 }
 // The trap that catches this student most (at least 2 times caught and a third of answers), or null.
 export function weakestTrap(history) {
-  const s = trapStats(history).filter(t => t.caught >= 2 && t.caught / t.total >= 1 / 3).sort((a, b) => b.caught / b.total - a.caught / a.total || b.caught - a.caught);
+  const s = trapStats(history).filter(t => t.caught >= 2 && t.rate >= 1 / 3).sort((a, b) => b.rate - a.rate || b.caught - a.caught);
   return s.length ? s[0].trap : null;
 }
 export const missionForTrap = trap => LAB.find(m => m.trap === trap);
-export const XP_LAB = { first: 10, hint: 4, step: 2, finish: 10 };
+export const XP_LAB = { first: [10, 15, 20], hint: 4, step: 2, finish: 10 };
 export function labXP(results) {
-  return results.reduce((t, r) => t + (r.skill === "Listening strategy" ? (r.first_try ? XP_LAB.step : 0) : r.support === "none" ? XP_LAB.first : r.support === "hint" ? XP_LAB.hint : 0), 0) + XP_LAB.finish;
+  return results.reduce((t, r) => t + (r.skill === "Listening strategy" ? (r.first_try ? XP_LAB.step : 0) : r.support === "none" ? XP_LAB.first[r.level || 0] : r.support === "hint" ? XP_LAB.hint : 0), 0) + XP_LAB.finish;
 }
+
+/* Adaptive missions. Every mission is 6 questions. 2 right first time in a row: up a level. 2 missed in a row: a strategy
+   rescue (tips, guided replay of the missed clip), then down a level. Challenge clips are heard once (+1 after a wrong answer). */
+export const LAB_LEVELS = ["Core", "Stretch", "Challenge"];
+export const MISSION_LEN = 6;
+export const LAB_PLAYS = [2, 2, 1];
+export const isLabAttempt = h => h.mode === "listening" && isLab(h.text_id);
+const labAnswers = h => (h.answers || []).filter(a => a.skill === "Listening" && a.lab);
+// Start where the last Lab mission ended; otherwise at the student's usual level (tier).
+export function labStartLevel(history, tier = 0) {
+  const last = history.filter(isLabAttempt).sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || ""))).map(labAnswers).find(a => a.length);
+  if (!last) return tier;
+  const a = last[last.length - 1];
+  return Math.max(0, Math.min(2, a.next ?? a.level ?? 0));
+}
+export const seenClips = history => new Set(history.filter(isLabAttempt).flatMap(h => labAnswers(h).map(a => a.lab)));
+// The next question: the wanted level first (then the nearest level), not used in this run, new clips before seen ones.
+export function nextLabItem(m, level, used = [], seen = new Set()) {
+  for (const l of [level, level - 1, level + 1, level - 2, level + 2].filter(x => x >= 0 && x <= 2)) {
+    const pool = m.items.filter(it => it.level === l && !used.includes(it.clip));
+    if (pool.length) return pool.find(it => !seen.has(it.clip)) || pool[0];
+  }
+  return null;
+}
+// After an answer: { level, up, down, rescue, rightRow, wrongRow }.
+export function labStep(state, firstTry) {
+  let { level, rightRow = 0, wrongRow = 0 } = state, up = false, rescue = false;
+  if (firstTry) { rightRow++; wrongRow = 0; if (rightRow >= 2 && level < 2) { level++; up = true; rightRow = 0; } }
+  else { wrongRow++; rightRow = 0; if (wrongRow >= 2) { rescue = true; wrongRow = 0; } }
+  return { level, up, rescue, rightRow, wrongRow };
+}
+export const labPeak = answers => answers.filter(a => a.skill === "Listening").reduce((p, a) => Math.max(p, a.level || 0), 0);
+
 // Splits a line of the transcript into plain, key and trap parts for highlighting.
 export function markLine(text, key, traps = []) {
   const marks = [];
