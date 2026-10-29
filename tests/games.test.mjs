@@ -110,3 +110,17 @@ test("Trap Dodger answers feed the trap tracker", async () => {
   const s = Object.fromEntries(Lab.trapStats([{ answers }]).map(t => [t.trap, t]));
   assert.equal(s.distractor.caught, 1); assert.equal(s.synonym.total, 1);
 });
+
+test("Trap Dodger plays clips the student hasn't heard before repeating any", () => {
+  const h = (at, clips) => ({ created_at: at, answers: clips.map(clip => ({ skill: "Trap game", clip, trap: "distractor", first_try: true })) });
+  const pool = G.dodgePool(0).map(x => x.clip);
+  const history = [h("2026-10-28T02:00:00Z", pool.slice(0, 10)), h("2026-10-29T02:00:00Z", pool.slice(10, 20)),
+    { created_at: "2026-10-29T03:00:00Z", answers: [{ skill: "Listening", lab: pool[20], trap: "synonym", first_try: true }] }];
+  const seen = G.dodgeSeen(history);
+  assert.equal(seen.size, 21);
+  const used = [];
+  for (let i = 0; i < 14; i++) used.push(G.dodgeItem(0, used, Math.random, seen).clip);
+  assert.ok(used.every(c => !seen.has(c)), "the 14 never-heard Core clips come first");
+  for (let i = 0; i < 10; i++) used.push(G.dodgeItem(0, used, Math.random, seen).clip);
+  assert.deepEqual(new Set(used.slice(14)), new Set(pool.slice(0, 10)), "then the clips heard longest ago");
+});
