@@ -2076,11 +2076,13 @@ function practiceDone() {
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished</p><h1>Well done, ${U.esc(me.name.split(" ").pop())}</h1>
     <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${text.slots.length}</b><span>right first time</span></div>
       <div class="stat"><b>${E.LEVELS[r.level]}</b><span>finished on</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
+    <div class="sumcards">
+      <div class="sumcard good"><p class="sumhead">✓ Strong</p>${strong.length ? `<div class="sumchips">${strong.map(x => `<span class="schip">${U.esc(x)}</span>`).join("")}</div>` : `<p>Keep going, you will get there.</p>`}</div>
+      <div class="sumcard next${practise.length ? " flash" : ""}"><p class="sumhead">🎯 Practise next</p>${practise.length ? `<div class="sumchips">${practise.map(x => `<span class="schip">${U.esc(x)}</span>`).join("")}</div>`
+        : `<p>${r.level < text.levels.length - 1 ? `Nothing. Try to finish on the ${E.LEVELS[r.level + 1]} text next time.` : "Nothing. Brilliant work!"}</p>`}</div></div>
     ${levelUpHTML(R.levelUp)}
     ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 texts this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     ${R.replay ? `<p class="note">You have read this text before, so this time earns half XP.</p>` : ""}
-    <div class="panel"><p style="margin:0"><b>Strong:</b> ${strong.length ? U.esc(strong.join(", ")) : "Keep going, you will get there."}</p>
-      <p style="margin:0"><b>Practise next:</b> ${practise.length ? U.esc(practise.join(", ")) : (r.level < text.levels.length - 1 ? `Nothing. Try to finish on the ${E.LEVELS[r.level + 1]} text next time.` : "Nothing. Brilliant work!")}</p></div>
     ${U.resultRows(text.slots, r.results)}<p class="note">Text path: ${U.esc(path)}</p>
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="home">Back to home</button><a class="btn alt" href="#leaderboard" id="lb">See the leaderboard</a></div></div>`;
