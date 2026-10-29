@@ -35,6 +35,7 @@ export function textTitle(id) {
   m = /^escape-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} escape room`;
   m = /^train-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} Word Train`;
   m = /^speed-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} Speed Read`;
+  m = /^dodge-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} Trap Dodger`;
   m = /^boss-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} final challenge`;
   m = /^grammar-(\d\.\d)$/.exec(id); if (m) return `Grammar ${m[1]}`;
   return id;
