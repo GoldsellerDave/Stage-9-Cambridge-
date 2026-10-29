@@ -107,8 +107,8 @@ const CROWDS_SLOTS = [
 /* ---------- 2. An eco-camping weekend in a national park ---------- */
 const CAMP_RULES = [
  {label:"take rubbish home", k:["rubbish","litter","trash","garbage","waste","bin"]},
- {label:"no fires", k:["fire","burn","cook","stove"]},
- {label:"be quiet", k:["quiet","noise","loud","music"]},
+ {label:"fires only in the fire area", k:["fire","burn","cook","stove"]},
+ {label:"no music after nine", k:["quiet","noise","loud","music"]},
  {label:"don't feed animals", k:["feed","food","animal","monkey"]}];
 const BUG_CAUSE = {label:"mosquitoes / insects", k:["mosquito","insect","bug","bite","bitten"]};
 const BUG_RESULT = {label:"repellent", k:["repellent","spray","cream","sleeve","cover"]};
@@ -209,7 +209,7 @@ const CAMP_SLOTS = [
 
 /* ---------- 3. Active holidays ---------- */
 const ACTIVE_BENEFITS = [
- {label:"fitness / health", k:["fit","health","exercise","body","strong","active"]},
+ {label:"fitness / health", k:["fit","fitter","fitness","health","exercise","body","strong","active"]},
  {label:"confidence", k:["confiden","brave","believe","proud","self"]},
  {label:"friends", k:["friend","people","social","team","together"]},
  {label:"less screen time", k:["screen","phone","device","online"]}];

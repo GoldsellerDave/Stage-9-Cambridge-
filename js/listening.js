@@ -72,7 +72,7 @@ export const LISTENING = [
    ["RANGER", "If you get lost, don't panic. Every ticket has the emergency phone number printed on the back, so keep your ticket with you. There's no phone signal by the lake, so walk back up to the road before you call."],
    ["RANGER", "Finally, why do we have all these rules? The money from your tickets pays for the conservation of the forest. That's our main aim: to protect the forest so that people and animals can coexist here for many years to come. Enjoy your day!"]],
   qs: [
-   { skill: "Detail", type: "gap", stem: "1. The visitor centre closes at ___.", answers: ["5.30", "5:30", "half past five", "five thirty", "5.30 pm", "5:30 pm", "5.30pm"],
+   { skill: "Detail", type: "gap", stem: "1. The visitor centre closes at ___.", answers: ["5.30", "5:30", "half past five", "five thirty", "5.30 pm", "5:30 pm", "5.30pm", "17.30", "17:30"],
      cue: "First, opening times", hint: "Two times are mentioned. One is for the car park.", explain: "\"The visitor centre closes earlier, at half past five.\" Six o'clock is the car park." },
    { skill: "Detail", type: "gap", stem: "2. Visitors must stay on the marked ___.", answers: ["paths", "path"],
      cue: "The park is home", hint: "Listen for the word after \"marked\".", explain: "\"Please stay on the marked paths at all times.\"" },

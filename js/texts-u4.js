@@ -210,7 +210,7 @@ const COLOUR_SLOTS = [
 
 /* ---------- 3. How diseases spread ---------- */
 const STOP_SPREAD = [
- {label:"quarantine / keep apart", k:["quarantin","apart","isolat","stay away","stay at home","separate","distance","wait"]},
+ {label:"quarantine / keep apart", k:["quarantin","apart","isolat","stay away","staying away","keep away","keeping away","away from","stay at home","staying at home","stay home","staying home","at home","separate","distance","wait"]},
  {label:"clean water", k:["clean water","water","pump","drink"]},
  {label:"wash hands / hygiene", k:["wash","hand","soap","hygien"]},
  {label:"vaccines / immunity", k:["vaccin","immun","injection"]}];
