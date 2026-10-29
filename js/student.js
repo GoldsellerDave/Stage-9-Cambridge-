@@ -6,6 +6,7 @@ import * as E from "./engine.js";
 import * as U from "./ui.js";
 import * as P from "./practice.js";
 import * as S from "./sound.js";
+import * as Cel from "./celebrate.js";
 import { SEQUENCE, UNITS } from "./curriculum.js";
 import { VOCAB } from "./vocab.js";
 import { LISTENING, listeningFor } from "./listening.js";
@@ -573,9 +574,9 @@ function nextSmallQ() {
     const bonus = E.streakBonus(history), boss = firstWin ? P.BOSS_BONUS : 0;
     run.result = { xp: P.smallXP(set.results) + bonus + boss, bonus, boss, win, score, max: flat.length, seconds: Math.round((Date.now() - run.t0) / 1000) };
     run.phase = "done"; run.xpSoFar = 0;
-    S.play(win ? "win" : "done");
   } else prepQuestion();
   saveRun(); runView(); top();
+  if (run.phase === "done") win ? Cel.big({ icon: "🏅", title: "Mission complete!", sub: `${P.MISSION_BADGES[run.boss]} badge`, xp: run.result.xp }) : Cel.set(run.result.xp);
 }
 // Per-question state that a question type needs before it is shown.
 function prepQuestion() {
@@ -641,9 +642,9 @@ function cardsView() {
   const f = document.getElementById("flip"); if (f) f.onclick = () => { run.side = "back"; S.play("flip"); saveRun(); runView(); };
   const rate = known => { run.known[run.i] = known; run.xpSoFar += 1; S.play(known ? "ok" : "tap");
     run.i++; run.side = "front";
-    if (run.i >= run.words.length) { run.phase = "done"; run.xpSoFar = 0; S.play("done");
+    if (run.i >= run.words.length) { run.phase = "done"; run.xpSoFar = 0;
       run.result = { xp: run.words.length + 5, seconds: Math.round((Date.now() - run.t0) / 1000) }; }
-    saveRun(); runView(); top(); };
+    saveRun(); runView(); top(); if (run.phase === "done") Cel.set(run.result.xp); };
   const k = document.getElementById("know"); if (k) k.onclick = () => rate(true);
   const u = document.getElementById("unsure"); if (u) u.onclick = () => rate(false);
 }
@@ -728,7 +729,7 @@ function gameView() {
     stopGame = play(document.getElementById("gbox"), { unit: run.unit, tier: Lab.labStartLevel(history, P.tierFor(history)), seen: G.dodgeSeen(history), missed: G.dodgeMissed(history), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
       stopGame = null; if (!run || run.kind !== "game") return;
       run.result = { ...R, xp: G.gameXP(R.hits, history), best };
-      run.phase = "done"; S.play(R.points > best ? "win" : "done"); saveRun(); runView(); top();
+      run.phase = "done"; saveRun(); runView(); top(); Cel.set(run.result.xp);
     } });
   }
 }
@@ -1210,7 +1211,12 @@ function finishListen(task) {
   stopAudio();
   const results = task.qs.map((_, k) => run.results[k]), bonus = E.streakBonus(history);
   run.result = { results, score: results.filter(r => r.first_try).length, xp: P.listenXP(results) + bonus, bonus, seconds: Math.round((Date.now() - run.t0) / 1000) };
-  run.phase = "done"; run.xpSoFar = 0; S.play("done"); saveRun(); runView(); top();
+  run.phase = "done"; run.xpSoFar = 0; saveRun(); runView(); top();
+  // The big show when this task completes the unit's whole listening section for the first time.
+  const done = new Set(history.filter(h => h.mode === "listening").map(h => h.text_id)), all = listeningFor(task.unitNo);
+  if (!done.has(task.id) && all.every(t => t.id === task.id || done.has(t.id)))
+    Cel.big({ icon: "🎧", title: `Unit ${task.unitNo} listening complete!`, sub: `All ${all.length} parts done`, xp: run.result.xp });
+  else Cel.set(run.result.xp);
 }
 function listenDone() {
   const task = LISTENING.find(t => t.id === run.id), R = run.result;
@@ -1437,7 +1443,9 @@ function finishLab() {
   if (main.length) main[main.length - 1].next = run.level;
   run.result = { score: main.filter(r => r.first_try).length, xp: Lab.labXP(run.results) + bonus, bonus, peak: Lab.labPeak(main),
                  seconds: Math.round((Date.now() - run.t0) / 1000) };
-  run.phase = "done"; S.play("done"); saveRun(); runView(); top();
+  run.phase = "done"; saveRun(); runView(); top();
+  const m = labM(), first = !history.some(h => h.text_id === m.id);
+  first ? Cel.big({ icon: "🔬", title: `Mission ${m.n} complete!`, sub: m.title, xp: run.result.xp }) : Cel.set(run.result.xp);
 }
 function labDoneView() {
   const m = labM(), R = run.result, main = run.results.filter(r => r.skill === "Listening"), next = Lab.LAB.find(x => x.n === m.n + 1);
@@ -1642,8 +1650,10 @@ async function finishBaseline() {
   const up = isBase ? null : E.levelUpAfter(history, attempt);
   run.result = { score, max, band, level, levelUp: up, xp: E.baselineXP(score) + (up ? E.LEVEL_UP_XP : 0), seconds: Math.round((Date.now() - run.t0) / 1000),
                  next: E.steadyLevel([...history, attempt], level) };
-  run.phase = "done"; S.play("done"); saveRun(); runView(); top();
+  run.phase = "done"; saveRun(); runView(); top(); levelCel(run.result);
 }
+// A level up gets the big show; any other finish gets the coins.
+function levelCel(R) { R.levelUp ? Cel.big({ icon: "🚀", title: "Level up!", sub: `Your reading level is now ${E.BANDS[R.levelUp.to]}`, xp: R.xp }) : Cel.set(R.xp); }
 async function saveAttempt(payload) {
   const msg = document.getElementById("savemsg");
   try {
@@ -1663,7 +1673,6 @@ function levelUpHTML(up) {
 }
 function baselineDone() {
   const R = run.result, T = testOf(run.test), isBase = T.id === "baseline";
-  if (R.levelUp) S.play("level");
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">${U.esc(T.title)} finished</p><h1>You scored ${R.score} out of ${R.max}</h1>
     ${levelUpHTML(R.levelUp)}
     <div class="stats"><div class="stat"><b>${R.score}/${R.max}</b><span>score</span></div><div class="stat"><b>${isBase ? E.LEVELS[R.level] : E.BANDS[R.band]}</b><span>${isBase ? "your starting level" : "this check"}</span></div>
@@ -1765,7 +1774,8 @@ function finishMini() {
   const u = run.unit, Q = M.miniQuestions(u), score = run.answers.filter(a => a.first_try).length, max = Q.length;
   run.result = { score, max, passed: score / max >= M.MINI_PASS, xp: M.miniXP(score, max, history, u), seconds: Math.round((Date.now() - run.t0) / 1000),
                  parts: M.PARTS.map(([k, name]) => { const a = run.answers.filter(x => x.part === k); return { name, right: a.filter(x => x.first_try).length, total: a.length }; }) };
-  run.phase = "done"; S.play(run.result.passed ? "level" : "done"); saveRun(); runView(); top();
+  run.phase = "done"; saveRun(); runView(); top();
+  run.result.passed ? Cel.big({ icon: "🏆", title: `Unit ${u} test passed!`, sub: `${Math.round(100 * score / max)}% · the next gate is open`, xp: run.result.xp }) : Cel.set(run.result.xp);
 }
 function miniDone() {
   const R = run.result, T = M.MINI[run.unit];
@@ -1889,7 +1899,7 @@ function finishPractice(text) {
   const up = E.levelUpAfter(history, attempt);
   const xp = E.runXP(r, { replay }) + bonus + (up ? E.LEVEL_UP_XP : 0);
   run.result = { xp, bonus, replay, score, levelUp: up, next: E.steadyLevel([...history, attempt], r.level), seconds: Math.round((Date.now() - run.t0) / 1000) };
-  run.phase = "done"; run.xpSoFar = 0; S.play("done"); saveRun(); runView(); top();
+  run.phase = "done"; run.xpSoFar = 0; saveRun(); runView(); top(); levelCel(run.result);
 }
 function practiceDone() {
   const text = PRACTICE_TEXTS.find(t => t.id === run.textId), r = run.r, R = run.result;
@@ -1910,7 +1920,6 @@ function practiceDone() {
   const leave = () => { run = null; saveRun(); };
   document.getElementById("home").onclick = () => { leave(); location.hash = "#home"; route(); };
   document.getElementById("lb").onclick = leave;
-  if (R.levelUp) S.play("level");
   saveAttempt({ mode: "practice", text_id: text.id, level_start: r.levelStart, level_end: r.level, next_level: R.next, score: R.score, max_score: text.slots.length,
                 xp: R.xp, seconds: R.seconds, answers: r.results });
 }
