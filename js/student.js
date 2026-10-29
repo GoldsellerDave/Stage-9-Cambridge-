@@ -725,7 +725,7 @@ function gameView() {
   $app.querySelectorAll("[data-wpm]").forEach(w => w.onclick = () => { run.wpm = +w.dataset.wpm; S.play("tap"); gameView(); });
   if (run.phase === "play") {
     const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed, dodge: G.playDodge }[run.game];
-    stopGame = play(document.getElementById("gbox"), { unit: run.unit, tier: Lab.labStartLevel(history, P.tierFor(history)), seen: G.dodgeSeen(history), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
+    stopGame = play(document.getElementById("gbox"), { unit: run.unit, tier: Lab.labStartLevel(history, P.tierFor(history)), seen: G.dodgeSeen(history), missed: G.dodgeMissed(history), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
       stopGame = null; if (!run || run.kind !== "game") return;
       run.result = { ...R, xp: G.gameXP(R.hits, history), best };
       run.phase = "done"; S.play(R.points > best ? "win" : "done"); saveRun(); runView(); top();
@@ -750,7 +750,7 @@ function gameDone() {
     ${R.xp === 0 ? `<p class="note">You have reached today's ${G.GAME_XP_DAY} XP from games. Your points still count for your best score.</p>` : ""}
     ${caught.length ? `<div class="panel"><b>Traps that caught you</b><ul>${caught.map(([t, n]) => `<li>🪤 ${U.esc(t === "prime" ? "Not reading the question carefully" : Lab.TRAPS[t].name)} × ${n}</li>`).join("")}</ul>
       ${caught[0][0] !== "prime" ? `<p class="note">The Listening Lab mission “${U.esc(Lab.missionForTrap(caught[0][0]).title)}” shows how to beat this trap.</p>` : ""}</div>` : ""}
-    ${missed.length ? `<div class="panel"><b>${{ rain: "Words to learn (they come back in your word review)", train: "Words to look at again", speed: "Questions you missed, with the answers", dodge: "Clips you missed, with the answers" }[run.game]}</b><ul>${missed.join("")}</ul></div>` : ""}
+    ${missed.length ? `<div class="panel"><b>${{ rain: "Words to learn (they come back in your word review)", train: "Words to look at again", speed: "Questions you missed, with the answers", dodge: "Clips you missed, with the answers (they come back in your next games)" }[run.game]}</b><ul>${missed.join("")}</ul></div>` : ""}
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
   document.getElementById("again").onclick = () => { const g = run.game; run = null; saveRun(); startGame(g, u); };

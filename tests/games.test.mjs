@@ -124,3 +124,16 @@ test("Trap Dodger plays clips the student hasn't heard before repeating any", ()
   for (let i = 0; i < 10; i++) used.push(G.dodgeItem(0, used, Math.random, seen).clip);
   assert.deepEqual(new Set(used.slice(14)), new Set(pool.slice(0, 10)), "then the clips heard longest ago");
 });
+
+test("Trap Dodger brings missed clips back until they are right", () => {
+  const pool = G.dodgePool(0).map(x => x.clip);
+  const h = (at, list) => ({ created_at: at, answers: list.map(([clip, ok, picked]) => ({ skill: "Trap game", clip, trap: "synonym", first_try: ok, ...(picked ? { picked } : {}) })) });
+  const history = [h("2026-10-28T02:00:00Z", [[pool[0], false, "x"], [pool[1], false], [pool[2], true]]), h("2026-10-29T02:00:00Z", [[pool[1], true]])];
+  const log = G.dodgeLog(history);
+  assert.equal(log.length, 3);
+  const r1 = log.find(r => r.clip === pool[1]);
+  assert.deepEqual([r1.tries, r1.right, r1.last], [2, 1, true]);
+  assert.deepEqual(log.find(r => r.clip === pool[0]).picked, ["x"]);
+  assert.deepEqual([...G.dodgeMissed(history)], [pool[0]]);
+  assert.equal(G.dodgeItem(0, [], Math.random, G.dodgeSeen(history), G.dodgeMissed(history)).clip, pool[0], "the missed clip comes first");
+});
