@@ -19,6 +19,7 @@ import * as M from "./minitests.js";
 import * as X from "./escape.js";
 import * as Lab from "./lab.js";
 import * as RL from "./rlab.js";
+import * as D from "./drill.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -63,7 +64,7 @@ function tick() {
   escTick();
   const el = document.getElementById("clock"); if (!el || !run) return;
   const s = run.kind === "escape" ? (run.play ? X.escapeSeconds(run.play) : 0) : Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
-  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 12, lab: 10, rlab: 10 }[run.kind] || 15;
+  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 12, lab: 10, rlab: 10, drill: 6 }[run.kind] || 15;
   el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${target}:00`;
   el.classList.toggle("over", s > target * 60);
 }
@@ -215,7 +216,7 @@ function homeView() {
 
 /* ---------------- today's workout and quick tiles ---------------- */
 let workout = [];
-const AREA_ICON = { baseline: "read", review: "review", text: "read", listen: "listen", lab: "lab", vocab: "words", grammar: "grammar" };
+const AREA_ICON = { drill: "read", baseline: "read", review: "review", text: "read", listen: "listen", lab: "lab", vocab: "words", grammar: "grammar" };
 function workoutCard() {
   const fu = P.focusUnit();
   workout = W.workoutPlan(history, fu, { level: E.steadyLevel(history, me.level ?? 1), baselineDone: me.baseline_done });
@@ -240,6 +241,7 @@ function startWorkoutItem(it) {
   if (it.kind === "baseline") return startBaseline();
   if (it.kind === "review") return startSmall("vocab", "vocab-review", "Word review", P.vocabSet({ review: true, history, tier: P.tierFor(history) }));
   if (it.kind === "text") return startPractice(it.id);
+  if (it.kind === "drill") return startDrill(it.skill);
   if (it.kind === "listen") return startListening(it.id);
   if (it.kind === "lab") return startLab(it.id);
   if (it.kind === "vocab") return startSmall("vocab", `vocab-u${u}`, `Unit ${u} vocabulary`, P.vocabSet({ unit: u, history, tier: P.tierFor(history) }));
@@ -1632,6 +1634,106 @@ function rlDoneView() {
                 xp: R.xp, seconds: R.seconds, answers: run.results.map(({ item, ...r }) => r) });
 }
 
+/* ---------------- skill drills ---------------- */
+// Four questions on one reading skill, from different texts at the student's level. A wrong answer shows the hint and
+// lights up the words that prove the answer; a second wrong answer shows the answer and moves on.
+function startDrill(skill, { exclude = null } = {}) {
+  const seed = history.filter(h => h.text_id === D.drillId(skill)).length;
+  const items = D.drillItems(skill, { unit: P.focusUnit(), level: E.steadyLevel(history, me.level ?? 1), exclude, seed });
+  if (!items.length) return;
+  run = { kind: "drill", skill, textId: D.drillId(skill), items, i: 0, tries: 0, phase: "teach", results: [], orders: {}, pick: null, draft: "", fb: null, t0: Date.now() };
+  saveRun(); route(); top();
+}
+function drillView() {
+  const st = STRATEGY[run.skill], n = run.items.length;
+  if (run.phase === "teach") {
+    $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Skill drill</p><h1>${U.esc(run.skill)}</h1>
+      <p class="lede">${n} questions on this skill, each from a different text. Read the part of the text, then answer.</p>
+      <div class="strat"><b>Strategy: ${U.esc(st.name)}</b><ol>${st.steps.map(s => `<li>${U.esc(s)}</li>`).join("")}</ol></div>
+      <div class="row"><button class="btn" id="dgo">Start the ${n} questions</button></div></div>`;
+    document.getElementById("dgo").onclick = () => { S.play("tap"); run.phase = "q"; saveRun(); runView(); top(); };
+    return;
+  }
+  const it = run.items[run.i], { text, q, explain, paras } = D.drillQuestion(it), short = q.type === "short";
+  const fb = run.fb, locked = !!(fb && (fb.kind === "ok" || fb.kind === "explained")), lit = run.tries > 0 || locked;
+  const whole = run.skill === "Main idea" || run.skill === "Writer's view";
+  const part = whole ? paras : paras.filter(p => it.para.includes(p[0]));
+  const T = { title: text.levels[it.level].title, paras: part, gloss: text.levels[it.level].gloss };
+  let h = `<div class="narrow pop"><p class="eyebrow">Skill drill · ${U.esc(run.skill)}</p>
+    <div class="progress">${run.items.map((_, k) => { const x = run.results[k]; return `<i class="${k === run.i ? "cur" : x ? (x.first_try ? "ok" : "help") : ""}"></i>`; }).join("")}</div>
+    <p class="note">From <b>${U.esc(text.topic)}</b> (${E.LEVELS[it.level]} text)${whole ? "" : `, paragraph${part.length > 1 ? "s" : ""} ${part.map(p => p[0]).join(" and ")}`}</p>
+    <div class="rbox">${U.textHTML(T, lit ? { para: it.para[0], focus: q.focus } : {})}</div>
+    ${whole ? "" : `<details class="dwhole"><summary>Read the whole text</summary>${U.textHTML(text.levels[it.level])}</details>`}
+    <div class="qcard"><div class="qhead"><span class="tag">${U.esc(run.skill)}</span><span class="qnum">Question ${run.i + 1} of ${run.items.length}</span></div>
+    <p class="stem">${U.esc(q.stem)}</p>`;
+  if (short) h += `<label class="fld" for="ans" style="font-weight:400"><span class="note">Short answer. Use your own words or words from the text.${q.need > 1 ? ` Give ${q.need} different points.` : ""}</span>
+      <textarea id="ans" ${locked ? "disabled" : ""}>${U.esc(run.draft)}</textarea></label>`;
+  else h += optsHTML(q, order("d" + run.i, q.opts.length), fb ? { right: fb.kind === "ok", wrong: fb.wrong, reveal: fb.kind === "explained", locked } : null);
+  if (fb) {
+    if (fb.kind === "ok") h += `<div class="fb ok pop"><p><strong>Correct.</strong> ${fb.first ? "Right first time." : "Well done for using the hint."} ${fb.xp ? `<span class="xpgain">+${fb.xp} XP</span>` : ""}</p>${fb.ai ? `<p class="note">Checked by AI: ${U.esc(fb.ai)}</p>` : ""}</div>`;
+    else if (fb.kind === "explained") h += `<div class="fb info pop"><p><strong>Let's look at the answer together.</strong></p>
+        <p>${U.esc(explain || `The answer is "${short ? "" : q.opts[0]}". The highlighted words in the text show why.`)}</p></div>`;
+    else h += `<div class="fb bad pop"><p><strong>${fb.tooShort ? "Too short." : "Not quite."}</strong> ${U.esc(fb.tooShort ? "Write at least a few words." : fb.partial || (short ? "Your answer does not match the text yet." : "That is not the answer."))}</p>
+        ${fb.tooShort ? "" : `<p><b>Hint:</b> ${U.esc(q.hint)}</p><p class="note">The highlighted words in the text will help. Try once more.</p>`}</div>`;
+  }
+  h += `<div class="row">${locked ? `<button class="btn" id="dnext">${run.i === run.items.length - 1 ? "See my results" : "Next question"}</button>`
+                                  : `<button class="btn" id="dcheck">Check answer</button>`}</div></div></div>`;
+  $app.innerHTML = h;
+  bindOpts(() => { runView(); });
+  const a = document.getElementById("ans"); if (a) a.oninput = () => { run.draft = a.value; saveRun(); };
+  const c = document.getElementById("dcheck"); if (c) c.onclick = () => drillCheck();
+  const nx = document.getElementById("dnext"); if (nx) nx.onclick = () => {
+    S.play("tap");
+    if (run.i === run.items.length - 1) return finishDrill();
+    run.i++; run.tries = 0; run.pick = null; run.draft = ""; run.fb = null; saveRun(); runView(); top();
+  };
+}
+async function drillCheck() {
+  const it = run.items[run.i], { text, q } = D.drillQuestion(it), iNow = run.i;
+  const response = q.type === "short" ? (document.getElementById("ans").value || "") : run.pick;
+  if (q.type !== "short" && response === null) return;
+  let m = E.mark(q, response), ai = null;
+  if (m.tooShort) { run.fb = { kind: "bad", tooShort: true }; saveRun(); return runView(); }
+  if (q.type === "short" && !m.ok) {
+    const btn = document.getElementById("dcheck"); if (btn) { btn.disabled = true; btn.textContent = "Checking your answer…"; }
+    const lv = text.levels[it.level], para = lv.paras.find(x => x[0] === it.para[0]);
+    ai = await api.aiMark(session.token, { text_id: text.id, slot: it.slot, level: it.level, stem: q.stem,
+      paragraph: para ? para[1] : lv.paras.map(x => x[1]).join("\n"), points: q.groups.map(g => g.label), need: q.need, answer: response });
+    if (!run || run.kind !== "drill" || run.i !== iNow) return;
+    if (ai && ai.ok) m = { ok: true, hits: ai.hits };
+  }
+  const res = support => ({ skill: run.skill, first_try: support === "none", support, text: it.text, level: it.level, drill: true });
+  if (m.ok) {
+    const r = res(run.tries ? "hint" : "none"); run.results.push(r);
+    run.fb = { kind: "ok", first: !run.tries, xp: r.first_try ? D.DRILL_XP.first : D.DRILL_XP.hint, ai: ai && ai.ok ? ai.feedback : null }; S.play("ok");
+  } else if (run.tries >= 1) { run.results.push(res("explained")); run.fb = { kind: "explained" }; S.play("info"); }
+  else { run.tries++; run.fb = { kind: "bad", wrong: run.pick, partial: ai && ai.feedback ? ai.feedback : q.type === "short" && m.hits.length ? shortNudge(q, m.hits) : null }; S.play("bad"); }
+  saveRun(); runView();
+  const el = $app.querySelector(".fb"); if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function finishDrill() {
+  const bonus = E.streakBonus(history);
+  run.result = { score: run.results.filter(r => r.first_try).length, xp: D.drillXP(run.results) + bonus, bonus, seconds: Math.round((Date.now() - run.t0) / 1000) };
+  run.phase = "done"; saveRun(); runView(); top(); Cel.set(run.result.xp);
+}
+function drillDoneView() {
+  const R = run.result, n = run.items.length, good = R.score >= n - 1;
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Skill drill done</p><h1>${U.esc(run.skill)}: ${R.score} of ${n} right first time</h1>
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${n}</b><span>right first time</span></div></div>
+    <div class="sumcard ${good ? "good" : "next"}"><p class="sumhead">${good ? "✓ Getting stronger" : "🎯 Keep practising"}</p>
+      <p>${good ? "Nice work. This skill will come up again in your texts, so keep using the strategy." : "This skill still needs work. Try another drill: the questions come from different texts."}</p></div>
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    <div class="panel"><h3>Your answers</h3><ul>${run.items.map((it, k) => { const r = run.results[k] || {};
+      return `<li>${U.esc(PRACTICE_TEXTS.find(t => t.id === it.text).topic)}: ${U.esc(E.SUPPORT_LABEL[r.support] || "")}</li>`; }).join("")}</ul></div>
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row"><button class="btn" id="dagain">Another ${U.esc(run.skill)} drill</button><button class="btn alt" id="dhome">Back to home</button></div></div>`;
+  const skill = run.skill;
+  document.getElementById("dagain").onclick = () => { run = null; saveRun(); startDrill(skill); };
+  document.getElementById("dhome").onclick = () => { run = null; saveRun(); location.hash = "#home"; route(); };
+  saveAttempt({ mode: "vocab", text_id: run.textId, level_start: run.items[0].level, level_end: null, score: R.score, max_score: n,
+                xp: R.xp, seconds: R.seconds, answers: run.results });
+}
+
 /* ---------------- progress & leaderboard ---------------- */
 const meTabs = cur => `<div class="tabs" role="tablist">${[["me", "My stats"], ["leaderboard", "Leaderboard"], ["settings", "Settings"]]
   .map(([k, l]) => `<a role="tab" aria-selected="${k === cur}" href="#${k}">${l}</a>`).join("")}</div>`;
@@ -1712,11 +1814,12 @@ function startPractice(id) {
 function runView() {
   header(); nav(null);
   if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "mini" ? miniDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone()
-    : run.kind === "listen" ? listenDone() : run.kind === "lab" ? labDoneView() : run.kind === "rlab" ? rlDoneView() : run.kind === "game" ? gameDone() : run.kind === "escape" ? escapeDone() : practiceDone();
+    : run.kind === "listen" ? listenDone() : run.kind === "lab" ? labDoneView() : run.kind === "rlab" ? rlDoneView() : run.kind === "drill" ? drillDoneView() : run.kind === "game" ? gameDone() : run.kind === "escape" ? escapeDone() : practiceDone();
   if (run.kind === "game") return gameView();
   if (run.kind === "escape") return escapeView();
   if (run.kind === "lab") { labRunView(); return backButton(); }
   if (run.kind === "rlab") { rlRunView(); return backButton(); }
+  if (run.kind === "drill") { drillView(); return backButton(); }
   if (run.kind === "baseline") baselineView();
   else if (run.kind === "mini") miniView();
   else if (run.kind === "small") smallView();
@@ -1742,6 +1845,7 @@ function runName(r) {
   if (r.kind === "listen") return `Listening: ${LISTENING.find(t => t.id === r.id).topic}`;
   if (r.kind === "lab") return `Listening Lab: ${Lab.labMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
   if (r.kind === "rlab") return `Reading Lab, Unit ${r.unit || RL.rItemUnit(r.seq[0]) || 2}: ${RL.rlabMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
+  if (r.kind === "drill") return `Skill drill: ${r.skill}${r.phase === "q" ? ` (question ${r.i + 1} of ${r.items.length})` : ""}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
   if (r.kind === "escape") return `Unit ${r.unit} escape room${r.play ? ` (room ${r.play.room + 1} of ${r.game.rooms.length})` : ""}`;
   return U.textTitle(r.textId);
@@ -2078,7 +2182,8 @@ function practiceDone() {
       <div class="stat"><b>${E.LEVELS[r.level]}</b><span>finished on</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
     <div class="sumcards">
       <div class="sumcard good"><p class="sumhead">✓ Strong</p>${strong.length ? `<div class="sumchips">${strong.map(x => `<span class="schip">${U.esc(x)}</span>`).join("")}</div>` : `<p>Keep going, you will get there.</p>`}</div>
-      <div class="sumcard next${practise.length ? " flash" : ""}"><p class="sumhead">🎯 Practise next</p>${practise.length ? `<div class="sumchips">${practise.map(x => `<span class="schip">${U.esc(x)}</span>`).join("")}</div>`
+      <div class="sumcard next${practise.length ? " flash" : ""}"><p class="sumhead">🎯 Practise next</p>${practise.length ? `<div class="sumchips">${practise.map(x => `<button class="schip" data-drill="${U.esc(x)}">${U.esc(x)}</button>`).join("")}</div>
+        <button class="btn" data-drill="${U.esc(practise[0])}">Practise now: ${U.esc(practise[0])}</button><p class="note">Or tap a skill above. Each drill is ${D.DRILL_LEN} quick questions from other texts.</p>`
         : `<p>${r.level < text.levels.length - 1 ? `Nothing. Try to finish on the ${E.LEVELS[r.level + 1]} text next time.` : "Nothing. Brilliant work!"}</p>`}</div></div>
     ${levelUpHTML(R.levelUp)}
     ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 texts this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
@@ -2089,6 +2194,7 @@ function practiceDone() {
   const leave = () => { run = null; saveRun(); };
   document.getElementById("home").onclick = () => { leave(); location.hash = "#home"; route(); };
   document.getElementById("lb").onclick = leave;
+  $app.querySelectorAll("[data-drill]").forEach(b => b.onclick = () => { leave(); startDrill(b.dataset.drill, { exclude: text.id }); });
   saveAttempt({ mode: "practice", text_id: text.id, level_start: r.levelStart, level_end: r.level, next_level: R.next, score: R.score, max_score: text.slots.length,
                 xp: R.xp, seconds: R.seconds, answers: r.results });
 }

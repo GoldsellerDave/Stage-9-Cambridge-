@@ -8,6 +8,7 @@ import { trailStops, trailHere } from "./trail.js";
 import { icon } from "./icons.js";
 import { TRAPS, trapStats, weakestTrap, missionForTrap, labMission, isLabAttempt, labSummary, LAB_LEVELS } from "./lab.js";
 import { RTRAPS, rTrapStats, weakestRTrap, rMissionForTrap, rlabMission } from "./rlab.js";
+import { drillSkill } from "./drill.js";
 
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
                        "Cause and effect", "Writer's purpose", "Writer's view", "Reading Lab", "Vocabulary", "Grammar", "Listening"];
@@ -27,6 +28,7 @@ export function textTitle(id) {
   if (id === "baseline") return "Baseline";
   const lab = labMission(id); if (lab) return `Listening Lab: ${lab.title}`;
   const rlab = rlabMission(id); if (rlab) return `Reading Lab: ${rlab.title}`;
+  const ds = drillSkill(id); if (ds) return `Skill drill: ${ds}`;
   const c = CHECKS.find(x => x.id === id); if (c) return c.title;
   if (id === "vocab-review") return "Word review";
   let m = /^vocab-u(\d)$/.exec(id); if (m) return `Unit ${m[1]} vocabulary`;

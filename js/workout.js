@@ -5,6 +5,7 @@ import { listeningFor } from "./listening.js";
 import { unitGrammar, grammarMastery, wordsToReview } from "./practice.js";
 import { speedTexts } from "./games.js";
 import { weakestTrap, missionForTrap } from "./lab.js";
+import { weakSkills, drillId } from "./drill.js";
 
 export const READING_SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
   "Cause and effect", "Writer's purpose", "Writer's view"];
@@ -46,8 +47,13 @@ export function workoutPlan(history, unit, { level = 1, baselineDone = true, now
   if (!baselineDone) items.push({ kind: "baseline", id: "baseline", area: "Reading", label: "Baseline reading" });
   else { const due = wordsToReview(before, now).length; if (due) items.push({ kind: "review", id: "vocab-review", area: "Vocabulary", label: `Review ${Math.min(due, 10)} words` }); }
   const pick = {
-    Reading: () => { if (!baselineDone) return null; const ts = PRACTICE_TEXTS.filter(t => t.unitNo === unit); if (!ts.length) return null;
-      const t = ts.find(x => !doneIds.has(x.id)) || ts[today % ts.length]; return { kind: "text", id: t.id, label: `Read: ${t.topic}` }; },
+    // A skill drill for the weakest reading skill on odd days, or every day once the unit's texts are all read;
+    // otherwise the next unread text in the unit.
+    Reading: () => { if (!baselineDone) return null; const ts = PRACTICE_TEXTS.filter(t => t.unitNo === unit);
+      const unread = ts.find(x => !doneIds.has(x.id)), weak = weakSkills(before)[0];
+      if (weak && (!unread || today % 2)) return { kind: "drill", id: drillId(weak.skill), skill: weak.skill, label: `Skill drill: ${weak.skill}` };
+      if (!ts.length) return null;
+      const t = unread || ts[today % ts.length]; return { kind: "text", id: t.id, label: `Read: ${t.topic}` }; },
     // The Listening Lab mission for the trap that catches the student most, if there is one; otherwise a unit task.
     Listening: () => { const wt = weakestTrap(before), lm = wt && missionForTrap(wt);
       if (lm) return { kind: "lab", id: lm.id, label: `Listening Lab: ${lm.title}` };
