@@ -8,7 +8,7 @@ import { trailStops, trailHere } from "./trail.js";
 import { icon } from "./icons.js";
 import { TRAPS, trapStats, weakestTrap, missionForTrap, labMission, isLabAttempt, labSummary, LAB_LEVELS } from "./lab.js";
 import { RTRAPS, rTrapStats, weakestRTrap, rMissionForTrap, rlabMission } from "./rlab.js";
-import { glabMission } from "./glab.js";
+import { glabMission, BLOCKS, blockStatus } from "./glab.js";
 import { drillSkill } from "./drill.js";
 
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
@@ -203,6 +203,7 @@ export function trackerHTML(history, who, opts = {}) {
     <div class="panel"><h3>Road to Checkpoint</h3><p class="note">Each unit ends with a checkpoint. Pass all nine to reach the finish post.</p>${roadSVG(history, opts)}</div>
     <div class="panel"><h3>Reading traps</h3>${rTrapsHTML(history, opts)}</div>
     <div class="panel"><h3>Listening traps</h3>${trapsHTML(history, opts)}</div>
+    <div class="panel"><h3>Grammar building blocks</h3>${blocksHTML(history, opts)}</div>
     <div class="panel"><h3>Trophy cabinet</h3>${trophyCabinet(history)}</div>
     <div class="panel"><h3>History</h3>${historyTable(history)}</div>`;
 }
@@ -234,6 +235,15 @@ export function rTrapsHTML(history, { links = true } = {}) {
       <span class="note">${t.total ? `Caught ${t.caught} of ${t.total}` : "Not met yet"}</span>
       ${links && m ? `<button class="btn small alt" data-rlab="${m.id}">${t.trap === weak ? "Practise this" : "Mission"}</button>` : ""}</div>`; }).join("")}</div>
     ${weak ? `<p class="note">${esc(RTRAPS[weak].name)} catch ${links ? "you" : "this student"} most often. ${esc(RTRAPS[weak].tip)}</p>` : ""}`;
+}
+
+// Grammar Lab building blocks the student has worked on: fixed, or still needing practice (their next warm-up).
+export function blocksHTML(history, { links = true } = {}) {
+  const st = blockStatus(history), ids = Object.keys(st);
+  if (!ids.length) return `<p class="note">No building blocks yet. When ${links ? "you keep" : "the student keeps"} making the same kind of mistake in the Grammar Lab, it stops and teaches the block underneath.</p>`;
+  const weak = ids.filter(id => st[id] === "weak");
+  return `<div class="glblocks">${ids.map(id => `<span class="chip ${st[id] === "weak" ? "explained" : "none"}">${st[id] === "weak" ? "🔧" : "✅"} ${esc(BLOCKS[id].name)}</span>`).join("")}</div>
+    ${weak.length ? `<p class="note">Still to fix: ${weak.map(id => esc(BLOCKS[id].name)).join(", ")}. ${links ? "Your" : "Their"} next Grammar Lab mission starts with a warm-up on ${weak.length > 1 ? "one of these" : "it"}.</p>` : ""}`;
 }
 
 // The trap tracker: how often each examiner's trick caught the student (listening answers not right first time).

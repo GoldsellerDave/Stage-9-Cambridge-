@@ -1663,7 +1663,9 @@ function glabHubView() {
 function startGLab(id) {
   const level = GL.glabStartLevel(history, P.tierFor(history));
   run = { kind: "glab", id, phase: "scene", gi: 0, ui: 0, i: 0, sort: {}, sortTries: 0, sortBad: [], cs: {}, st: {}, results: [], seq: [], draft: "", wtries: 0,
-          level, start: level, rightRow: 0, wrongRow: 0, t0: Date.now(), orders: {} };
+          level, start: level, rightRow: 0, wrongRow: 0, t0: Date.now(), orders: {}, bm: {}, bdone: {} };
+  const warm = GL.warmUpBlock(history, id);
+  if (warm) { run.warm = true; glEnterBlock(warm, "scene"); }
   saveRun(); route(); top();
 }
 const glM = () => GL.glabMission(run.id);
@@ -1726,8 +1728,8 @@ function glChoiceHTML(key, item) {
   h += glHintHTML(key, item, s);
   if (!s.done && s.wrong.length) h += `<div class="fb bad"><p><strong>Not quite.</strong> ${glx(item.opts[s.wrong[s.wrong.length - 1]].why)}</p>
     ${item.hint ? `<p><b>💡 Hint:</b> ${glx(item.hint)}</p>` : ""}<p class="note">Have another try.</p></div>`;
-  if (s.done) h += s.wrong.length >= 2 ? `<div class="fb info"><p><strong>Let's work it out together, ${U.esc(firstName())}.</strong></p><p>${glx(item.explain || "")}</p></div>`
-    : `<div class="fb ok"><p><strong>${s.wrong.length ? "Yes, that's it." : s.hint ? "Correct!" : "Correct, first time!"}</strong> ${s.wrong.length || s.hint ? "" : `<span class="xpgain">+${GL.XP_GLAB.step} XP</span>`}</p></div>`;
+  if (s.done) h += s.wrong.length >= 2 ? `<div class="fb info"><p><strong>Let's work it out together, ${U.esc(firstName())}.</strong></p><p>${glx(item.explain || `The answer is "${item.opts[0].t}".`)}</p>${glBlockNote()}</div>`
+    : `<div class="fb ok"><p><strong>${s.wrong.length ? "Yes, that's it." : s.hint ? "Correct!" : "Correct, first time!"}</strong> ${s.wrong.length || s.hint ? "" : `<span class="xpgain">+${GL.XP_GLAB.step} XP</span>`}</p>${glBlockNote()}</div>`;
   return h;
 }
 // A question like the one just explained. Its result upgrades the main answer from "explained" to "twin".
@@ -1745,16 +1747,91 @@ function glBindChoice(step, items, redraw) {
   $app.querySelectorAll("[data-gtwin]").forEach(b => b.onclick = () => { run.cs[b.dataset.gtwin].twinOn = true; S.play("tap"); redraw(); const q = document.getElementById("gtwinq"); if (q) q.scrollIntoView({ block: "start", behavior: "smooth" }); });
   $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => {
     const key = b.dataset.gk, oi = +b.dataset.go, s = run.cs[key], twin = key.endsWith("~t"), main = twin ? key.slice(0, -2) : key, item = twin ? items(main).twin : items(key);
-    const res = support => ({ skill: "Grammar Lab", step, point: glM().point, item: items(main).id || main, first_try: support === "none", support });
+    const res = support => ({ skill: "Grammar Lab", step, point: glM().point, item: items(main).id || main, first_try: support === "none", support, ...(step === "block" ? { block: items(main).id.split("#")[0] } : {}) });
     if (oi === 0) { s.done = true; S.play("ok");
       if (twin) { const r = run.results.find(x => x.item === (items(main).id || main) && x.step === step); if (r && s.wrong.length < 2) r.support = "twin"; }
-      else { run.results.push(res(s.wrong.length || s.hint ? "hint" : "none")); glTrack(false); } }
-    else { s.wrong.push(oi); S.play("bad"); if (s.wrong.length >= 2) { s.done = true; if (!twin) { run.results.push(res("explained")); glTrack(true); } } }
+      else { run.results.push(res(s.wrong.length || s.hint ? "hint" : "none")); if (step !== "block") glTrack(false); } }
+    else { s.wrong.push(oi); S.play("bad"); if (step !== "block") glMiss(item.opts[oi].b);
+      if (s.wrong.length >= 2) { s.done = true; if (!twin) { run.results.push(res("explained")); if (step !== "block") glTrack(true); } } }
     redraw(); const f = $app.querySelectorAll(".fb"); if (f.length) f[f.length - 1].scrollIntoView({ block: "center", behavior: "smooth" });
   });
 }
+/* Building blocks (GL.BLOCKS). A wrong answer counts against the block it shows; the second time the same block
+   shows up, the Lab teaches it after the current question: a short lesson, then 3 quick checks. Passing (no answer
+   explained, at most one needing a second try) goes back to where the student was. Failing drops to the block
+   underneath that the mistakes point to (at most BLOCK_DEPTH deep), then climbs back up and retries the block above with
+   2 fresh checks. A block that still fails is saved as weak: the next mission starts with it as a warm-up. */
+function glMiss(b) {
+  run.bm = run.bm || {}; run.bdone = run.bdone || {};
+  if (!b || run.bdone[b] || run.phase === "block") return;
+  run.bm[b] = (run.bm[b] || 0) + 1;
+  if (run.bm[b] >= 2 && !run.bpend) run.bpend = b;
+}
+const glBlockNote = () => run.bpend && run.phase !== "block" ? `<p><b>🧱 Next: a building block.</b> Let's fix "${U.esc(GL.BLOCKS[run.bpend].name)}" first. It's what keeps tripping you up.</p>` : "";
+function glEnterBlock(id, ret) {
+  run.bpend = null; run.blkRet = ret; run.phase = "block";
+  run.bstack = [{ id, set: 0, i: 0, lesson: true }];
+}
+const glFrame = () => run.bstack[run.bstack.length - 1];
+const glSet = f => f.set ? [3, 4] : [0, 1, 2];
+const glCheckKey = (f, k) => `blk:${f.id}:${f.set}:${k}`;
+function glBlockView() {
+  const f = glFrame(), b = GL.BLOCKS[f.id], set = glSet(f), redraw = () => { saveRun(); glRunView(); backButton(); };
+  const path = run.bstack.map(x => GL.BLOCKS[x.id].name);
+  let h = `<div class="narrow pop">${run.blkRet === "scene" ? `<p class="eyebrow">Grammar Lab · ${U.esc(glM().title)}</p>` : glHead(run.blkRet === "prove" || run.blkRet === "rescue" || run.blkRet === "finish" ? 3 : run.blkRet === "get" ? 1 : run.blkRet === "use" || run.blkRet === "write" ? 2 : 0)}
+    <div class="glpath">${path.map((p, k) => `<span class="${k === path.length - 1 ? "now" : ""}">🧱 ${U.esc(p)}</span>`).join(`<i>›</i>`)}</div>`;
+  if (f.lesson) {
+    h += `<h1>${run.warm && run.bstack.length === 1 ? "Warm-up: " : f.back ? "Back to " : run.bstack.length > 1 ? "One step down: " : "Building block: "}${U.esc(b.name)}</h1>
+      <p class="lede">${run.warm && run.bstack.length === 1 ? `Last time this was tricky, ${U.esc(firstName())}. Let's make it solid before the mission.`
+        : f.back ? "Now you've fixed the step underneath, try this one again."
+        : run.bstack.length > 1 ? "Those mistakes come from something underneath. Let's fix that first." : `Your mistakes show this building block needs work, ${U.esc(firstName())}. Two minutes, then back to the mission.`}</p>
+      <div class="strat"><b>${U.esc(b.name)}</b> <span class="note">(${U.esc(b.vi)})</span><p style="margin:6px 0 0">${glx(b.say)}</p>
+      <div class="glbank-in" style="margin-top:8px">${b.ex.map(([a, c]) => `<span>${U.esc(a)} → <b>${U.esc(c)}</b></span>`).join("")}</div></div>
+      <div class="row"><button class="btn" id="gbgo">${f.back ? "Try 2 more" : "Quick check: 3 questions"}</button></div></div>`;
+    $app.innerHTML = h;
+    document.getElementById("gbgo").onclick = () => { f.lesson = false; S.play("tap"); redraw(); top(); };
+    return;
+  }
+  if (f.i < set.length) {
+    const it = b.checks[set[f.i]], key = glCheckKey(f, f.i), cs = run.cs[key];
+    h += `<div class="qcard"><div class="qhead"><span class="tag">Building block</span><span class="qnum">${f.i + 1} of ${set.length}</span></div>
+      <p class="stem">${glGap(it.stem)}</p>${glChoiceHTML(key, it)}</div>
+      ${cs && cs.done ? `<div class="row"><button class="btn" id="gbnext">${f.i === set.length - 1 ? "See how I did" : "Next"}</button></div>` : ""}</div>`;
+    $app.innerHTML = h;
+    glBindChoice("block", () => it, redraw);
+    const n = document.getElementById("gbnext"); if (n) n.onclick = () => { f.i++; S.play("tap"); redraw(); top(); };
+    return;
+  }
+  // The set is done: pass, drop down, or climb back up.
+  const st = set.map((_, k) => run.cs[glCheckKey(f, k)]), first = st.filter(x => !x.wrong.length).length, explained = st.filter(x => x.wrong.length >= 2).length;
+  const pass = !explained && first >= set.length - 1;
+  const tags = st.flatMap((x, k) => x.wrong.map(oi => b.checks[set[k]].opts[oi].b)).filter(Boolean);
+  const kid = b.kids.filter(k => !run.bstack.some(x => x.id === k)).sort((a, c) => tags.filter(t => t === c).length - tags.filter(t => t === a).length)[0];
+  const canDrop = !pass && !f.set && kid && run.bstack.length < GL.BLOCK_DEPTH;
+  const parent = run.bstack[run.bstack.length - 2];
+  h += `<div class="fb ${pass ? "ok" : "info"} pop"><p class="big"><strong>${pass ? `Building block fixed: ${U.esc(b.name)} ✅` : canDrop ? "Let's go one step down" : "Good effort"}</strong>${pass ? ` <span class="xpgain">+${GL.XP_GLAB.block} XP</span>` : ""}</p>
+    <p>${first} of ${set.length} right first time.</p>
+    <p>${pass ? (parent ? `Now back up to "${U.esc(GL.BLOCKS[parent.id].name)}".` : run.blkRet === "scene" ? "Now on to the mission." : "Now back to the mission.")
+      : canDrop ? `These mistakes come from "${U.esc(GL.BLOCKS[kid].name)}". Let's fix that, then come back up.`
+      : `"${U.esc(b.name)}" needs more practice. We'll come back to it next time, and your teacher can see it too.${parent ? ` Let's go back up to "${U.esc(GL.BLOCKS[parent.id].name)}".` : ""}`}</p></div>
+    <div class="row"><button class="btn" id="gbdone">${canDrop ? `Fix "${U.esc(GL.BLOCKS[kid].name)}"` : parent ? `Back to "${U.esc(GL.BLOCKS[parent.id].name)}"` : run.blkRet === "finish" ? "See my results" : run.blkRet === "scene" ? "Start the mission" : "Back to the mission"}</button></div></div>`;
+  $app.innerHTML = h;
+  document.getElementById("gbdone").onclick = () => {
+    S.play("tap");
+    if (canDrop) { run.bstack.push({ id: kid, set: 0, i: 0, lesson: true }); return (redraw(), top()); }
+    run.results.push({ skill: "Grammar Block", block: f.id, passed: pass, depth: run.bstack.length, first_try: false, support: "block" });
+    run.bdone[f.id] = true; run.bm[f.id] = 0; run.bstack.pop();
+    if (parent) { if (!parent.set) Object.assign(parent, { set: 1, i: 0, lesson: true, back: true });
+      else { run.results.push({ skill: "Grammar Block", block: parent.id, passed: false, depth: run.bstack.length, first_try: false, support: "block" }); run.bdone[parent.id] = true; run.bstack.pop(); }
+      if (run.bstack.length) return (redraw(), top()); }
+    run.warm = false; run.bstack = [];
+    if (run.blkRet === "finish") return finishGLab();
+    run.phase = run.blkRet; if (run.phase === "prove" && !run.seq[run.i]) glPick();
+    redraw(); top();
+  };
+}
 function glRunView() {
-  const m = glM(), redraw = () => { saveRun(); glRunView(); backButton(); }, go = (fn) => { S.play("tap"); fn(); saveRun(); glRunView(); backButton(); top(); };
+  const m = glM(), redraw = () => { saveRun(); glRunView(); backButton(); }, go = (fn) => { S.play("tap"); fn(); if (run.bpend) glEnterBlock(run.bpend, run.phase); saveRun(); glRunView(); backButton(); top(); };
   const nextBtn = (label, id = "gnext") => `<div class="row"><button class="btn" id="${id}">${label}</button></div>`;
   if (run.phase === "scene") {
     $app.innerHTML = `<div class="narrow pop">${glHead(0)}<h1>${U.esc(m.title)}</h1><p class="lede">${U.esc(m.blurb)}</p>
@@ -1847,6 +1924,7 @@ function glRunView() {
     return;
   }
   if (run.phase === "rescue") return glRescueView();
+  if (run.phase === "block") return glBlockView();
   glProveView();
 }
 function glRescueView() {
@@ -1883,7 +1961,7 @@ function glProveView() {
         ${got ? `<span class="xpgain">+${first ? GL.XP_GLAB.first[it.level] : GL.XP_GLAB.hint} XP</span>` : ""}</p>
         ${got ? "" : `<p>The answer is <b>${U.esc(it.type === "type" ? it.accept[0] : it.opts[0].t)}</b>. ${glx(it.explain || "")}</p>`}
         ${s.step && s.step.up && run.i < n - 1 ? `<p><b>2 in a row!</b> The next question is ${lvChip(s.step.level)}.</p>` : ""}
-        ${s.step && s.step.rescue && run.i < n - 1 ? `<p><b>2 missed in a row.</b> Next, a quick look at the rule.</p>` : ""}</div>
+        ${s.step && s.step.rescue && run.i < n - 1 ? `<p><b>2 missed in a row.</b> Next, a quick look at the rule.</p>` : ""}${glBlockNote()}</div>
       <div class="row"><button class="btn" id="gnext">${run.i === n - 1 ? "See my results" : s.step && s.step.rescue ? "Look at the rule" : "Next question"}</button></div>`;
   }
   $app.innerHTML = h + `</div></div>`;
@@ -1898,15 +1976,16 @@ function glProveView() {
     redraw(); const f = $app.querySelector(".fb"); if (f) f.scrollIntoView({ block: "center", behavior: "smooth" });
   };
   $app.querySelectorAll("[data-ghint]").forEach(b => b.onclick = () => { s.hint = true; S.play("tap"); redraw(); });
-  $app.querySelectorAll("[data-gp]").forEach(b => b.onclick = () => { const oi = +b.dataset.gp; if (oi !== 0) s.wrong.push(oi); finish(oi === 0); });
+  $app.querySelectorAll("[data-gp]").forEach(b => b.onclick = () => { const oi = +b.dataset.gp; if (oi !== 0) { s.wrong.push(oi); glMiss(it.opts[oi].b); } finish(oi === 0); });
   const c = document.getElementById("gcheck"), inp = document.getElementById("gword");
-  if (c) { const check = () => { const v = inp.value.trim(); if (!v) return; const ok = GL.typedOk(it, v); if (!ok) s.tries.push(v); finish(ok); };
+  if (c) { const check = () => { const v = inp.value.trim(); if (!v) return; const ok = GL.typedOk(it, v); if (!ok) { s.tries.push(v); glMiss(it.b); } finish(ok); };
     c.onclick = check; inp.onkeydown = ev => { if (ev.key === "Enter") check(); }; }
   const nx = document.getElementById("gnext"); if (nx) nx.onclick = () => {
     S.play("tap");
-    if (run.i === n - 1) return finishGLab();
+    if (run.i === n - 1) { if (run.bpend) { glEnterBlock(run.bpend, "finish"); redraw(); return top(); } return finishGLab(); }
     run.i++; run.flash = s.step && s.step.up ? "up" : null;
     if (s.step && s.step.rescue) { run.phase = "rescue"; run.rescueItem = it.id; } else glPick();
+    if (run.bpend) glEnterBlock(run.bpend, run.phase);
     redraw(); top();
   };
 }
@@ -1928,6 +2007,8 @@ function glDoneView() {
     ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     ${caught.length ? `<div class="panel"><h3>The questions that caught you</h3><ul>${caught.map(it => `<li>${glGap(it.stem)} <span class="note">(answer: ${U.esc(it.type === "type" ? it.accept[0] : it.opts[0].t)})</span></li>`).join("")}</ul></div>`
       : `<div class="fb ok winbox"><p class="big">Perfect proof!</p></div>`}
+    ${(() => { const bl = run.results.filter(r => r.skill === "Grammar Block"); return bl.length ? `<div class="panel"><h3>Building blocks you worked on</h3>
+      <ul>${bl.map(r => `<li>${r.passed ? "✅" : "🔧"} ${U.esc(GL.BLOCKS[r.block].name)} <span class="note">${r.passed ? "fixed" : "needs more practice: it'll be your warm-up next time"}</span></li>`).join("")}</ul></div>` : ""; })()}
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row">${next ? `<button class="btn" id="gnextm">Next mission: ${U.esc(next.title)}</button>` : ""}<button class="btn alt" id="gmore">More ${U.esc(m.point)} practice</button><button class="btn alt" id="ghub">Back to the Grammar Lab</button></div></div>`;
   const nm = document.getElementById("gnextm"); if (nm) nm.onclick = () => { run = null; saveRun(); startGLab(next.id); };
