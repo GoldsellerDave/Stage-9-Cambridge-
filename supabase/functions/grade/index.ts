@@ -83,10 +83,12 @@ Deno.serve(async (req) => {
       output_config: { effort: "low", format: { type: "json_schema", schema: SCHEMA } },
       messages: [{ role: "user", content: prompt }],
     });
-    if (res.stop_reason === "refusal") return json({ error: "Not marked" }, 502);
+    if (res.stop_reason === "refusal") { console.error("grade: refusal"); return json({ error: "Not marked" }, 502); }
     const text = res.content.find((c) => c.type === "text");
     verdict = JSON.parse(text && text.type === "text" ? text.text : "{}");
   } catch (e) {
+    // Shows in Supabase > Edge Functions > grade > Logs, so setup problems (wrong key, no credit, wrong model) are easy to spot.
+    console.error("grade: Claude call failed", e instanceof Anthropic.APIError ? `${e.status} ${e.message}` : String(e));
     if (e instanceof Anthropic.RateLimitError) return json({ error: "Busy, try later" }, 503);
     if (e instanceof Anthropic.APIError) return json({ error: `AI error ${e.status}` }, 502);
     return json({ error: "AI unavailable" }, 502);
