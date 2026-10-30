@@ -1,4 +1,4 @@
-"""Make the voices for the grammar cartoon scenes (js/scenes.js) with Kokoro TTS (kokoro-onnx).
+"""Make the voices for the grammar cartoon scenes and quest cutscenes (js/scenes.js SCENES and CUTS) with Kokoro TTS (kokoro-onnx).
 
 Usage: python3 tools/make_scene_audio.py MODEL_DIR
 MODEL_DIR holds kokoro-v1.0.onnx and voices-v1.0.bin (github.com/thewh1teagle/kokoro-onnx/releases, model-files-v1.0).
@@ -13,7 +13,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VOICES = {"zip": ("am_puck", 1.0), "nova": ("bf_emma", 0.92)}
 
 def scenes():
-    js = 'import("./js/scenes.js").then(m => console.log(JSON.stringify(Object.fromEntries(Object.entries(m.SCENES).map(([k, v]) => [k, v.beats.map(b => ({ who: b.who, say: b.say }))])))))'
+    js = 'import("./js/scenes.js").then(m => console.log(JSON.stringify(Object.fromEntries(Object.entries({ ...m.SCENES, ...m.CUTS }).map(([k, v]) => [k, v.beats.map(b => ({ who: b.who, say: b.say }))])))))'
     return json.loads(subprocess.check_output(["node", "-e", js], cwd=ROOT))
 
 def spoken(t):

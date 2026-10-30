@@ -1028,3 +1028,57 @@ button.schip{cursor:pointer;font-family:inherit} .sumcard .btn{align-self:flex-s
 .gblessons a{color:var(--ink)}
 .scn .scnbub.an-fade,.scn .scnsent.an-fade{animation:scfade .5s ease-out} @keyframes scfade{from{opacity:0;transform:translateY(6px)}}
 .scn[data-beat="4"] .bowl{transition-delay:1.4s}
+
+/* Grammar Quests (quests.js): quest cards, the hero, the hero maker, power buttons, cutscene stages (scenes.js CUTS) */
+.qhero{display:block;width:44px;height:55px} .qhero.big{width:96px;height:120px}
+.qherocard{display:flex;gap:14px;align-items:center;margin:12px 0;padding:12px 16px;border-radius:16px;background:linear-gradient(135deg,#2B1B5A,#2E6FB0);color:#fff}
+.qherocard .note{color:#E6E9F5} .qherocard .btn.alt{background:#fff;color:#2B1B5A;border-color:#fff}
+.qherocard.qmaker{justify-content:center;padding:18px} .qherocard.qmaker .qhero.big{width:120px;height:150px}
+.qst{border-radius:16px;overflow:hidden;margin:12px 0;border:2px solid var(--line);background:var(--card)}
+.qbanner{display:flex;gap:12px;align-items:center;padding:12px 16px;background:linear-gradient(135deg,var(--q1),var(--q2));color:#fff}
+.qbanner h3{margin:0;color:#fff} .qbanner .eyebrow{color:#E6E9F5;margin:0}
+.qicon{font-size:2rem;width:48px;height:48px;display:grid;place-items:center;background:rgba(255,255,255,.15);border-radius:10px}
+.qbody{padding:10px 16px 12px}
+.qst.locked{opacity:.65} .qst.locked .qbanner{filter:grayscale(.7)} .qst.cleared{border-color:var(--gold)}
+.qlevels{list-style:none;margin:8px 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.qlevels li{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--surface);border:2px solid transparent}
+.qlevels li.now{border-color:var(--teal)} .qlevels li.done{background:var(--gold-bg)}
+.qnode{flex:0 0 32px;height:32px;border-radius:8px;display:grid;place-items:center;font-weight:800;background:var(--card);border:2px solid var(--line)}
+.qlevels li.now .qnode{background:var(--teal);color:#fff;border-color:var(--teal)}
+.qhome .qhomein{display:flex;gap:12px;align-items:center} .qhome h3{margin:0 0 4px}
+.qhomeav{flex:0 0 64px;height:72px;border-radius:12px;background:linear-gradient(135deg,#2B1B5A,#2E6FB0);display:grid;place-items:center}
+.qlink{border-color:var(--teal);background:var(--mint)} .qlink .gbscav{background:linear-gradient(135deg,#2B1B5A,#2E6FB0);border-radius:10px;padding:2px 6px}
+.qpick{margin:14px 0} .qpick .row{margin-top:6px;gap:8px;flex-wrap:wrap}
+.qsw{width:40px;height:40px;border-radius:8px;border:3px solid var(--line);cursor:pointer} .qsw.on{border-color:var(--ink);box-shadow:0 0 0 3px var(--teal)}
+.qchip{padding:8px 14px;border-radius:999px;border:2px solid var(--line);background:var(--card);color:var(--ink);font-weight:700;cursor:pointer} .qchip.on{border-color:var(--teal);background:var(--mint)}
+.qgearg{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;margin-top:6px}
+.qgearb{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 6px;border-radius:12px;border:2px solid var(--line);background:var(--card);color:var(--ink);text-align:center;font:inherit;cursor:pointer}
+.qgearb>span:first-child{font-size:1.6rem} .qgearb.on{border-color:var(--gold);background:var(--gold-bg)} .qgearb:disabled{opacity:.55;cursor:default}
+.qpw{display:flex;gap:4px;margin-left:auto} .gbcombo{margin-left:6px}
+.qpwb{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:1.1rem;background:var(--card);border:2px solid var(--gold);padding:0}
+button.qpwb:not(:disabled){cursor:pointer;animation:qpulse 1.4s ease-in-out infinite} .qpwb.used{opacity:.35;border-color:var(--line)} button.qpwb:disabled{opacity:.45}
+@keyframes qpulse{50%{box-shadow:0 0 0 4px rgba(242,194,48,.35)}}
+.opt.ko{opacity:.35;text-decoration:line-through}
+.qwin{display:grid;place-items:center;padding:16px;margin:8px 0 12px;border-radius:16px;background:linear-gradient(135deg,var(--q1),var(--q2))}
+.qtxt{font:900 14px var(--f-body);fill:#fff;letter-spacing:.04em}
+.qme{transition:transform 1.6s cubic-bezier(.45,.05,.3,1);transform:translateX(160px)}
+.scn[data-scene="q-time"][data-beat="5"] .qme,.scn[data-scene="q-robots"][data-beat="4"] .qme,.scn[data-scene="q-museum"][data-beat="4"] .qme{transform:none}
+.scn[data-scene^="q-"] :is(.qagain,.qspark,.qhelp,.qmask){opacity:0;transition:opacity .5s}
+.scn[data-scene="q-time"]:is([data-beat="1"],[data-beat="3"]) :is(.qagain,.qspark){opacity:1}
+.scn[data-scene="q-robots"][data-beat="2"] .qhelp{opacity:1}
+.qpizza,.qbots{transition:transform 1.4s cubic-bezier(.45,.05,.3,1)}
+.scn[data-scene="q-robots"][data-beat="2"] .qpizza{transform:translate(-30px,40px) rotate(-12deg)} .scn[data-scene="q-robots"][data-beat="2"] .qbots{transform:translateX(-90px)}
+.scn[data-scene="q-museum"][data-beat="2"] .qmask{opacity:1}
+.qmask{transform:translate(200px,160px);transition:opacity .5s,transform 2.5s linear} .scn[data-scene="q-museum"][data-beat="2"] .qmask{transform:translate(110px,160px)}
+@media (prefers-reduced-motion:no-preference){
+  .qhand{animation:qspin 6s linear infinite} .scn[data-scene="q-time"]:is([data-beat="1"],[data-beat="3"]) .qhand{animation-duration:.5s}
+  .qgear.g1{animation:qspin 4s linear infinite} .qgear.g2{animation:qspin 4s linear infinite reverse} @keyframes qspin{to{transform:rotate(360deg)}}
+  .scn[data-scene="q-time"][data-beat="3"] .qgear{animation-duration:.4s}
+  .qjaw{animation:qchomp .3s steps(2) infinite} @keyframes qchomp{50%{transform:translateY(3px)}}
+  .qbeam{transform-origin:262px 120px;animation:qsweep 4s ease-in-out infinite alternate} @keyframes qsweep{from{transform:rotate(-12deg)}to{transform:rotate(14deg)}}
+  .qzzz{animation:qzz 1.6s ease-in-out infinite alternate} @keyframes qzz{to{opacity:.3;transform:translateY(-3px)}}
+  .scn[data-scene="q-museum"][data-beat="2"] .qmask .leg{transform-box:fill-box;transform-origin:50% 0;animation:legs .3s ease-in-out infinite alternate}
+  .scn[data-scene="q-museum"][data-beat="2"] .qmask .leg.r{animation-direction:alternate-reverse}
+  .hr-flame{animation:qzz .2s infinite alternate} .hr-aura{animation:qzz 1.2s ease-in-out infinite alternate}
+  .qwin.cheer .qhero{animation:qjump .6s ease-in-out 3} @keyframes qjump{50%{transform:translateY(-14px)}}
+}

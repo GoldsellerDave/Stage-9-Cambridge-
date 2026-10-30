@@ -72,12 +72,75 @@ export const SCENES = {
     { who: "zip", say: "Uh-oh… why is the HALL mopping itself?! And why are the cleaners eating noodles?! 😱", s: "The hall#o | was cleaning#bad", note: "was cleaning = the hall was DOING the cleaning. 🙃", ms: 5600, walk: true, sound: "bad" },
     { who: "nova", say: "Rewind! A hall can't clean anything. It GETS cleaned: was being + V3.", s: "The hall#o | was being cleaned#new | by the cleaners#s", ms: 5200, walk: true, sound: "ok" }] }
 };
+// Quest cutscenes (quests.js): the story at the start of each quest. Same player and cast; %%ME%% is the student's
+// own hero (quests.js heroSVG), who walks on at the end. Keys are quest ids. Not lessons, so not in SCENES.
+const cast = (svg, x, y, w) => svg.replace('<svg viewBox="0 0 40 40" class="av"', `<svg x="${x}" y="${y}" width="${w}" height="${w}" viewBox="0 0 40 40" class="av"`);
+const ME = (x, y) => `<g transform="translate(${x} ${y}) scale(1.2)"><g class="qme">%%ME%%</g></g>`;
+const gear = (x, y, r, cls) => `<g class="qgear ${cls}" style="transform-origin:${x}px ${y}px"><rect x="${x - r}" y="${y - r}" width="${r * 2}" height="${r * 2}" fill="#C98A0B"/><rect x="${x - r}" y="${y - r}" width="${r * 2}" height="${r * 2}" fill="#C98A0B" transform="rotate(45 ${x} ${y})"/><rect x="${x - r / 3}" y="${y - r / 3}" width="${r / 1.5}" height="${r / 1.5}" fill="#2B1B5A"/></g>`;
+const LAB = `<svg viewBox="0 0 360 200" class="scnsvg" role="img" aria-label="A lab with a broken time machine">
+  <rect width="360" height="150" fill="#2B1B5A"/><path d="M0 40H360M0 80H360M0 120H360" stroke="#000" stroke-opacity=".18"/>
+  <rect y="150" width="360" height="50" fill="#3D2C70"/><path d="M0 172H360M40 150V200M100 150V200M160 150V200M220 150V200M280 150V200M340 150V200" stroke="#000" stroke-opacity=".18"/>
+  ${gear(98, 56, 13, "g1")}${gear(266, 50, 10, "g2")}${gear(276, 84, 8, "g1")}
+  ${blk(118, 30, 124, 120, "#5C6B7A")}${blk(142, 42, 76, 76, "#F4E9D8")}
+  <rect x="177" y="46" width="6" height="8" fill="#2B3440"/><rect x="177" y="106" width="6" height="8" fill="#2B3440"/><rect x="146" y="77" width="8" height="6" fill="#2B3440"/><rect x="206" y="77" width="8" height="6" fill="#2B3440"/>
+  <g class="qhand" style="transform-origin:180px 80px"><rect x="177.5" y="52" width="5" height="30" fill="#E2574C"/></g><rect x="175" y="75" width="10" height="10" fill="#2B3440"/>
+  ${blk(158, 126, 44, 14, "#E2574C")}<text x="180" y="137" text-anchor="middle" class="qtxt" style="font-size:9px">DON'T</text>
+  <g class="qspark"><path d="M110 120l4 -10l4 10l10 4l-10 4l-4 10l-4 -10l-10 -4z" fill="#FFD54A"/><path d="M250 120l3 -8l3 8l8 3l-8 3l-3 8l-3 -8l-8 -3z" fill="#FFD54A"/></g>
+  <text class="qagain qtxt" x="180" y="22" text-anchor="middle">AGAIN! AGAIN! AGAIN!</text>
+  ${cast(ZIP, 26, 98, 58)}${cast(NOVA, 300, 96, 56)}${ME(232, 84)}</svg>`;
+const pizza = `<g class="qpizza"><path d="M0 0L64 0L32 52Z" fill="#F2C230"/><path d="M-3 -6H67V4H-3Z" fill="#C98A0B"/><rect x="14" y="10" width="7" height="7" fill="#E2574C"/><rect x="38" y="20" width="7" height="7" fill="#E2574C"/>
+  <rect x="20" y="4" width="9" height="9" fill="#fff"/><rect x="36" y="4" width="9" height="9" fill="#fff"/><rect x="23" y="7" width="5" height="5" fill="#222"/><rect x="37" y="7" width="5" height="5" fill="#222"/>
+  <path class="qjaw" d="M24 22h16v6h-16z" fill="#7A2A20"/></g>`;
+const bot = (x, c) => `<g class="qbot" transform="translate(${x} 0)">${blk(0, 0, 22, 20, c)}<rect x="4" y="5" width="14" height="8" fill="#0F2A2A"/><rect x="6" y="7" width="4" height="4" fill="#7CF5E8"/><rect x="12" y="7" width="4" height="4" fill="#7CF5E8"/>${blk(4, 20, 14, 10, "#5C6B7A")}</g>`;
+const KITCHEN = `<svg viewBox="0 0 360 200" class="scnsvg" role="img" aria-label="A robot pizza kitchen where a pizza is chasing the robots">
+  <rect width="360" height="150" fill="#E6F4F1"/><path d="M0 30H360M0 60H360M0 90H360M0 120H360M30 0V150M90 0V150M150 0V150M210 0V150M270 0V150M330 0V150" stroke="#2BA59E" stroke-opacity=".2"/>
+  <rect y="150" width="360" height="50" fill="#9AA8B5"/><path d="M0 172H360" stroke="#000" stroke-opacity=".15"/>
+  ${blk(20, 18, 70, 46, "#5C6B7A")}<rect x="28" y="26" width="54" height="30" fill="#FF8A3D"/><text x="55" y="45" text-anchor="middle" class="qtxt" style="font-size:10px">OVEN</text>
+  <g class="qbelt">${blk(110, 112, 180, 12, "#3A3A3A")}<path d="M120 112v12M140 112v12M160 112v12M180 112v12M200 112v12M220 112v12M240 112v12M260 112v12M280 112v12" stroke="#777"/></g>
+  <g transform="translate(168 60)">${pizza}</g>
+  <g transform="translate(120 120)"><g class="qbots">${bot(0, "#2BA59E")}${bot(34, "#F06292")}</g></g>
+  <text class="qhelp qtxt" style="fill:#E2574C;font-size:20px" x="250" y="40" text-anchor="middle">HELP!</text>
+  ${cast(ZIP, 20, 96, 58)}${cast(NOVA, 300, 96, 56)}${ME(230, 84)}</svg>`;
+const MUSEUM = `<svg viewBox="0 0 360 200" class="scnsvg" role="img" aria-label="A dark museum at night with an empty stand where the golden mask was">
+  <rect width="360" height="150" fill="#0B1426"/><path d="M0 50H360M0 100H360" stroke="#fff" stroke-opacity=".05"/>
+  <rect y="150" width="360" height="50" fill="#1A2440"/><path d="M0 172H360M60 150V200M140 150V200M220 150V200M300 150V200" stroke="#fff" stroke-opacity=".06"/>
+  ${blk(40, 30, 18, 120, "#2E3850")}${blk(302, 30, 18, 120, "#2E3850")}
+  ${blk(150, 104, 60, 46, "#3A4566")}${blk(158, 50, 44, 54, "#24304D")}<rect x="164" y="56" width="32" height="42" fill="none" stroke="#C98A0B" stroke-width="2" stroke-dasharray="4 3"/><text x="180" y="82" text-anchor="middle" class="qtxt" style="font-size:16px">?</text>
+  <g class="qguard">${blk(250, 116, 26, 34, "#2E4A7A")}${blk(252, 98, 20, 18, "#C68642")}<rect x="256" y="106" width="5" height="2" fill="#222"/><rect x="264" y="106" width="5" height="2" fill="#222"/>${blk(250, 94, 24, 6, "#1A2440")}<text class="qzzz qtxt" x="282" y="92">z z Z</text></g>
+  <g class="qmask"><path d="M0 0h30v14l-6 10h-18l-6 -10z" fill="#F2C230" stroke="#C98A0B"/><rect x="6" y="5" width="6" height="5" fill="#0B1426"/><rect x="18" y="5" width="6" height="5" fill="#0B1426"/>
+    <rect class="leg l" x="8" y="24" width="4" height="10" fill="#C98A0B"/><rect class="leg r" x="18" y="24" width="4" height="10" fill="#C98A0B"/>${blk(28, 8, 16, 16, "#6B4320")}</g>
+  <path class="qbeam" d="M262 120L150 160L190 196Z" fill="#FFF3B0" opacity=".22"/>
+  <g class="qprints" fill="#C9B48A" opacity=".5"><rect x="120" y="182" width="6" height="4"/><rect x="100" y="176" width="6" height="4"/><rect x="80" y="184" width="6" height="4"/></g>
+  ${cast(ZIP, 20, 96, 58)}${cast(NOVA, 88, 96, 56)}${ME(176, 84)}</svg>`;
+
+export const CUTS = {
+  "q-time": { stage: LAB, beats: [
+    { who: "nova", say: "Uh-oh. Zip, what did you do to the Time Engine?", s: "", ms: 3000 },
+    { who: "zip", say: "I pressed the big red button! Now it's yesterday… again. And again. And again!", s: "", ms: 4500, sound: "bad" },
+    { who: "nova", say: "To fix it, we need to tell the story of yesterday correctly. What happened, and what was happening.", s: "I#s | was eating#v | when it#s | exploded#v", ms: 5000 },
+    { who: "zip", say: "Easy! Yesterday I was eat a sandwich when the machine explode. Fixed!", s: "I | was eat#bad | a sandwich when the machine | explode#bad", note: "was eat? explode? The gears just got worse! 🙃", ms: 5000, sound: "bad" },
+    { who: "nova", say: "See? The gears won't turn with sentences like that. Every right answer fixes one gear.", s: "I | was eating#new | a sandwich when the machine | exploded#new", ms: 5000, sound: "ok" },
+    { who: "nova", say: "Hero, you're up. Let's fix yesterday!", s: "", ms: 3000, walk: true, sound: "level" }] },
+  "q-robots": { stage: KITCHEN, beats: [
+    { who: "zip", say: "Welcome to my robot pizza kitchen! My robots make the pizzas.", s: "The robots#s | make#v | the pizzas#o", ms: 4000 },
+    { who: "zip", say: "I made their instructions shorter. Now they're a bit… mixed up.", s: "", ms: 3800 },
+    { who: "zip", say: "The pizza ate the robot! Help! It's hungry!", s: "The pizza#s | ate#v | the robot#o", note: "Who's doing the eating? The PIZZA! 🍕", ms: 4500, walk: true, sound: "bad" },
+    { who: "nova", say: "Find the doer. Pizzas don't eat robots. Robots make pizzas. The pizza was made by the robots.", s: "The pizza#o | was made#new | by the robots#s", ms: 5500, sound: "ok" },
+    { who: "nova", say: "Hero, find the doers and switch the sentences round, before that pizza gets hungry again.", s: "", ms: 4000, walk: true, sound: "level" }] },
+  "q-museum": { stage: MUSEUM, beats: [
+    { who: "nova", say: "Museum Night. Last night, the golden mask disappeared.", s: "", ms: 3500 },
+    { who: "nova", say: "While the guards were sleeping, the mask was being stolen.", s: "The mask#o | was being stolen#v", ms: 4500 },
+    { who: "zip", say: "So… the mask was stealing? Naughty mask! It stole itself and ran away!", s: "The mask#o | was stealing#bad", note: "was stealing = the mask did the stealing. 🙃", ms: 5000, walk: true, sound: "bad" },
+    { who: "nova", say: "No, Zip. The mask didn't DO anything. Somebody stole it. The question is: by whom?", s: "The mask#o | was being stolen#new | by ???#s", ms: 5200, sound: "ok" },
+    { who: "nova", say: "Hero, search the halls and question the suspects. Let's solve the case.", s: "", ms: 4000, walk: true, sound: "level" }] }
+};
 export const hasScene = id => !!SCENES[id];
+const scene = id => SCENES[id] || CUTS[id] || null;
 
 const sentence = s => s ? s.split("|").map(x => x.trim()).filter(Boolean).map(x => { const [t, k] = x.split("#"); return `<span class="at${k ? ` at-${k}` : ""}">${esc(t)}</span>`; }).join("") : `<span class="note">…</span>`;
 
-export const sceneHTML = id => SCENES[id] ? `<div class="scn" id="gscn" data-scene="${esc(id)}" data-beat="0">
-  <div class="scnstage">${SCENES[id].stage}</div>
+export const sceneHTML = (id, { me = "" } = {}) => scene(id) ? `<div class="scn" id="gscn" data-scene="${esc(id)}" data-beat="0">
+  <div class="scnstage">${scene(id).stage.replace("%%ME%%", me)}</div>
   <div class="scnsay"><span class="scnav"></span><p class="scnbub" aria-live="polite"></p></div>
   <div class="scnsent"></div><p class="scnnote"></p>
   <div class="anctl"><button type="button" class="anb" data-sc="prev" aria-label="Back">‹</button><span class="andots"></span>
@@ -91,8 +154,8 @@ const READ_GAP = 1800;
 const stopAll = () => { clearTimeout(timer); clearInterval(guard); if (voice) { voice.pause(); voice = null; } };
 export function mountScene(root = typeof document !== "undefined" && document.getElementById("gscn")) {
   stopAll();
-  if (!root || !SCENES[root.dataset.scene]) return;
-  const sid = root.dataset.scene, beats = SCENES[sid].beats;
+  if (!root || !scene(root.dataset.scene)) return;
+  const sid = root.dataset.scene, beats = scene(sid).beats;
   let k = -1, paused = false;
   guard = setInterval(() => { if (!root.isConnected) stopAll(); }, 500);
   const after = (ms) => { clearTimeout(timer); if (!paused && k < beats.length - 1) timer = setTimeout(() => go(k + 1), ms); else if (k >= beats.length - 1) setPaused(true, true); };
