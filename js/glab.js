@@ -12,7 +12,7 @@
 // { skill: "Grammar Lab", step } and give XP but don't count in the area score. Don't rename mission or item ids.
 
 export const GLAB_LEN = 6;
-export const XP_GLAB = { step: 3, write: 10, first: [10, 15, 20], hint: 4, finish: 10 };
+export const XP_GLAB = { step: 3, twin: 2, write: 10, frame: 5, first: [10, 15, 20], hint: 4, finish: 10 };
 
 export const GLAB = [
 { id: "glab-2.4", point: "2.4", unit: 2, n: 1, title: "The Case of the Missing Phone", short: "must have, might have, can't have",
@@ -155,6 +155,151 @@ export const GLAB = [
     { level: 2, id: "p33-x4", stem: "At 9:30 last night, the paintings ___ by two guards, but one of them fell asleep.", opts: [{ t: "were being watched" }, { t: "were watching", why: "The paintings didn't watch anything. The guards watched them." }, { t: "were being watching", why: "After being, use the past participle: watched." }] }] }
 ];
 
+// Help for every question, so a wrong answer leads to understanding, not just the answer.
+//   hint: a nudge towards the clue or the rule (never the answer). Shown on "Need a hint?", after one wrong answer, and
+//         straight away while support is on (see student.js).
+//   explain: after two wrong answers, why the right answer is right.
+//   twin: a question like it (Get it, Use it) to try straight after the explanation, so the student uses what they just saw.
+// Keys are item ids; "r24" and "r33" are the rule questions. Merged into the missions below.
+const HELP = {
+  r24: { hint: "Look at your three groups: sure it happened, maybe, sure it didn't. Which rule fits all three?",
+    explain: "Lan can see the open bag, so she's sure: must have fallen. Bao isn't sure: might have taken. The teacher knows about the photo on the bus, so he's sure it didn't happen: can't have left. They are all guesses about the past from clues: modal + have + past participle." },
+  "g24-1": { hint: "100% sure. In your groups, which modal meant \"sure it happened\"?",
+    explain: "100% sure that something happened = must have. might have is only maybe, and can't have is sure it did NOT happen.",
+    twin: { visual: { kind: "meter", at: 0, who: "The teacher" }, stem: "The teacher is sure it did NOT happen. Which sentence does she say?",
+      opts: [{ t: "Minh can't have lost it at school." }, { t: "Minh must have lost it at school.", why: "must have means she's sure it DID happen." },
+        { t: "Minh might have lost it here at school.", why: "might have means maybe. She's sure it didn't happen." }],
+      explain: "Sure it did NOT happen = can't have + past participle." } },
+  "g24-2": { hint: "Lan's meter is in the middle. Which modal means maybe?",
+    explain: "The middle of the meter means maybe, and maybe = might have (or could have). must have and can't have are both for when you're sure.",
+    twin: { visual: { kind: "quote", t: "I'm not sure. Someone could have taken it from his bag." }, stem: "How sure is Bao?",
+      opts: [{ t: "Not sure. It's possible." }, { t: "Completely sure it happened.", why: "could have means maybe, like might have. He also says \"I'm not sure\"." },
+        { t: "Sure it didn't happen.", why: "That would be can't have." }],
+      explain: "could have and might have both mean maybe. Bao even says \"I'm not sure\"." } },
+  "g24-3": { hint: "Read the second sentence: \"He was with me all day.\" Could Bao take it?",
+    explain: "can't have = I'm sure it did NOT happen. The speaker was with Bao all day, so the speaker is sure he didn't take it.",
+    twin: { visual: { kind: "quote", t: "The phone must have fallen out. His bag was open." }, stem: "Did the phone fall out of the bag?",
+      opts: [{ t: "Yes. The speaker is sure it did." }, { t: "No. The speaker is sure it didn't.", why: "That would be can't have. must have means sure it DID happen." },
+        { t: "We have no idea. Nobody can guess.", why: "The open bag is a clue, and must have shows the speaker is sure." }],
+      explain: "must have = sure it happened. The open bag is the clue that makes the speaker sure." } },
+  "g24-4": { hint: "A guess about the past has three parts: modal + have + past participle. Which sentence has all three?",
+    explain: "must have forgotten = modal (must) + have + past participle (forgotten), so it's a guess about the past. must forget is about now or a rule, and must be forget isn't a correct form.",
+    twin: { stem: "Which sentence is a guess about the past?",
+      opts: [{ t: "He might have missed the bus." }, { t: "He might miss the bus tomorrow.", why: "might + verb is about now or the future." },
+        { t: "He might has missed the bus.", why: "After might, use have, not has." }],
+      explain: "might have missed = modal + have + past participle, so it's a guess about the past." } },
+  "u24-1": { hint: "Look at the 📸 clue. Where was the phone at 2:30?",
+    explain: "He took a photo with it on the bus at 2:30, after the museum. So the detective is sure it did NOT happen: can't have left.",
+    twin: { stem: "Lan's bag was closed all day, so the phone ___ into it by accident.",
+      opts: [{ t: "can't have fallen" }, { t: "could have fallen", why: "could have means maybe. A closed bag makes it impossible." },
+        { t: "must have fell", why: "The closed bag says it didn't happen. Also, after have use fallen, not fell." }],
+      explain: "The bag was closed all day, so it's impossible: can't have fallen." } },
+  "u24-2": { hint: "Look at the 😴 clue. What was Mai doing during the journey?",
+    explain: "Mai was asleep for the whole journey, so it's impossible that she saw it: can't have seen. After couldn't, it's always have, never had.",
+    twin: { stem: "Bao was at home sick that day, so he ___ it.",
+      opts: [{ t: "can't have taken" }, { t: "must have taken away", why: "He wasn't even on the trip. Could he take it?" },
+        { t: "can't have took", why: "took is the past simple. After have, use taken." }],
+      explain: "Bao wasn't there, so it's impossible: can't have taken." } },
+  "u24-3": { hint: "Look at the 📱 and 🎒 clues. Whose phone looks the same as Minh's?",
+    explain: "Duc found two blue phones in his bag, and the phones look the same. So the detective is sure: Duc must have picked it up. After have, use the past participle (picked).",
+    twin: { stem: "Lan has a red umbrella just like Mai's. Now Lan has two red umbrellas, so she ___ Mai's by mistake.",
+      opts: [{ t: "must have taken" }, { t: "can't have taken", why: "Two umbrellas is a clue that it did happen." },
+        { t: "must have take", why: "After have, use the past participle: taken." }],
+      explain: "Two umbrellas make it certain: must have taken." } },
+  "u24-4": { hint: "Look at the 🎒 clue. What did Duc do straight away?",
+    explain: "He gave the phone back at once, so the detective is sure he didn't mean to take it: can't have taken it on purpose. took is the past simple, so it can't come after have.",
+    twin: { stem: "Nam said sorry and paid for the broken window at once. He ___ it on purpose.",
+      opts: [{ t: "can't have broken" }, { t: "must have wanted to break", why: "Saying sorry at once shows he didn't want to." },
+        { t: "can't have broke", why: "broke is the past simple. After have, use broken." }],
+      explain: "Saying sorry at once is the clue: he can't have broken it on purpose." } },
+  "p24-c1": { hint: "Is 100% a clue that she did study, or that she didn't?", explain: "100% is a clue that she did study, and the speaker is sure: must have studied (modal + have + past participle)." },
+  "p24-c2": { hint: "Read the first sentence again. Is the speaker sure?", explain: "\"I'm not sure\" means maybe: might have gone. Use the past participle gone, not went." },
+  "p24-c3": { hint: "Is it possible to read 400 pages in an hour?", explain: "400 pages in an hour is impossible, so the speaker is sure it didn't happen: can't have read." },
+  "p24-c4": { explain: "A guess about the past is must + have + past participle: must have left." },
+  "p24-c5": { hint: "Check the verb after have.", explain: "might have + past participle: might have missed." },
+  "p24-s1": { explain: "His phone was in another room, so it's impossible he heard it: can't (or couldn't) have heard." },
+  "p24-s2": { hint: "The museum was closed. What does that tell you about the times you read?", explain: "The closed museum is a clue that you did read the wrong times. You're sure: must have read." },
+  "p24-s3": { hint: "Maybe = not sure. Which modal means maybe?", explain: "may have, might have and could have all mean maybe." },
+  "p24-s4": { explain: "\"I'm not sure\" means maybe: might, may or could have dropped." },
+  "p24-x1": { hint: "He replied to it. What does that prove?", explain: "He replied, so he certainly got it: must have received." },
+  "p24-x2": { hint: "Did someone send them to bed, or did they go themselves?", explain: "They went themselves, so it isn't passive: must have gone. The lights off and the quiet are the clues that make the speaker sure." },
+  "p24-x3": { explain: "The speaker was in another city all day, so it's impossible: can't (or couldn't) have seen." },
+  "p24-x4": { hint: "Who could know the code to the safe?", explain: "Knowing the code is a clue that it was someone who works there, so the speaker is sure: must have been." },
+  w24: { frame: "Duc must have ___ Minh's phone by ___, because ___.",
+    explain: "must have + past participle (picked up) says the detective is sure, and the clues (the same phone, two phones in Duc's bag) say why." },
+
+  r33: { hint: "Compare \"was being cleaned\" with \"was cleaned\". Which one was still going on at 9:30?",
+    explain: "At 9:30 the cleaning, the moving and the repairing were all still going on. Nobody says who was doing them, because that isn't important. So was / were + being + past participle = something was happening to a thing at that moment." },
+  "g33-1": { hint: "Look at the bar and the ⚡. Was the cleaning still going on at 9:30?",
+    explain: "The bar starts before 9:30 and goes on after it, so the cleaning was in progress: was being cleaned. After being, use the past participle.",
+    twin: { visual: { kind: "timeline", from: "6:00", to: "8:00", span: "Cooking dinner", at: 0.5, point: "7:00 The phone rings" }, stem: "Which sentence matches the timeline?",
+      opts: [{ t: "Dinner was being cooked when the phone rang." }, { t: "Dinner was cooked after the phone rang.", why: "Look at the bar. The cooking was still going on at 7:00." },
+        { t: "Dinner was being cooking when the phone rang.", why: "After being, use the past participle: cooked." }],
+      explain: "At 7:00 the cooking was still in progress: was being cooked." } },
+  "g33-2": { hint: "Look at the word being. Does it mean finished, or still happening?",
+    explain: "being shows the moving was still going on at 9:30, so the statues weren't in their new room yet.",
+    twin: { visual: { kind: "quote", t: "The museum doors were being painted when we arrived." }, stem: "Could the visitors walk through the doors when they arrived?",
+      opts: [{ t: "No. The painting wasn't finished." }, { t: "Yes. The doors were finished and dry.", why: "being shows the painting was still going on." },
+        { t: "We can't tell anything about it.", why: "were being painted tells us the painting was happening at that moment." }],
+      explain: "were being painted = the painting was in progress when they arrived, so the doors weren't ready." } },
+  "g33-3": { hint: "Read the sentence again. Does it name a person?",
+    explain: "The passive doesn't say who did the action. We use it when we don't know who, or it isn't important. Cameras can't repair themselves: they receive the action.",
+    twin: { visual: { kind: "quote", t: "The tickets were being checked at the door." }, stem: "Who was checking the tickets?",
+      opts: [{ t: "We don't know. It doesn't say." }, { t: "The tickets were checking themselves.", why: "Tickets can't check anything. Someone checked them." },
+        { t: "The visitors were checking them all.", why: "The sentence doesn't say who. Who did it isn't important here." }],
+      explain: "The sentence doesn't name a person. The passive puts the tickets first, not the person." } },
+  "g33-4": { hint: "Find 10:00 on the timeline. Was the painting finished then?",
+    explain: "The bar runs from 8:00 to 11:00, so at 10:00 the painting was still going on: was being painted. A sign can't paint, so it must be passive.",
+    twin: { visual: { kind: "timeline", from: "1:00", to: "4:00", span: "Repairing the lift", at: 0.33, point: "2:00 Minh arrives" }, stem: "Minh arrived at 2:00. What did he see?",
+      opts: [{ t: "The lift was being repaired." }, { t: "The lift was repaired last year.", why: "Look at the timeline. At 2:00 the repair was still going on." },
+        { t: "The lift was repairing.", why: "A lift can't repair anything. Someone repaired it." }],
+      explain: "At 2:00 the repair was in progress: was being repaired." } },
+  "u33-1": { hint: "Look at the 🧹 clue. Did the hall clean something, or did people clean it?",
+    explain: "The cleaners started at 9:00, so at 9:30 the cleaning was in progress. The hall received the action, and it's one thing: was being cleaned.",
+    twin: { stem: "At 9:30, the floor ___ by the cleaners.",
+      opts: [{ t: "was being washed" }, { t: "was washing", why: "The floor didn't wash anything. The cleaners washed it." },
+        { t: "were being washed", why: "The floor is one thing: was." }],
+      explain: "The floor received the action, it's one thing, and it was happening at 9:30: was being washed." } },
+  "u33-2": { hint: "Look at the 🗿 clue. How many statues?",
+    explain: "Two statues = plural = were. The moving was still going on: were being moved.",
+    twin: { stem: "At 9:40, the visitors ___ out of the building.",
+      opts: [{ t: "were being led" }, { t: "was being led", why: "visitors is plural: were." },
+        { t: "were being leading", why: "After being, use the past participle: led." }],
+      explain: "visitors is plural, so were being + led (the past participle of lead)." } },
+  "u33-3": { hint: "When did the story happen? And can cameras repair things?",
+    explain: "The story happened last night, so use the past: were. The cameras received the action: were being repaired.",
+    twin: { stem: "We couldn't use the lift last night because it ___.",
+      opts: [{ t: "was being fixed" }, { t: "is being fixed", why: "last night: use the past." },
+        { t: "was fixing itself", why: "A lift can't fix anything. Someone fixed it." }],
+      explain: "last night = past, the lift is one thing, and someone was fixing it: was being fixed." } },
+  "u33-4": { hint: "Look at the 💡 clue. Who fixed the lights?",
+    explain: "The electrician was fixing the lights, so the lights received the action: were being fixed. After being, use the past participle.",
+    twin: { stem: "While the paintings ___, a guard noticed the open door.",
+      opts: [{ t: "were being counted" }, { t: "were counting", why: "The paintings didn't count anything. Someone counted them." },
+        { t: "were being counting", why: "After being, use the past participle: counted." }],
+      explain: "paintings is plural, and someone was counting them: were being counted." } },
+  "p33-c1": { hint: "Did the classroom paint something, or did people paint it?", explain: "People were painting the classroom when I arrived, so it's passive and in progress: was being painted." },
+  "p33-c2": { hint: "roads: one or more than one?", explain: "roads is plural, so were being + repaired." },
+  "p33-c3": { explain: "The repair was in progress: was being repaired." },
+  "p33-c4": { hint: "Which word shows that something is still happening?", explain: "being shows the painting was still happening." },
+  "p33-c5": { hint: "Does dinner serve something, or do people serve it?", explain: "People were serving dinner at 8 p.m., so it's passive and in progress: was being served." },
+  "p33-s1": { explain: "tourists is plural: were being shown." },
+  "p33-s2": { hint: "Was I following someone, or was someone following me?", explain: "Someone was following me, so it's passive. I goes with was: was being followed." },
+  "p33-s3": { hint: "If the repair was finished, could you visit?", explain: "We couldn't visit, so the work was still going on: was being repaired." },
+  "p33-s4": { explain: "After being, use the past participle: checked." },
+  "p33-x1": { hint: "Lanterns aren't people. Which past participle of hang do we use for things?", explain: "For things, hang → hung. People were hanging the lanterns: were being hung." },
+  "p33-x2": { hint: "boats: one or more? And did the boats prepare anything?", explain: "boats is plural (were), and people prepared them (being prepared)." },
+  "p33-x3": { explain: "dry → dried (y changes to i): was being dried." },
+  "p33-x4": { hint: "Who did the watching: the paintings or the guards?", explain: "The guards watched the paintings, so the paintings received the action: were being watched." },
+  w33: { frame: "At 9:30, the ___ was being ___, so ___.",
+    explain: "was / were being + past participle (cleaned, repaired) says what was happening at 9:30, and so says why nobody saw the thief." }
+};
+for (const m of GLAB) {
+  const u = m.point.replace(".", "");
+  Object.assign(m.spot, HELP[`r${u}`]); Object.assign(m.use.write, HELP[`w${u}`]);
+  [...m.get, ...m.use.items, ...m.prove].forEach(it => Object.assign(it, HELP[it.id]));
+}
+
 export const glabMission = id => GLAB.find(m => m.id === id);
 export const glabForPoint = point => GLAB.find(m => m.point === point) || null;
 export const isGLab = id => /^glab-/.test(id || "") && !!glabMission(id);
@@ -175,6 +320,7 @@ export function glabStartLevel(history, tier = 0) {
 export const seenGItems = history => new Set(history.filter(isGLabAttempt).flatMap(h => proveAnswers(h).map(a => a.glab)));
 export const glabPeak = answers => answers.filter(a => a.skill === "Grammar" && a.glab).reduce((p, a) => Math.max(p, a.level || 0), 0);
 export function glabXP(results) {
-  return results.reduce((t, r) => t + (r.skill === "Grammar Lab" ? (r.step === "write" ? (r.first_try || r.support === "hint" ? XP_GLAB.write : 0) : r.first_try ? XP_GLAB.step : 0)
+  return results.reduce((t, r) => t + (r.skill === "Grammar Lab" ? (r.step === "write" ? (r.first_try || r.support === "hint" ? XP_GLAB.write : r.support === "frame" ? XP_GLAB.frame : 0)
+    : r.first_try ? XP_GLAB.step : r.support === "twin" ? XP_GLAB.twin : 0)
     : r.support === "none" ? XP_GLAB.first[r.level || 0] : r.support === "hint" ? XP_GLAB.hint : 0), 0) + XP_GLAB.finish;
 }
