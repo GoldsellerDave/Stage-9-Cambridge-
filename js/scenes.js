@@ -6,7 +6,8 @@
 // moves the characters, shows who says what, and the sentence under the stage changes with it.
 // Sentence: "text#kind | text#kind" (kinds as in anim.js: s doer, o receiver, v verb, bad, new).
 // Keys are block ids (gengine.js / glab.js). Pilot: active-passive. Don't rename the keys.
-import { play } from "./sound.js";
+import { play, soundOn } from "./sound.js";
+import { SCENE_AUDIO } from "./scene-audio.js";
 
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const reduced = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -22,7 +23,7 @@ export const NOVA = `<svg viewBox="0 0 40 40" class="av" aria-hidden="true"><pat
 
 // A cleaner: feet at (0, 0). The mop swings from the hand; the noodle bowl only shows at lunch.
 const cleaner = (cls, colour) => `<g class="cl ${cls}"><g transform="scale(1.35)"><g class="clbody">
-  <path d="M-4 0V-12M4 0V-12" stroke="#2B3440" stroke-width="3.2" stroke-linecap="round"/>
+  <path class="leg l" d="M-4 0V-12" stroke="#2B3440" stroke-width="3.2" stroke-linecap="round"/><path class="leg r" d="M4 0V-12" stroke="#2B3440" stroke-width="3.2" stroke-linecap="round"/>
   <rect x="-9" y="-35" width="18" height="25" rx="6" fill="${colour}"/><rect x="-5" y="-31" width="10" height="8" rx="2" fill="#fff" opacity=".35"/>
   <circle cy="-43" r="8" fill="#E8B58C"/><path d="M-8.5 -45a8.5 8.5 0 0 1 17 0z" fill="${colour}"/><rect x="2" y="-47" width="10" height="3" rx="1.5" fill="${colour}"/>
   <circle cx="-2.5" cy="-42" r="1.1" fill="#222"/><circle cx="3" cy="-42" r="1.1" fill="#222"/><path d="M-2 -38.5q2 1.6 4 0" stroke="#7A3B2A" stroke-width="1" fill="none"/>
@@ -54,11 +55,11 @@ const HALL = `<svg viewBox="0 0 360 200" class="scnsvg" role="img" aria-label="A
 export const SCENES = {
   "active-passive": { stage: HALL, beats: [
     { who: "nova", say: "Watch the hall. Who's going to do the cleaning?", s: "", ms: 3000 },
-    { who: "nova", say: "The cleaners do the cleaning. They're the doers.", s: "The cleaners#s | cleaned#v | the hall#o", ms: 4200 },
+    { who: "nova", say: "The cleaners do the cleaning. They're the doers.", s: "The cleaners#s | cleaned#v | the hall#o", ms: 5000, walk: true },
     { who: "nova", say: "Now put the hall first. It doesn't DO anything. It RECEIVES the action: it gets cleaned.", s: "The hall#o | was being cleaned#v | by the cleaners#s", ms: 5200 },
     { who: "zip", say: "Too long! I'll make it shorter: \"The hall was cleaning.\" Done! 😎", s: "The hall#o | was cleaning#bad", ms: 4000, sound: "tap" },
-    { who: "zip", say: "Uh-oh… why is the HALL mopping itself?! And why are the cleaners eating noodles?! 😱", s: "The hall#o | was cleaning#bad", note: "was cleaning = the hall was DOING the cleaning. 🙃", ms: 5600, sound: "bad" },
-    { who: "nova", say: "Rewind! A hall can't clean anything. It GETS cleaned: was being + V3.", s: "The hall#o | was being cleaned#new | by the cleaners#s", ms: 5200, sound: "ok" }] }
+    { who: "zip", say: "Uh-oh… why is the HALL mopping itself?! And why are the cleaners eating noodles?! 😱", s: "The hall#o | was cleaning#bad", note: "was cleaning = the hall was DOING the cleaning. 🙃", ms: 5600, walk: true, sound: "bad" },
+    { who: "nova", say: "Rewind! A hall can't clean anything. It GETS cleaned: was being + V3.", s: "The hall#o | was being cleaned#new | by the cleaners#s", ms: 5200, walk: true, sound: "ok" }] }
 };
 export const hasScene = id => !!SCENES[id];
 
@@ -69,27 +70,50 @@ export const sceneHTML = id => SCENES[id] ? `<div class="scn" id="gscn" data-sce
   <div class="scnsay"><span class="scnav"></span><p class="scnbub" aria-live="polite"></p></div>
   <div class="scnsent"></div><p class="scnnote"></p>
   <div class="anctl"><button type="button" class="anb" data-sc="prev" aria-label="Back">‹</button><span class="andots"></span>
-  <button type="button" class="anb" data-sc="next" aria-label="Next">›</button><button type="button" class="btn small alt" data-sc="play">↻ Replay</button></div></div>` : "";
+  <button type="button" class="anb" data-sc="next" aria-label="Next">›</button><button type="button" class="btn small alt" data-sc="pause">⏸ Pause</button></div></div>` : "";
 
-let timer = null;
+// Playing: each line is spoken (audio/scenes, made by tools/make_scene_audio.py), then the scene waits so students
+// can read it before the next beat. With sound off, or if the voice can't play, it waits by the length of the line.
+// Tap the stage or › to move on, ⏸ to pause.
+let timer = null, voice = null, guard = null;
+const READ_GAP = 1800;
+const stopAll = () => { clearTimeout(timer); clearInterval(guard); if (voice) { voice.pause(); voice = null; } };
 export function mountScene(root = typeof document !== "undefined" && document.getElementById("gscn")) {
-  clearTimeout(timer);
+  stopAll();
   if (!root || !SCENES[root.dataset.scene]) return;
-  const beats = SCENES[root.dataset.scene].beats;
-  let k = -1;
+  const sid = root.dataset.scene, beats = SCENES[sid].beats;
+  let k = -1, paused = false;
+  guard = setInterval(() => { if (!root.isConnected) stopAll(); }, 500);
+  const after = (ms) => { clearTimeout(timer); if (!paused && k < beats.length - 1) timer = setTimeout(() => go(k + 1), ms); else if (k >= beats.length - 1) setPaused(true, true); };
+  const setPaused = (p, end = false) => { paused = p; const b = root.querySelector('[data-sc="pause"]'); if (b) { b.textContent = p ? (end ? "↻ Again" : "▶ Play") : "⏸ Pause"; b.dataset.end = end ? 1 : ""; } };
+  const say = b => {
+    if (voice) { voice.pause(); voice = null; }
+    const words = b.say.split(/\s+/).length, fallback = Math.max(b.ms || 0, 1500 + words * 380) + READ_GAP;
+    if (!soundOn()) return after(fallback);
+    const v = SCENE_AUDIO[`${sid}-${k}`];
+    if (!v) return after(fallback);
+    const a = voice = new Audio(`audio/scenes/${sid}-${k}.mp3?v=${v}`), t0 = Date.now();
+    a.onended = () => { if (voice === a) after(Math.max(READ_GAP, (b.ms || 0) - (Date.now() - t0))); };
+    setTimeout(() => { if (voice === a && root.isConnected) a.play().catch(() => after(fallback)); }, 450);
+  };
   const show = (n, sound = false) => {
-    k = Math.max(0, Math.min(beats.length - 1, n)); const b = beats[k];
+    clearTimeout(timer);
+    const was = k; k = Math.max(0, Math.min(beats.length - 1, n)); const b = beats[k];
     root.dataset.beat = k; root.dataset.who = b.who;
+    if (b.walk && was !== k) { root.classList.add("walking"); setTimeout(() => root.classList.remove("walking"), 1700); }
     root.querySelector(".scnav").innerHTML = b.who === "zip" ? ZIP : NOVA;
     const bub = root.querySelector(".scnbub"); bub.innerHTML = `<b>${b.who === "zip" ? "Zip" : "Nova"}:</b> ${esc(b.say)}`; bub.classList.remove("an-fade"); void bub.offsetWidth; bub.classList.add("an-fade");
     const sent = root.querySelector(".scnsent"); sent.innerHTML = sentence(b.s); sent.classList.remove("an-fade"); void sent.offsetWidth; sent.classList.add("an-fade");
     root.querySelector(".scnnote").textContent = b.note || "";
     root.querySelector(".andots").innerHTML = beats.map((_, j) => `<button type="button" class="andot${j === k ? " on" : ""}" data-sc="${j}" aria-label="Scene ${j + 1}"></button>`).join("");
-    root.querySelectorAll("[data-sc]").forEach(btn => btn.onclick = ev => { ev.stopPropagation(); clearTimeout(timer); const a = btn.dataset.sc;
-      if (a === "play") run(0); else show(a === "prev" ? k - 1 : a === "next" ? k + 1 : +a, true); });
-    if (sound && b.sound) play(b.sound);
+    root.querySelectorAll(".andot").forEach(btn => btn.onclick = ev => { ev.stopPropagation(); go(+btn.dataset.sc); });
+    if (sound && b.sound) setTimeout(() => play(b.sound), 200);
+    say(b);
   };
-  const run = n => { show(n, true); if (k < beats.length - 1 && root.isConnected) timer = setTimeout(() => run(k + 1), beats[k].ms); };
-  root.querySelector(".scnstage").onclick = () => { clearTimeout(timer); show(k + 1, true); };
-  reduced() ? show(0) : run(0);
+  const go = n => { if (paused) setPaused(false); show(n, true); };
+  root.querySelectorAll('.anctl > [data-sc]').forEach(btn => btn.onclick = ev => { ev.stopPropagation(); const a = btn.dataset.sc;
+    if (a === "prev") go(k - 1); else if (a === "next") go(k + 1);
+    else if (a === "pause") { if (btn.dataset.end) return go(0); if (paused) { setPaused(false); go(k); } else { setPaused(true); clearTimeout(timer); if (voice) voice.pause(); } } });
+  root.querySelector(".scnstage").onclick = () => go(k + 1);
+  if (reduced()) { paused = true; show(0); setPaused(true); } else go(0);
 }
