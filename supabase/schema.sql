@@ -57,6 +57,7 @@ alter table ck_students add constraint ck_students_level_check check (level betw
 -- The admin (the first teacher, set up by seed.sql) sees every class and adds colleagues.
 alter table ck_students add column if not exists is_admin    boolean not null default false;
 alter table ck_students add column if not exists must_change boolean not null default false;  -- one-time password still in use
+alter table ck_students add column if not exists english_name text;  -- the name students use in class; shown to them instead of display_name
 create table if not exists ck_classes (
   code       text primary key,
   teacher_id uuid references ck_students(id) on delete set null,
@@ -110,7 +111,7 @@ begin
   update ck_students set failed_logins = 0, locked_until = null where id = s.id;
   delete from ck_tokens where student_id = s.id and expires_at < now();
   insert into ck_tokens(student_id) values (s.id) returning token into tok;
-  return json_build_object('token', tok, 'role', s.role, 'name', s.display_name,
+  return json_build_object('token', tok, 'role', s.role, 'name', coalesce(s.english_name, s.display_name),
                            'class_code', s.class_code, 'level', s.level, 'must_change', s.must_change);
 end $$;
 
@@ -124,7 +125,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_auth(p_token);
 begin
   return json_build_object(
-    'id', s.id, 'name', s.display_name, 'username', s.username, 'class_code', s.class_code,
+    'id', s.id, 'name', coalesce(s.english_name, s.display_name), 'english_name', s.english_name, 'username', s.username, 'class_code', s.class_code,
     'role', s.role, 'level', s.level, 'xp_total', s.xp_total, 'is_admin', s.is_admin, 'must_change', s.must_change,
     'xp_week', (select coalesce(sum(xp), 0) from ck_attempts where student_id = s.id and created_at >= ck_week_start()),
     'baseline_done', exists(select 1 from ck_attempts where student_id = s.id and mode = 'baseline'));
@@ -173,15 +174,15 @@ begin
   return json_build_object(
     'class_code', v_class,
     'week', coalesce((select json_agg(r order by r.xp desc, r.name) from (
-        select st.display_name as name, st.id = s.id as me, coalesce(sum(a.xp), 0)::int as xp
+        select coalesce(st.english_name, st.display_name) as name, st.id = s.id as me, coalesce(sum(a.xp), 0)::int as xp
           from ck_students st left join ck_attempts a on a.student_id = st.id and a.created_at >= ck_week_start()
          where st.class_code = v_class and st.role = 'student'
          group by st.id) r), '[]'::json),
     'all', coalesce((select json_agg(r order by r.xp desc, r.name) from (
-        select display_name as name, id = s.id as me, xp_total as xp
+        select coalesce(english_name, display_name) as name, id = s.id as me, xp_total as xp
           from ck_students where class_code = v_class and role = 'student') r), '[]'::json),
     'improved', coalesce((select json_agg(r order by r.gain desc, r.name) from (
-        select st.display_name as name, st.id = s.id as me,
+        select coalesce(st.english_name, st.display_name) as name, st.id = s.id as me,
                (array_agg(a.score * 100 / nullif(a.max_score, 0) order by a.created_at desc))[1]
              - (array_agg(a.score * 100 / nullif(a.max_score, 0) order by a.created_at))[1] as gain
           from ck_students st join ck_attempts a on a.student_id = st.id and a.mode = 'baseline'
@@ -236,7 +237,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_require_class(p_token, p_class);
 begin
   return coalesce((select json_agg(r order by r.username) from (
-    select st.id, st.display_name as name, st.username, st.level, st.xp_total,
+    select st.id, st.display_name as name, st.english_name, st.username, st.level, st.xp_total,
       (select coalesce(sum(xp), 0) from ck_attempts a where a.student_id = st.id and a.created_at >= ck_week_start())::int as xp_week,
       (select count(*) from ck_attempts a where a.student_id = st.id and a.mode = 'practice')::int as texts_done,
       (select score * 100 / nullif(max_score, 0) from ck_attempts a where a.student_id = st.id and a.mode = 'baseline' order by created_at limit 1) as baseline_first,
@@ -268,7 +269,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_require_student_of(p_token, p_student);
 begin
   return json_build_object(
-    'student', (select json_build_object('id', id, 'name', display_name, 'username', username,
+    'student', (select json_build_object('id', id, 'name', display_name, 'english_name', english_name, 'username', username,
                  'class_code', class_code, 'level', level, 'xp_total', xp_total) from ck_students where id = p_student),
     'history', coalesce((select json_agg(a order by a.created_at) from (
        select id, mode, text_id, level_start, level_end, score, max_score, xp, seconds, answers, created_at
@@ -366,13 +367,26 @@ create or replace function ck_teacher_new_pins(p_token uuid, p_class text) retur
 language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_require_class(p_token, p_class); r record; v_pin text; out jsonb := '[]';
 begin
-  for r in select id, username, display_name from ck_students where class_code = p_class and role = 'student' order by username loop
+  for r in select id, username, display_name, english_name from ck_students where class_code = p_class and role = 'student' order by username loop
     v_pin := ck_new_pin();
     update ck_students set pin_hash = crypt(v_pin, gen_salt('bf')), failed_logins = 0, locked_until = null where id = r.id;
     delete from ck_tokens where student_id = r.id;
-    out := out || jsonb_build_object('no', coalesce(substring(r.username from '-([0-9]+)$')::int, 0), 'name', r.display_name, 'username', r.username, 'pin', v_pin);
+    out := out || jsonb_build_object('no', coalesce(substring(r.username from '-([0-9]+)$')::int, 0), 'name', r.display_name, 'english_name', r.english_name, 'username', r.username, 'pin', v_pin);
   end loop;
   return json_build_object('class_code', p_class, 'students', out);
+end $$;
+
+-- English names: p_names is [{"id": student id, "english": name}]. An empty name clears it. Returns how many were saved.
+create or replace function ck_teacher_english_names(p_token uuid, p_class text, p_names jsonb) returns int
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_class(p_token, p_class); n int;
+begin
+  if jsonb_typeof(p_names) <> 'array' then raise exception 'Bad list of names.'; end if;
+  update ck_students st set english_name = nullif(left(trim(x->>'english'), 40), '')
+    from jsonb_array_elements(p_names) x
+   where st.id = (x->>'id')::uuid and st.class_code = p_class and st.role = 'student';
+  get diagnostics n = row_count;
+  return n;
 end $$;
 
 -- Remove one student, with all their work. Cannot be undone.
@@ -529,7 +543,7 @@ begin
   return json_build_object('code', l.code, 'unit', l.unit, 'class_code', l.class_code, 'status', l.status,
     'elapsed', case when l.started_at is null then 0 else extract(epoch from now() - l.started_at)::int end,
     'teams', coalesce((select json_agg(r order by r.finished is null, r.seconds, r.room desc, r.solved desc, r.team) from (
-       select t.team, t.room, t.solved, t.penalty, t.seconds, t.finished_at as finished, st.display_name as device
+       select t.team, t.room, t.solved, t.penalty, t.seconds, t.finished_at as finished, coalesce(st.english_name, st.display_name) as device
          from ck_live_teams t left join ck_students st on st.id = t.student_id where t.live_id = l.id) r), '[]'::json));
 end $$;
 
@@ -590,7 +604,7 @@ grant execute on function ck_login(text, text), ck_logout(uuid), ck_me(uuid), ck
   ck_save_attempt(uuid, jsonb), ck_leaderboard(uuid, text), ck_teacher_classes(uuid),
   ck_teacher_class(uuid, text), ck_teacher_student(uuid, uuid), ck_teacher_reset_pin(uuid, uuid, text),
   ck_teacher_ai_log(uuid, text), ck_teacher_ai_flag(uuid, bigint, boolean),
-  ck_teacher_add_students(uuid, text, jsonb), ck_teacher_new_pins(uuid, text), ck_teacher_remove_student(uuid, uuid),
+  ck_teacher_add_students(uuid, text, jsonb), ck_teacher_new_pins(uuid, text), ck_teacher_english_names(uuid, text, jsonb), ck_teacher_remove_student(uuid, uuid),
   ck_teacher_delete_class(uuid, text), ck_set_password(uuid, text, text), ck_admin_teachers(uuid),
   ck_admin_add_teacher(uuid, text, text), ck_admin_reset_teacher(uuid, uuid), ck_admin_remove_teacher(uuid, uuid),
   ck_admin_move_class(uuid, text, uuid), ck_live_start(uuid, text, int), ck_live_control(uuid, text, text),

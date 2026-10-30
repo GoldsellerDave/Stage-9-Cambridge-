@@ -175,7 +175,7 @@ window.addEventListener("hashchange", () => { if (!run) route(); });
 function homeView() {
   const { streak, thisWeek } = E.weeklyStreak(history);
   const check = me.baseline_done ? C.checkDue(history) : null, checkIn = me.baseline_done ? C.daysToCheck(history) : null;
-  const first = me.name.split(" ").pop();
+  const first = firstName();
   const review = P.wordsToReview(history);
   let h = `<div class="narrow pop">
     <div class="hero"><p class="eyebrow">Class ${U.esc(me.class_code)}</p><h1>Hi, ${U.esc(first)}</h1></div>`;
@@ -1637,6 +1637,8 @@ function rlDoneView() {
 /* ---------------- skill drills ---------------- */
 // Four questions on one reading skill, from different texts at the student's level. A wrong answer shows the hint and
 // lights up the words that prove the answer; a second wrong answer shows the answer and moves on.
+// The English name if the teacher added one (it can be two words, like "Ryan A"), otherwise the last word of the full name.
+function firstName() { return me.english_name || me.name.split(" ").pop(); }
 function startDrill(skill, { exclude = null } = {}) {
   const seed = history.filter(h => h.text_id === D.drillId(skill)).length;
   const items = D.drillItems(skill, { unit: P.focusUnit(), level: E.steadyLevel(history, me.level ?? 1), exclude, seed });
@@ -2177,7 +2179,7 @@ function practiceDone() {
   const strong = [], practise = [];
   text.slots.forEach((s, i) => (r.results[i] && r.results[i].first_try ? strong : practise).push(s.skill));
   const path = r.path.map(p => E.LEVELS[p.level] + (p.at ? ` (from Q${p.at + 1})` : "")).join(" → ");
-  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished</p><h1>Well done, ${U.esc(me.name.split(" ").pop())}</h1>
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished</p><h1>Well done, ${U.esc(firstName())}</h1>
     <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${text.slots.length}</b><span>right first time</span></div>
       <div class="stat"><b>${E.LEVELS[r.level]}</b><span>finished on</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
     <div class="sumcards">
