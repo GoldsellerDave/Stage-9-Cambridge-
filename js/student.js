@@ -1685,24 +1685,54 @@ function glVisual(v) {
       <div class="glt-ends"><span>${U.esc(v.from)}</span><span>${U.esc(v.to)}</span></div><p class="note">⚡ ${U.esc(v.point)}</p></div>`;
   return "";
 }
-// One multiple-choice step (the rule, Get it, Use it). Option 0 is right; a wrong option shows its why; 2 wrong shows the answer.
+// Help that adapts. Every question has "Need a hint?". One wrong answer shows why it's wrong plus the hint; two wrong
+// answers explain the right answer, then (Get it, Use it) a question like it to try straight away. After 2 explained
+// answers (1 for a student who started on Core), support turns on: the hint shows with every question until they get
+// 3 right in a row.
+const glHintHTML = (key, item, s) => !item.hint || s.done ? "" : s.hint && !s.wrong.length ? `<div class="fb hint"><p><b>💡 Hint:</b> ${U.esc(item.hint)}</p></div>`
+  : s.hint || s.wrong.length ? "" : `<div class="row"><button class="btn alt small" data-ghint="${key}">💡 Need a hint?</button></div>`;
+function glTrack(explained) {
+  if (explained) { run.okRow = 0; run.helpN = (run.helpN || 0) + 1;
+    if (!run.helpOn && run.helpN >= (run.start ? 2 : 1)) { run.helpOn = true; run.helpMsg = "on"; } return; }
+  run.okRow = (run.okRow || 0) + 1;
+  if (run.helpOn && run.okRow >= 3) { run.helpOn = false; run.helpN = 0; run.helpMsg = "off"; }
+}
+const glHelpNote = () => { const k = run.helpMsg; run.helpMsg = null;
+  return k === "on" ? `<div class="lvdown">💡 <b>Support is on.</b> You'll see a hint with each question. It switches off when you get 3 right in a row.</div>`
+    : k === "off" ? `<div class="lvup pop">⬆ <b>3 in a row!</b> Hints are off now. You can still tap "Need a hint?".</div>` : ""; };
 function glChoiceHTML(key, item) {
-  const s = run.cs[key] || (run.cs[key] = { wrong: [], done: false });
+  const s = run.cs[key] || (run.cs[key] = { wrong: [], done: false, hint: !!run.helpOn });
   let h = `<div class="opts">${order(key, item.opts.length).map((oi, k) => {
     let cls = "opt"; if (s.done && oi === 0) cls += " right"; else if (s.wrong.includes(oi)) cls += " wrong";
     return `<button class="${cls}" data-go="${oi}" data-gk="${key}" ${s.done || s.wrong.includes(oi) ? "disabled" : ""}><span class="k">${"ABCD"[k]}</span><span>${U.esc(item.opts[oi].t)}</span></button>`; }).join("")}</div>`;
-  if (!s.done && s.wrong.length) h += `<div class="fb bad"><p><strong>Not quite.</strong> ${U.esc(item.opts[s.wrong[s.wrong.length - 1]].why)}</p><p class="note">Have another try.</p></div>`;
-  if (s.done) h += s.wrong.length >= 2 ? `<div class="fb info"><p><strong>Let's look at it together, ${U.esc(firstName())}.</strong> The answer is "${U.esc(item.opts[0].t)}".</p></div>`
-    : `<div class="fb ok"><p><strong>${s.wrong.length ? "Yes, that's it." : "Correct, first time!"}</strong> ${s.wrong.length ? "" : `<span class="xpgain">+${GL.XP_GLAB.step} XP</span>`}</p></div>`;
+  h += glHintHTML(key, item, s);
+  if (!s.done && s.wrong.length) h += `<div class="fb bad"><p><strong>Not quite.</strong> ${U.esc(item.opts[s.wrong[s.wrong.length - 1]].why)}</p>
+    ${item.hint ? `<p><b>💡 Hint:</b> ${U.esc(item.hint)}</p>` : ""}<p class="note">Have another try.</p></div>`;
+  if (s.done) h += s.wrong.length >= 2 ? `<div class="fb info"><p><strong>Let's work it out together, ${U.esc(firstName())}.</strong></p><p>${U.esc(item.explain || "")}</p></div>`
+    : `<div class="fb ok"><p><strong>${s.wrong.length ? "Yes, that's it." : s.hint ? "Correct!" : "Correct, first time!"}</strong> ${s.wrong.length || s.hint ? "" : `<span class="xpgain">+${GL.XP_GLAB.step} XP</span>`}</p></div>`;
   return h;
 }
+// A question like the one just explained. Its result upgrades the main answer from "explained" to "twin".
+function glTwinHTML(key, item) {
+  const s = run.cs[key];
+  if (!s || !s.done || s.wrong.length < 2 || !item.twin) return "";
+  if (!s.twinOn) return `<div class="row"><button class="btn" data-gtwin="${key}">Try one like it</button></div>`;
+  const t = run.cs[`${key}~t`];
+  return `<div class="qcard pop" id="gtwinq"><div class="qhead"><span class="tag">Try one like it</span></div>${glVisual(item.twin.visual)}<p class="stem">${glGap(item.twin.stem)}</p>
+    ${glChoiceHTML(`${key}~t`, item.twin)}${t && t.done && t.wrong.length < 2 ? `<p class="note">You've got it now. +${GL.XP_GLAB.twin} XP</p>` : ""}</div>`;
+}
+const glStepDone = (key, item) => { const s = run.cs[key]; return !!s && s.done && (s.wrong.length < 2 || !item.twin || !!(run.cs[`${key}~t`] || {}).done); };
 function glBindChoice(step, items, redraw) {
+  $app.querySelectorAll("[data-ghint]").forEach(b => b.onclick = () => { run.cs[b.dataset.ghint].hint = true; S.play("tap"); redraw(); });
+  $app.querySelectorAll("[data-gtwin]").forEach(b => b.onclick = () => { run.cs[b.dataset.gtwin].twinOn = true; S.play("tap"); redraw(); const q = document.getElementById("gtwinq"); if (q) q.scrollIntoView({ block: "start", behavior: "smooth" }); });
   $app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => {
-    const key = b.dataset.gk, oi = +b.dataset.go, s = run.cs[key], item = items(key);
-    const res = support => ({ skill: "Grammar Lab", step, point: glM().point, item: item.id || key, first_try: support === "none", support });
-    if (oi === 0) { run.results.push(res(s.wrong.length ? "hint" : "none")); s.done = true; S.play("ok"); }
-    else { s.wrong.push(oi); S.play("bad"); if (s.wrong.length >= 2) { run.results.push(res("explained")); s.done = true; } }
-    redraw(); const f = $app.querySelector(".fb"); if (f) f.scrollIntoView({ block: "center", behavior: "smooth" });
+    const key = b.dataset.gk, oi = +b.dataset.go, s = run.cs[key], twin = key.endsWith("~t"), main = twin ? key.slice(0, -2) : key, item = twin ? items(main).twin : items(key);
+    const res = support => ({ skill: "Grammar Lab", step, point: glM().point, item: items(main).id || main, first_try: support === "none", support });
+    if (oi === 0) { s.done = true; S.play("ok");
+      if (twin) { const r = run.results.find(x => x.item === (items(main).id || main) && x.step === step); if (r && s.wrong.length < 2) r.support = "twin"; }
+      else { run.results.push(res(s.wrong.length || s.hint ? "hint" : "none")); glTrack(false); } }
+    else { s.wrong.push(oi); S.play("bad"); if (s.wrong.length >= 2) { s.done = true; if (!twin) { run.results.push(res("explained")); glTrack(true); } } }
+    redraw(); const f = $app.querySelectorAll(".fb"); if (f.length) f[f.length - 1].scrollIntoView({ block: "center", behavior: "smooth" });
   });
 }
 function glRunView() {
@@ -1736,31 +1766,31 @@ function glRunView() {
     return;
   }
   if (run.phase === "rule") {
-    const item = { opts: m.spot.rules }, s = run.cs.rule;
-    $app.innerHTML = `<div class="narrow pop">${glHead(0)}<h2>Which rule explains the sentences?</h2>${glScene(m)}${glChoiceHTML("rule", item)}
+    const item = { opts: m.spot.rules, hint: m.spot.hint, explain: m.spot.explain }, s = run.cs.rule;
+    $app.innerHTML = `<div class="narrow pop">${glHead(0)}${glHelpNote()}<h2>Which rule explains the sentences?</h2>${glScene(m)}${glChoiceHTML("rule", item)}
       ${s && s.done ? `<div class="strat"><b>The rule</b><p style="margin:6px 0 0">${U.esc(m.rule)}</p></div>${nextBtn("Get it: check the meaning")}` : ""}</div>`;
     glBindChoice("rule", () => item, redraw);
     const n = document.getElementById("gnext"); if (n) n.onclick = () => go(() => { run.phase = "get"; run.gi = 0; });
     return;
   }
   if (run.phase === "get") {
-    const it = m.get[run.gi], s = run.cs[it.id], last = run.gi === m.get.length - 1;
+    const it = m.get[run.gi], last = run.gi === m.get.length - 1;
     $app.innerHTML = `<div class="narrow pop">${glHead(1, `<div class="labdots">${m.get.map((_, k) => `<i class="${k < run.gi ? "done" : k === run.gi ? "now" : ""}"></i>`).join("")}</div>`)}
       <div class="qcard"><div class="qhead"><span class="tag">Get it</span><span class="qnum">${run.gi + 1} of ${m.get.length}</span></div>
-      ${glVisual(it.visual)}<p class="stem">${U.esc(it.stem)}</p>${glChoiceHTML(it.id, it)}
-      ${s && s.done ? nextBtn(last ? `Use it: ${m.use.h.toLowerCase()}` : "Next") : ""}</div></div>`;
+      ${glHelpNote()}${glVisual(it.visual)}<p class="stem">${U.esc(it.stem)}</p>${glChoiceHTML(it.id, it)}</div>
+      ${glTwinHTML(it.id, it)}${glStepDone(it.id, it) ? nextBtn(last ? `Use it: ${m.use.h.toLowerCase()}` : "Next") : ""}</div>`;
     glBindChoice("get", () => it, redraw);
     const n = document.getElementById("gnext"); if (n) n.onclick = () => go(() => { if (last) { run.phase = "use"; run.ui = 0; } else run.gi++; });
     return;
   }
   const clues = `<div class="panel glclues"><p class="eyebrow">${m.point === "2.4" ? "The clues" : "Security log"}</p><ul>${m.use.clues.map(c => `<li>${U.esc(c)}</li>`).join("")}</ul></div>`;
   if (run.phase === "use") {
-    const it = m.use.items[run.ui], s = run.cs[it.id], last = run.ui === m.use.items.length - 1;
+    const it = m.use.items[run.ui], last = run.ui === m.use.items.length - 1;
     $app.innerHTML = `<div class="narrow pop">${glHead(2, `<div class="labdots">${m.use.items.map((_, k) => `<i class="${k < run.ui ? "done" : k === run.ui ? "now" : ""}"></i>`).join("")}</div>`)}
       <h2>${U.esc(m.use.h)}</h2><p class="note">${U.esc(m.use.intro)}</p>${clues}
       <div class="qcard"><div class="qhead"><span class="tag">Use it</span><span class="qnum">${run.ui + 1} of ${m.use.items.length}</span></div>
-      <p class="stem">${glGap(it.stem)}</p>${glChoiceHTML(it.id, it)}
-      ${s && s.done ? nextBtn(last ? "Write your own sentence" : "Next") : ""}</div></div>`;
+      ${glHelpNote()}<p class="stem">${glGap(it.stem)}</p>${glChoiceHTML(it.id, it)}</div>
+      ${glTwinHTML(it.id, it)}${glStepDone(it.id, it) ? nextBtn(last ? "Write your own sentence" : "Next") : ""}</div>`;
     glBindChoice("use", () => it, redraw);
     const n = document.getElementById("gnext"); if (n) n.onclick = () => go(() => { if (last) run.phase = "write"; else run.ui++; });
     return;
@@ -1770,12 +1800,15 @@ function glRunView() {
     let h = `<div class="narrow pop">${glHead(2)}<h2>Your turn</h2>${clues}
       <div class="qcard"><div class="qhead"><span class="tag">Use it</span><span class="qnum">Your sentence</span></div><p class="stem">${U.esc(w.stem)}</p>
       <label class="fld" for="gans" style="font-weight:400"><span class="note">One sentence is enough.</span><textarea id="gans" rows="3" ${done ? "disabled" : ""}>${U.esc(run.draft)}</textarea></label>`;
-    if (fb) h += fb.kind === "ok" ? `<div class="fb ok pop"><p><strong>Great sentence, ${U.esc(firstName())}!</strong> <span class="xpgain">+${GL.XP_GLAB.write} XP</span></p>${fb.ai ? `<p class="note">Checked by AI: ${U.esc(fb.ai)}</p>` : ""}</div>`
-      : fb.kind === "explained" ? `<div class="fb info pop"><p><strong>Let's look at an example together.</strong></p><p>${U.esc(w.model)}</p></div>`
-      : `<div class="fb bad pop"><p><strong>${fb.tooShort ? "Too short." : "Not quite yet."}</strong> ${U.esc(fb.tooShort ? "Write a whole sentence." : fb.msg)}</p></div>`;
+    if (fb) h += fb.kind === "ok" ? `<div class="fb ok pop"><p><strong>Great sentence, ${U.esc(firstName())}!</strong> <span class="xpgain">+${run.wtries >= 2 ? GL.XP_GLAB.frame : GL.XP_GLAB.write} XP</span></p>${fb.ai ? `<p class="note">Checked by AI: ${U.esc(fb.ai)}</p>` : ""}</div>`
+      : fb.kind === "explained" ? `<div class="fb info pop"><p><strong>Let's look at an example together, ${U.esc(firstName())}.</strong></p><p>${U.esc(w.model)}</p><p>${U.esc(w.explain || "")}</p></div>`
+      : `<div class="fb bad pop"><p><strong>${fb.tooShort ? "Too short." : "Not quite yet."}</strong> ${U.esc(fb.tooShort ? "Write a whole sentence." : fb.msg)}</p>
+        ${fb.frame ? `<p><b>Let's build it together.</b> Start like this and fill the gaps with ideas from the clues:</p><p class="egrow"><span class="chip">Start</span> ${U.esc(w.frame)}</p>
+          <div class="row"><button class="btn alt small" id="gframe">Use this start</button></div>` : ""}</div>`;
     h += done ? nextBtn("Prove it: 6 Checkpoint questions") : `<div class="row"><button class="btn" id="gcheck">Check my sentence</button></div>`;
     $app.innerHTML = h + `</div></div>`;
     const a = document.getElementById("gans"); if (a) a.oninput = () => { run.draft = a.value; saveRun(); };
+    const fr = document.getElementById("gframe"); if (fr) fr.onclick = () => { run.draft = w.frame; saveRun(); a.value = w.frame; a.focus(); a.setSelectionRange(w.frame.indexOf("___"), w.frame.indexOf("___") + 3); };
     const c = document.getElementById("gcheck"); if (c) c.onclick = async () => {
       const q = { type: "short", groups: w.groups, need: w.need }, response = a.value || "";
       let mk = E.mark(q, response), ai = null;
@@ -1786,10 +1819,10 @@ function glRunView() {
       if (!run || run.kind !== "glab" || run.phase !== "write") return;
       if (ai) mk = { ok: ai.ok, hits: ai.hits };
       const res = support => ({ skill: "Grammar Lab", step: "write", point: m.point, item: "write", first_try: support === "none", support, ai: !!ai });
-      if (mk.ok) { run.results.push(res(run.wtries ? "hint" : "none")); run.wfb = { kind: "ok", ai: ai && ai.feedback }; S.play("ok"); }
-      else if (run.wtries >= 1) { run.results.push(res("explained")); run.wfb = { kind: "explained" }; S.play("info"); }
+      if (mk.ok) { run.results.push(res(run.wtries >= 2 ? "frame" : run.wtries ? "hint" : "none")); run.wfb = { kind: "ok", ai: ai && ai.feedback }; S.play("ok"); }
+      else if (run.wtries >= 2) { run.results.push(res("explained")); run.wfb = { kind: "explained" }; S.play("info"); }
       else { run.wtries++; const miss = w.groups.find(g => !mk.hits.includes(g.label));
-        run.wfb = { kind: "bad", msg: ai && ai.feedback ? ai.feedback : miss ? miss.ask : "Read the task again." }; S.play("bad"); }
+        run.wfb = { kind: "bad", frame: run.wtries >= 2 && !!w.frame, msg: ai && ai.feedback ? ai.feedback : miss ? miss.ask : "Read the task again." }; S.play("bad"); }
       redraw();
     };
     const n = document.getElementById("gnext"); if (n) n.onclick = () => go(() => { run.phase = "prove"; run.i = 0; glPick(); });
@@ -1811,24 +1844,26 @@ function glRescueView() {
     run.phase = "prove"; run.rescueItem = null; glPick(); saveRun(); glRunView(); backButton(); top(); };
 }
 function glProveView() {
-  const m = glM(), n = GL.GLAB_LEN, it = glItem(), s = run.st[run.i] || (run.st[run.i] = { wrong: [], tries: [], done: false });
+  const m = glM(), n = GL.GLAB_LEN, it = glItem(), s = run.st[run.i] || (run.st[run.i] = { wrong: [], tries: [], done: false, hint: !!run.helpOn });
   const flash = run.flash === "up" ? `<div class="lvup pop"><b>⬆ Level up!</b> 2 in a row. You're on ${lvChip(run.level)} now.</div>`
     : run.flash === "down" ? `<div class="lvdown">Back to ${lvChip(run.level)} to practise the rule. Get 2 right in a row to move up again.</div>` : "";
-  let h = `<div class="narrow pop">${glHead(3, `<div class="labdots">${Array.from({ length: n }, (_, k) => `<i class="${k < run.i ? `done l${glItem(k).level}` : k === run.i ? "now" : ""}"></i>`).join("")}</div>`)}${flash}
+  let h = `<div class="narrow pop">${glHead(3, `<div class="labdots">${Array.from({ length: n }, (_, k) => `<i class="${k < run.i ? `done l${glItem(k).level}` : k === run.i ? "now" : ""}"></i>`).join("")}</div>`)}${flash}${glHelpNote()}
     <div class="qcard"><div class="qhead"><span class="tag">${run.i === n - 1 ? "Checkpoint challenge" : "Prove it"}</span>${lvChip(it.level)}<span class="qnum">${run.i + 1} of ${n}</span></div>
     <p class="stem">${glGap(it.stem)}</p>`;
   if (it.type === "type") {
     h += `<p class="note">Write ONE word.</p><div class="row"><input type="text" id="gword" autocomplete="off" autocapitalize="off" spellcheck="false" style="max-width:14em" ${s.done ? "disabled" : ""} value="${U.esc(s.done ? it.accept[0] : "")}">
       ${s.done ? "" : `<button class="btn" id="gcheck">Check</button>`}</div>`;
-    if (!s.done && s.tries.length) h += `<div class="fb bad"><p><strong>Not quite.</strong> "${U.esc(s.tries[s.tries.length - 1])}" doesn't fit.</p><p><b>Hint:</b> ${U.esc(it.hint)}</p></div>`;
+    if (!s.done && s.tries.length) h += `<div class="fb bad"><p><strong>Not quite.</strong> "${U.esc(s.tries[s.tries.length - 1])}" doesn't fit.</p><p><b>💡 Hint:</b> ${U.esc(it.hint)}</p><p class="note">Have another try.</p></div>`;
+    else h += glHintHTML("p", it, { ...s, wrong: s.tries });
   } else h += `<div class="opts">${order(`gp${run.i}`, it.opts.length).map((oi, k) => {
       let cls = "opt"; if (s.done && oi === 0) cls += " right"; else if (s.wrong.includes(oi)) cls += " wrong";
       return `<button class="${cls}" data-gp="${oi}" ${s.done || s.wrong.includes(oi) ? "disabled" : ""}><span class="k">${"ABCD"[k]}</span><span>${U.esc(it.opts[oi].t)}</span></button>`; }).join("")}</div>
-    ${!s.done && s.wrong.length ? `<div class="fb bad"><p><strong>Not quite.</strong> ${U.esc(it.opts[s.wrong[s.wrong.length - 1]].why)}</p><p class="note">Have another try.</p></div>` : ""}`;
+    ${!s.done && s.wrong.length ? `<div class="fb bad"><p><strong>Not quite.</strong> ${U.esc(it.opts[s.wrong[s.wrong.length - 1]].why)}</p>${it.hint ? `<p><b>💡 Hint:</b> ${U.esc(it.hint)}</p>` : ""}<p class="note">Have another try.</p></div>` : glHintHTML("p", it, s)}`;
   if (s.done) {
     const r = run.results.find(x => x.item === `p${run.i}`), first = r.first_try, got = r.support !== "explained";
-    h += `<div class="fb ${got ? "ok" : "info"}"><p><strong>${first ? "Correct, first time!" : got ? "Correct." : `The answer is "${U.esc(it.type === "type" ? it.accept[0] : it.opts[0].t)}".`}</strong>
+    h += `<div class="fb ${got ? "ok" : "info"}"><p><strong>${first ? "Correct, first time!" : got ? "Correct." : `Let's work it out together, ${U.esc(firstName())}.`}</strong>
         ${got ? `<span class="xpgain">+${first ? GL.XP_GLAB.first[it.level] : GL.XP_GLAB.hint} XP</span>` : ""}</p>
+        ${got ? "" : `<p>The answer is <b>${U.esc(it.type === "type" ? it.accept[0] : it.opts[0].t)}</b>. ${U.esc(it.explain || "")}</p>`}
         ${s.step && s.step.up && run.i < n - 1 ? `<p><b>2 in a row!</b> The next question is ${lvChip(s.step.level)}.</p>` : ""}
         ${s.step && s.step.rescue && run.i < n - 1 ? `<p><b>2 missed in a row.</b> Next, a quick look at the rule.</p>` : ""}</div>
       <div class="row"><button class="btn" id="gnext">${run.i === n - 1 ? "See my results" : s.step && s.step.rescue ? "Look at the rule" : "Next question"}</button></div>`;
@@ -1838,12 +1873,13 @@ function glProveView() {
   const finish = right => {
     const res = support => ({ item: `p${run.i}`, skill: "Grammar", point: m.point, glab: it.id, level: it.level, first_try: support === "none", support });
     const tries = it.type === "type" ? s.tries.length : s.wrong.length;
-    if (right) { run.results.push(res(tries ? "hint" : "none")); s.done = true; S.play("ok"); }
-    else { S.play("bad"); if (tries >= 2) { run.results.push(res("explained")); s.done = true; } }
-    if (s.done) { s.step = Lab.labStep(run, right && !tries);
+    if (right) { run.results.push(res(tries || s.hint ? "hint" : "none")); s.done = true; S.play("ok"); glTrack(false); }
+    else { S.play("bad"); if (tries >= 2) { run.results.push(res("explained")); s.done = true; glTrack(true); } }
+    if (s.done) { s.step = Lab.labStep(run, right && !tries && !s.hint);
       Object.assign(run, { level: s.step.level, rightRow: s.step.rightRow, wrongRow: s.step.wrongRow }); if (s.step.up) S.play("level"); }
     redraw(); const f = $app.querySelector(".fb"); if (f) f.scrollIntoView({ block: "center", behavior: "smooth" });
   };
+  $app.querySelectorAll("[data-ghint]").forEach(b => b.onclick = () => { s.hint = true; S.play("tap"); redraw(); });
   $app.querySelectorAll("[data-gp]").forEach(b => b.onclick = () => { const oi = +b.dataset.gp; if (oi !== 0) s.wrong.push(oi); finish(oi === 0); });
   const c = document.getElementById("gcheck"), inp = document.getElementById("gword");
   if (c) { const check = () => { const v = inp.value.trim(); if (!v) return; const ok = GL.typedOk(it, v); if (!ok) s.tries.push(v); finish(ok); };

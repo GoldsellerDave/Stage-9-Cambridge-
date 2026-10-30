@@ -126,6 +126,7 @@ mark{background:var(--mark);color:inherit;padding:0 2px;border-radius:3px}
 .fb.ok{background:var(--ok-bg);border:1px solid var(--ok-line)} .fb.ok strong{color:var(--ok)}
 .fb.bad{background:var(--bad-bg);border:1px solid var(--bad-line)} .fb.bad strong{color:var(--bad)}
 .fb.info{background:var(--peach)}
+.fb.hint{background:var(--card);border:1px dashed var(--teal)}
 .xpgain{color:var(--gold);font-weight:800}
 .rescue{border:2px dashed var(--orange);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .rescue .para{margin:0}
