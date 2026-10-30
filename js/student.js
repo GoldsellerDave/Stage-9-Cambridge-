@@ -26,6 +26,7 @@ import * as GB from "./gbank.js";
 import * as T from "./tower.js";
 import * as A from "./anim.js";
 import * as SC from "./scenes.js";
+import * as Q from "./quests.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -171,6 +172,9 @@ async function draw() {
   if (view === "lab") return labHubView();
   if (view === "glab") return glabHubView();
   if (view === "build") return gbHubView();
+  if (view === "quests") return qHubView();
+  if (view === "hero") return qHeroView();
+  if (view.startsWith("quest-") && Q.questOf(view.slice(6))) return qQuestView(view.slice(6));
   if (view.startsWith("lesson-") && GE.GBLOCKS[view.slice(7)]) return gbLessonView(view.slice(7));
   const rv = /^rlab(?:-(\d))?$/.exec(view);
   if (rv) return rlabHubView(rv[1] ? +rv[1] : rlUnitNow());
@@ -205,7 +209,7 @@ function homeView() {
   if (me.baseline_done && GL.GLAB.some(x => !history.some(a => a.text_id === x.id))) h += `<div class="tcard"><span class="tag gold">New</span><h3>Grammar Lab</h3>
       <p class="note" style="font-size:1rem">Grammar missions: solve a mystery and write a news story while you work out the rules yourself.</p>
       <div class="row"><button class="btn" data-glabhub="1">Open the Grammar Lab</button></div></div>`;
-  if (me.baseline_done) h += gbHomeCard();
+  if (me.baseline_done) h += qHomeCard() + gbHomeCard();
   h += quickTiles(review.length);
   if (me.baseline_done) {
     h += `<div class="stats">
@@ -1733,8 +1737,8 @@ const glHelpNote = () => { const k = run.helpMsg; run.helpMsg = null;
 function glChoiceHTML(key, item) {
   const s = run.cs[key] || (run.cs[key] = { wrong: [], done: false, hint: !!run.helpOn });
   let h = `<div class="opts">${order(key, item.opts.length).map((oi, k) => {
-    let cls = "opt"; if (s.done && oi === 0) cls += " right"; else if (s.wrong.includes(oi)) cls += " wrong";
-    return `<button class="${cls}" data-go="${oi}" data-gk="${key}" ${s.done || s.wrong.includes(oi) ? "disabled" : ""}><span class="k">${"ABCD"[k]}</span><span>${U.esc(item.opts[oi].t)}</span></button>`; }).join("")}</div>`;
+    let cls = "opt"; if (s.done && oi === 0) cls += " right"; else if (s.wrong.includes(oi)) cls += " wrong"; else if (s.ko === oi) cls += " ko";
+    return `<button class="${cls}" data-go="${oi}" data-gk="${key}" ${s.done || s.wrong.includes(oi) || s.ko === oi ? "disabled" : ""}><span class="k">${"ABCD"[k]}</span><span>${U.esc(item.opts[oi].t)}</span></button>`; }).join("")}</div>`;
   h += glHintHTML(key, item, s);
   if (!s.done && s.wrong.length) h += `<div class="fb bad"><p><strong>Not quite.</strong> ${glx(item.opts[s.wrong[s.wrong.length - 1]].why)}</p>
     ${item.hint ? `<p><b>💡 Hint:</b> ${glx(item.hint)}</p>` : ""}<p class="note">Have another try.</p></div>`;
@@ -2082,6 +2086,8 @@ function gbHubView() {
       <span class="note">${nr ? `${nr[0] - prog.done} more brick${nr[0] - prog.done === 1 ? "" : "s"} to ${nr[2]} ${nr[1]}` : "Top rank. Keep every brick solid!"}</span></div></div>` : ""}
     ${Object.keys(SC.SCENES).map(id => `<a class="gbscene" href="#lesson-${id}"><span class="gbscav">${SC.ZIP}${SC.NOVA}</span><span><b>🎬 Cartoon: ${U.esc(GE.GBLOCKS[id].name)}</b>
       <span class="note">Zip and Nova act it out. Watch what goes wrong!</span></span></a>`).join("")}
+    <a class="gbscene qlink" href="#quests"><span class="gbscav">${qHeroArt(st)}</span><span><b>🗺️ Grammar Quests</b>
+      <span class="note">The same bricks as missions with a story. Clear levels, power up your hero.</span></span></a>
     <div class="gbtower">${T.towerSVG(st, { next: plan.learn, due, fresh: placed ? fresh : [] })}</div>
     <div class="gblegend"><span><i class="lg done"></i>Built</span><span><i class="lg build"></i>Building</span><span><i class="lg next"></i>Next</span><span><i class="lg due"></i>Cracked: needs a check</span><span><i class="lg todo"></i>Not yet</span></div>
     <p class="note">Tap a brick to see what it is.</p>
@@ -2125,7 +2131,7 @@ function gbBrickSheet(id, st, due) {
 
 function gbStart(mode) {
   const st = GE.mastery(history);
-  run = { kind: "gbuild", mode, i: 0, n: 0, cs: {}, results: [], combo: 0, best: 0, t0: Date.now(), orders: {}, before: gbMastered(st), queue: [], known: {}, miss: {}, tags: {}, dropped: {} };
+  run = { kind: "gbuild", mode, i: 0, n: 0, cs: {}, results: [], combo: 0, best: 0, cxp: 0, t0: Date.now(), orders: {}, before: gbMastered(st), queue: [], known: {}, miss: {}, tags: {}, dropped: {} };
   if (mode === "place") gbProbe();
   else {
     const plan = GE.planSession(st), q = (block, tag, n) => gbPick(block, n).map(item => ({ t: "q", block, item, tag }));
@@ -2146,12 +2152,13 @@ function gbHud() {
   const qs = run.queue.filter(e => e.t === "q");
   const slot = e => { const r = e.res; return `<i class="${!r ? "" : r === "none" ? "on" : r === "explained" ? "x" : "half"}${run.queue.indexOf(e) === run.lastIdx ? " drop" : ""}"></i>`; };
   return `<div class="gbhud"><div class="gbstrip" aria-label="${qs.filter(e => e.res).length} of ${run.mode === "place" ? GE.PLACE_MAX : qs.length} answered">${qs.map(slot).join("")}${run.mode === "place" ? "<i></i>".repeat(Math.max(0, GE.PLACE_MAX - qs.length)) : ""}</div>
-    ${run.mode === "place" ? "" : `<span class="gbcombo${run.combo >= 3 ? " hot" : ""}" aria-label="Combo ${run.combo}">🔥 x${run.combo}</span>`}</div>`;
+    ${run.mode === "place" ? "" : `${qPowerHud()}<span class="gbcombo${run.combo >= 3 ? " hot" : ""}" aria-label="Combo ${run.combo}">🔥 x${run.combo}</span>`}</div>`;
 }
 function gbRunView() {
   const e = run.queue[run.i], redraw = () => { saveRun(); gbRunView(); backButton(); };
   if (!e) return gbFinish();
-  const b = GE.GBLOCKS[e.block], head = `<p class="eyebrow">Grammar Builder · ${run.mode === "place" ? "Foundation scan" : "Today's build"}</p>${gbHud()}`;
+  const b = GE.GBLOCKS[e.block], qq = run.mode === "quest" && Q.questOf(run.quest);
+  const head = `<p class="eyebrow">${qq ? `${qq.icon} ${U.esc(qq.name)} · Level ${run.level + 1}` : `Grammar Builder · ${run.mode === "place" ? "Foundation scan" : "Today's build"}`}</p>${gbHud()}`;
   if (e.t === "lesson") {
     const L = GB.blockLesson(e.block), from = e.from && GE.GBLOCKS[e.from];
     $app.innerHTML = `<div class="narrow pop">${head}
@@ -2200,11 +2207,15 @@ function gbRunView() {
     run.results.push({ skill: "Grammar", eng: 1, block: e.block, item: it.id, first_try: support === "none", support, ...(tagged[0] ? { b: tagged[0] } : {}) });
     e.res = support; run.lastIdx = run.i; run.n++;
     if (support === "none") { run.combo++; run.best = Math.max(run.best, run.combo);
-      if ([3, 5, 8].includes(run.combo)) { run.toast = `🔥 Combo x${run.combo}! +${run.combo} XP bonus`; S.play("level"); } }
-    else { run.combo = 0; run.miss[e.block] = (run.miss[e.block] || 0) + 1; run.tags[e.block] = [...(run.tags[e.block] || []), ...tagged]; gbMaybeDrop(e); }
+      if ([3, 5, 8].includes(run.combo)) { const x = run.combo * (run.mode === "quest" && run.powers.includes("surge") ? 2 : 1);
+        if (run.cxp != null) run.cxp += x; run.toast = `🔥 Combo x${run.combo}! +${x} XP bonus${x > run.combo ? " ⚡" : ""}`; S.play("level"); } }
+    else { if (run.mode === "quest" && run.powers.includes("rewind") && !run.pw.rewind && run.combo > 0) { run.pw.rewind = true; run.toast = `⏪ Rewind! Your combo x${run.combo} is safe.`; }
+      else run.combo = 0; run.miss[e.block] = (run.miss[e.block] || 0) + 1; run.tags[e.block] = [...(run.tags[e.block] || []), ...tagged]; gbMaybeDrop(e); }
     redraw(); const f = $app.querySelectorAll(".fb"); if (f.length) f[f.length - 1].scrollIntoView({ block: "center", behavior: "smooth" });
   });
   const nx = document.getElementById("gbnext"); if (nx) nx.onclick = () => { run.lastIdx = null; run.i++; S.play("tap"); redraw(); top(); };
+  const shd = document.getElementById("qshield"); if (shd) shd.onclick = () => { const s = run.cs[key], ko = it.opts.map((o, j) => j).filter(j => j && !s.wrong.includes(j));
+    if (!ko.length) return; s.ko = ko[Math.floor(Math.random() * ko.length)]; s.hint = true; run.pw.shield = true; S.play("ok"); redraw(); };
 }
 // Two misses on a new brick drop to the brick underneath they point at (at most 2 levels down), then climb back up.
 function gbMaybeDrop(e) {
@@ -2225,15 +2236,21 @@ function gbFinish() {
   const after = GE.mastery([...history, { created_at: new Date().toISOString(), answers: run.results }]), now = gbMastered(after);
   const fresh = now.filter(id => !run.before.includes(id)), bonus = E.streakBonus(history);
   const right = run.results.filter(r => r.first_try).length, second = run.results.filter(r => r.support === "hint").length;
-  const combo = run.results.reduce((a, r) => { a.c = r.first_try ? a.c + 1 : 0; if ([3, 5, 8].includes(a.c)) a.x += a.c; return a; }, { c: 0, x: 0 }).x;
+  const combo = run.cxp != null ? run.cxp : run.results.reduce((a, r) => { a.c = r.first_try ? a.c + 1 : 0; if ([3, 5, 8].includes(a.c)) a.x += a.c; return a; }, { c: 0, x: 0 }).x;
+  const quest = run.mode === "quest" && Q.questOf(run.quest), qi = Q.QUESTS.indexOf(quest), qb = quest && quest.levels[run.level][0];
+  const qr = quest ? { levelCleared: fresh.includes(qb), questCleared: Q.questState(after, qi).cleared && !Q.questState(GE.mastery(history), qi).cleared } : null;
+  const qxp = qr ? (qr.levelCleared ? Q.QXP.level : 0) + (qr.questCleared ? Q.QXP.quest : 0) : 0;
   const xp = run.mode === "place" ? right * GE.XP_GB.place + GE.XP_GB.finish
     : right * GE.XP_GB.right + second * GE.XP_GB.second + combo + fresh.length * GE.XP_GB.brick + GE.XP_GB.finish;
-  run.result = { score: right, max: run.results.length, xp: xp + bonus, bonus, fresh, rankBefore: T.rankOf(run.before.length)[1], rankAfter: T.rankOf(now.length), total: now.length, seconds: Math.round((Date.now() - run.t0) / 1000) };
+  run.result = { q: qr, score: right, max: run.results.length, xp: xp + qxp + bonus, bonus, fresh, rankBefore: T.rankOf(run.before.length)[1], rankAfter: T.rankOf(now.length), total: now.length, seconds: Math.round((Date.now() - run.t0) / 1000) };
   run.phase = "done"; saveRun(); runView(); top();
-  if (fresh.length && run.mode !== "place") Cel.big({ icon: "🧱", title: fresh.length > 1 ? `${fresh.length} new bricks, ${firstName()}!` : `New brick, ${firstName()}!`, sub: fresh.map(id => GE.GBLOCKS[id].name).join(" · "), xp: run.result.xp });
+  if (qr && qr.questCleared) Cel.big({ icon: quest.power.icon, title: `Power unlocked: ${quest.power.name}!`, sub: quest.power.say, xp: run.result.xp });
+  else if (qr && qr.levelCleared) Cel.big({ icon: "⭐", title: `Level cleared, ${firstName()}!`, sub: quest.levels[run.level][1], xp: run.result.xp });
+  else if (fresh.length && run.mode !== "place") Cel.big({ icon: "🧱", title: fresh.length > 1 ? `${fresh.length} new bricks, ${firstName()}!` : `New brick, ${firstName()}!`, sub: fresh.map(id => GE.GBLOCKS[id].name).join(" · "), xp: run.result.xp });
   else Cel.set(run.result.xp);
 }
 function gbDoneView() {
+  if (run.mode === "quest") return qDoneView();
   const R = run.result, st = GE.mastery(run.saved ? history : [...history, { created_at: new Date().toISOString(), answers: run.results }]), place = run.mode === "place";
   const rankUp = R.rankAfter[1] !== R.rankBefore;
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Grammar Builder · ${place ? "Scan complete" : "Build complete"}</p>
@@ -2253,6 +2270,117 @@ function gbDoneView() {
   document.getElementById("gbtower").onclick = () => { run = null; saveRun(); location.hash = "#build"; route(); top(); };
   const f = document.getElementById("gbfirst"); if (f) f.onclick = () => { run = null; saveRun(); gbStart("daily"); };
   saveAttempt({ mode: "vocab", text_id: place ? "gplace" : "gbuild", level_start: 0, level_end: null, score: R.score, max_score: R.max, xp: R.xp, seconds: R.seconds, answers: run.results });
+}
+
+/* ---------------- Grammar Quests (quests.js) ----------------
+   Quests are the grammar engine as a game: each level is one brick, played as a short Grammar Builder run (mode
+   "quest") and cleared when that brick is mastered. The hero's look is kept on this device; powers come from cleared
+   quests and gear from total XP, so nothing new is saved. Attempts save as text_id "gquest". */
+const Q_HERO = () => "quest-hero-" + (session ? session.username : "");
+function qHero() { let h = null; try { h = JSON.parse(localStorage.getItem(Q_HERO())); } catch (e) {} return Q.cleanHero(h, me.xp_total); }
+function qSaveHero(h) { try { localStorage.setItem(Q_HERO(), JSON.stringify(h)); } catch (e) {} }
+const Q_SEEN = id => `quest-story-${id}-` + (session ? session.username : "");
+const qSeen = id => { try { return !!localStorage.getItem(Q_SEEN(id)); } catch (e) { return false; } };
+const qHeroArt = (st, cls = "") => Q.heroSVG(qHero(), { powers: Q.powersOf(st), cls });
+
+function qHomeCard() {
+  const st = GE.mastery(history), i = Q.QUESTS.findIndex((q, k) => !Q.questState(st, k).cleared), s = i >= 0 ? Q.questState(st, i) : null;
+  return `<div class="tcard qhome"><span class="tag gold">${s ? "New" : "All cleared ✓"}</span><div class="qhomein"><a href="#quests" class="qhomeav" aria-label="Grammar Quests">${qHeroArt(st)}</a><div>
+    <h3>Grammar Quests</h3><p class="note" style="font-size:1rem">${s ? `${s.q.icon} <b>${U.esc(s.q.name)}</b>, level ${s.at + 1} of 3. Clear quests to power up your hero.` : "Every quest cleared. Your hero is fully powered!"}</p></div></div>
+    <div class="row"><a class="btn" href="#quests">${s ? "Play" : "See my hero"}</a></div></div>`;
+}
+function qCard(st, i) {
+  const s = Q.questState(st, i), q = s.q, low = Math.round(100 * GE.START_P / GE.MASTERED) + 1;
+  return `<div class="qst${s.open ? "" : " locked"}${s.cleared ? " cleared" : ""}" style="--q1:${q.sky[0]};--q2:${q.sky[1]}">
+    <div class="qbanner"><span class="qicon" aria-hidden="true">${s.open ? q.icon : "🔒"}</span><div><p class="eyebrow">Quest ${i + 1}${s.cleared ? " · Cleared ✓" : ""}</p><h3>${U.esc(q.name)}</h3></div></div>
+    <div class="qbody"><p class="note">${U.esc(q.blurb)}</p>
+    <ol class="qlevels">${q.levels.map(([b, name], k) => { const now = s.open && k === s.at;
+      return `<li class="${s.done[k] ? "done" : now ? "now" : "todo"}"><span class="qnode">${s.done[k] ? "⭐" : now ? k + 1 : "🔒"}</span><span><b>${U.esc(name)}</b><span class="note"> · ${U.esc(GE.GBLOCKS[b].name)}${!s.done[k] && s.built[k] >= low ? ` · ${s.built[k]}% built` : ""}</span></span></li>`; }).join("")}</ol>
+    <p class="note">Power: ${q.power.icon} <b>${U.esc(q.power.name)}</b>. ${U.esc(q.power.say)}</p>
+    <div class="row">${s.open ? `<a class="btn${s.cleared ? " alt" : " go"}" href="#quest-${q.id}">${s.cleared ? "Play again" : qSeen(q.id) ? "Continue" : "Start the quest"}</a>`
+      : `<span class="note">🔒 Clear "${U.esc(Q.QUESTS[i - 1].name)}" to open this quest.</span>`}</div></div></div>`;
+}
+function qHubView() {
+  const st = GE.mastery(history), powers = Q.powersOf(st);
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Grammar · Quests</p><h1>Grammar Quests</h1>
+      <p class="lede">Go on quests, clear the levels and power up your hero. Every level is one brick of your <a href="#build">grammar tower</a>.</p></div>
+    <div class="qherocard">${qHeroArt(st, "big")}<div style="flex:1"><b>${U.esc(firstName())}</b>
+      <p class="note" style="margin:4px 0">${powers.length ? `Powers: ${powers.map(p => `${p.icon} ${U.esc(p.name)}`).join(" · ")}` : "No powers yet. Clear a quest to get one!"}</p>
+      <a class="btn small alt" href="#hero">🎨 Change my hero</a></div></div>
+    ${Q.QUESTS.map((q, i) => qCard(st, i)).join("")}</div>`;
+}
+function qQuestView(id) {
+  const st = GE.mastery(history), i = Q.QUESTS.findIndex(q => q.id === id), s = Q.questState(st, i), q = s.q;
+  if (!s.open) { location.hash = "#quests"; return; }
+  try { localStorage.setItem(Q_SEEN(id), "1"); } catch (e) {}
+  $app.innerHTML = `<div class="narrow pop"><div class="row back"><a href="#quests">← All quests</a></div>
+    <p class="eyebrow">Quest ${i + 1}${s.cleared ? " · Cleared ✓" : ""}</p><h1>${q.icon} ${U.esc(q.name)}</h1>
+    ${SC.sceneHTML(id, { me: Q.heroSVG(qHero(), { inner: true, powers: Q.powersOf(st) }) })}
+    <div class="qst" style="--q1:${q.sky[0]};--q2:${q.sky[1]}"><div class="qbody"><ol class="qlevels">${q.levels.map(([b, name], k) => {
+      const open = k === 0 || s.done[k - 1], now = open && !s.done[k];
+      return `<li class="${s.done[k] ? "done" : now ? "now" : "todo"}"><span class="qnode">${s.done[k] ? "⭐" : now ? k + 1 : "🔒"}</span><span style="flex:1"><b>Level ${k + 1}: ${U.esc(name)}</b>
+        <span class="note"> · ${U.esc(GE.GBLOCKS[b].name)}</span></span>${open ? `<button class="btn small${now ? " go" : " alt"}" data-qplay="${k}">${s.done[k] ? "Replay" : "Play"}</button>` : ""}</li>`; }).join("")}</ol>
+    <p class="note">Clear all 3 levels to get ${q.power.icon} <b>${U.esc(q.power.name)}</b>: ${U.esc(q.power.say)}</p></div></div></div>`;
+  SC.mountScene();
+  $app.querySelectorAll("[data-qplay]").forEach(b => b.onclick = () => qStart(id, +b.dataset.qplay));
+}
+function qHeroView() {
+  const st = GE.mastery(history), h = qHero(), xp = me.xp_total, pw = Q.powersOf(st).map(p => p.id);
+  const sw = (key, list, label) => `<div class="qpick"><b>${label}</b><div class="row">${list.map((c, k) => `<button class="qsw${h[key] === k ? " on" : ""}" data-hk="${key}:${k}" style="background:${c}" aria-label="${label} ${k + 1}"></button>`).join("")}</div></div>`;
+  $app.innerHTML = `<div class="narrow pop"><div class="row back"><a href="#quests">← Quests</a></div><p class="eyebrow">Grammar Quests</p><h1>My hero</h1>
+    <div class="qherocard qmaker">${Q.heroSVG(h, { powers: Q.powersOf(st), cls: "big" })}</div>
+    ${sw("skin", Q.SKINS, "Skin")}
+    <div class="qpick"><b>Hair</b><div class="row">${Q.HAIRS.map(x => `<button class="qchip${h.hair === x ? " on" : ""}" data-hk="hair:${x}">${x === "none" ? "No hair" : x[0].toUpperCase() + x.slice(1)}</button>`).join("")}</div></div>
+    ${sw("hairCol", Q.HAIR_COLS, "Hair colour")}${sw("shirt", Q.SHIRTS, "Top")}
+    <div class="qpick"><b>Gear</b> <span class="note">unlocks with XP · you have ${xp} XP</span><div class="qgearg">${Q.GEAR.map(g => { const ok = Q.gearOpen(g, xp), on = h.gear[g.slot] === g.id;
+      return `<button class="qgearb${on ? " on" : ""}" data-hg="${g.id}" ${ok ? "" : "disabled"}><span aria-hidden="true">${ok ? g.icon : "🔒"}</span><b>${U.esc(g.name)}</b><span class="note">${ok ? (on ? "Wearing" : "Tap to wear") : `${g.xp} XP`}</span></button>`; }).join("")}</div></div>
+    <div class="qpick"><b>Powers</b> <span class="note">clear quests to unlock</span><div class="qgearg">${Q.QUESTS.map(q => { const ok = pw.includes(q.power.id);
+      return `<div class="qgearb${ok ? " on" : ""}"><span aria-hidden="true">${ok ? q.power.icon : "🔒"}</span><b>${U.esc(q.power.name)}</b><span class="note">${ok ? U.esc(q.power.say) : `Clear ${U.esc(q.name)}`}</span></div>`; }).join("")}</div></div>
+    <div class="row"><a class="btn" href="#quests">Done</a></div></div>`;
+  const save = h2 => { qSaveHero(h2); S.play("tap"); qHeroView(); };
+  $app.querySelectorAll("[data-hk]").forEach(b => b.onclick = () => { const [k, v] = b.dataset.hk.split(":"); save({ ...h, [k]: k === "hair" ? v : +v }); });
+  $app.querySelectorAll("[data-hg]").forEach(b => b.onclick = () => { const g = Q.GEAR.find(x => x.id === b.dataset.hg); save({ ...h, gear: { ...h.gear, [g.slot]: h.gear[g.slot] === g.id ? null : g.id } }); });
+}
+// A level: the brick's lesson (cartoon) and 5 questions, or 4 quick ones on a replay. Drops work as in a build.
+function qStart(id, k) {
+  const st = GE.mastery(history), q = Q.questOf(id), b = q.levels[k][0], has = GE.isMastered(st, b), prev = k > 0 ? q.levels[k - 1][0] : null;
+  run = { kind: "gbuild", mode: "quest", quest: id, level: k, powers: Q.powersOf(st).map(p => p.id), pw: {}, cxp: 0, i: 0, n: 0, cs: {}, results: [], combo: 0, best: 0, t0: Date.now(), orders: {},
+    before: gbMastered(st), queue: [], known: {}, miss: {}, tags: {}, dropped: {} };
+  const qs = gbPick(b, 5).map(item => ({ t: "q", block: b, item, tag: has ? "mix" : "new" }));
+  if (has) run.queue.push(...qs.slice(0, 4));
+  else { run.queue.push({ t: "lesson", block: b, why: "new" }, ...qs);
+    if (prev) run.queue.splice(3, 0, ...gbPick(prev, 1).map(item => ({ t: "q", block: prev, item, tag: "mix" }))); }
+  saveRun(); route(); top();
+}
+// Power buttons in a level's HUD. Shield knocks out one wrong option on the current question (it counts as a hint).
+function qPowerHud() {
+  if (run.mode !== "quest" || !run.powers.length) return "";
+  const e = run.queue[run.i], cs = e && e.t === "q" && run.cs[`gb:${run.i}`], live = e && e.t === "q" && !(cs && (cs.done || cs.ko != null));
+  return `<span class="qpw">${Q.QUESTS.filter(q => run.powers.includes(q.power.id)).map(({ power: p }) =>
+    p.id === "shield" ? `<button class="qpwb${run.pw.shield ? " used" : ""}" id="qshield" ${run.pw.shield || !live ? "disabled" : ""} title="${U.esc(p.say)}">${p.icon}</button>`
+      : `<span class="qpwb${run.pw[p.id] ? " used" : ""}" title="${U.esc(p.name)}: ${U.esc(p.say)}">${p.icon}</span>`).join("")}</span>`;
+}
+function qDoneView() {
+  const R = run.result, q = Q.questOf(run.quest), b = q.levels[run.level][0], st = GE.mastery(run.saved ? history : [...history, { created_at: new Date().toISOString(), answers: run.results }]);
+  const qi = Q.QUESTS.indexOf(q), s = Q.questState(st, qi), cleared = GE.isMastered(st, b), k = Math.min(100, Math.round(100 * GE.pOf(st, b) / GE.MASTERED));
+  const next = cleared && run.level < 2 ? run.level + 1 : null;
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">${q.icon} ${U.esc(q.name)} · Level ${run.level + 1}</p>
+    <h1>${R.q.questCleared ? `Quest cleared! ${q.power.icon} ${U.esc(q.power.name)} unlocked` : cleared ? "Level cleared! ⭐" : "Nearly there!"}</h1>
+    <div class="qwin${cleared ? " cheer" : ""}" style="--q1:${q.sky[0]};--q2:${q.sky[1]}">${qHeroArt(st, "big")}</div>
+    ${R.q.questCleared ? `<div class="lvup pop">${q.power.icon} <b>New power: ${U.esc(q.power.name)}.</b> ${U.esc(q.power.say)}</div>` : ""}
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${R.max}</b><span>right first time</span></div>
+      <div class="stat"><b>🔥 x${run.best}</b><span>best combo</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
+    ${cleared ? "" : `<div class="panel"><h3>${U.esc(GE.GBLOCKS[b].name)}</h3><div class="gbprog"><span>🏗️ Brick</span><div class="bar"><i style="width:${k}%"></i></div><span class="note">${k}% built</span></div>
+      <p class="note">Get a few more right first time to clear this level. Play it again, or watch the lesson first.</p></div>`}
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row">${next != null ? `<button class="btn go" id="qnext">Level ${next + 1}</button>` : cleared ? "" : `<button class="btn go" id="qagain">Play again</button>`}
+      <button class="btn alt" id="qback">${s.cleared && qi < Q.QUESTS.length - 1 ? "Next quest" : "Quest map"}</button></div></div>`;
+  const leave = h => { run = null; saveRun(); location.hash = h; route(); top(); };
+  document.getElementById("qback").onclick = () => leave(s.cleared && qi < Q.QUESTS.length - 1 ? "#quests" : `#quest-${q.id}`);
+  const nx = document.getElementById("qnext"); if (nx) nx.onclick = () => { const id = run.quest; run = null; saveRun(); qStart(id, next); };
+  const ag = document.getElementById("qagain"); if (ag) ag.onclick = () => { const id = run.quest, lv = run.level; run = null; saveRun(); qStart(id, lv); };
+  saveAttempt({ mode: "vocab", text_id: "gquest", level_start: 0, level_end: null, score: R.score, max_score: R.max, xp: R.xp, seconds: R.seconds, answers: run.results });
 }
 
 /* ---------------- skill drills ---------------- */
@@ -2471,6 +2599,7 @@ function runName(r) {
   if (r.kind === "lab") return `Listening Lab: ${Lab.labMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
   if (r.kind === "rlab") return `Reading Lab, Unit ${r.unit || RL.rItemUnit(r.seq[0]) || 2}: ${RL.rlabMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
   if (r.kind === "glab") return `Grammar Lab: ${GL.glabMission(r.id).title}${r.phase === "prove" ? ` (question ${r.i + 1} of ${GL.GLAB_LEN})` : ""}`;
+  if (r.kind === "gbuild" && r.mode === "quest") return `Grammar Quest: ${Q.questOf(r.quest).name}, level ${r.level + 1}`;
   if (r.kind === "gbuild") return `Grammar Builder: ${r.mode === "place" ? "foundation scan" : "today's build"}`;
   if (r.kind === "drill") return `Skill drill: ${r.skill}${r.phase === "q" ? ` (question ${r.i + 1} of ${r.items.length})` : ""}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
