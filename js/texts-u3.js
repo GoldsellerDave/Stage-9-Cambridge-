@@ -39,28 +39,28 @@ const CROWDS_LEVELS = [
 
 const CROWDS_SLOTS = [
  {skill:"Main idea", para:"F", q:[
-  {stem:"What is the text mainly about?", opts:["How too many tourists can harm famous places, and what can help","Why Venice is the best city in Europe","How painters made frescoes","Why tourists should stay at home"],
+  {stem:"What is the text mainly about?", opts:["How too many tourists can harm famous places, and what can help","Why Venice is the best city in Europe","How painters made frescoes on the walls of old churches","Why tourists should stay at home instead of visiting famous places"],
    hint:"Read paragraph A and paragraph F again. Your answer must be true for the whole text, not one paragraph.", focus:"Then tourists and local people can share these special places.",
    explain:"The answer is \"How too many tourists can harm famous places, and what can help\". Paragraphs A to C describe the problem, and D to F give ideas that help. Frescoes are only one detail in paragraph C."},
-  {stem:"What is the text mainly about?", opts:["The problems caused by overtourism, and some ways to reduce them","How to plan a cheap day trip to Venice","The history of the Colosseum in Rome","Why small towns are better than big cities"],
+  {stem:"What is the text mainly about?", opts:["The problems caused by overtourism, and some ways to reduce them","How to plan a cheap day trip to Venice","The history of the Colosseum in Rome","Why small towns are better places to visit than big, crowded cities"],
    hint:"Read paragraph A and paragraph F again. Your answer must be true for the whole text, not one paragraph.", focus:"a balance in which local people and visitors can both enjoy these extraordinary places"},
-  {stem:"Which statement best summarises the article?", opts:["Overtourism harms both places and communities, but spreading visitors more evenly can protect them.","Tourism should be strictly limited at every historic site.","Famous places should close to protect their frescoes.","Lesser-known sites are more interesting than famous ones."],
+  {stem:"Which statement best summarises the article?", opts:["Overtourism harms both places and communities, but spreading visitors more evenly can protect them.","Tourism should be strictly limited at every historic site, however many or few visitors it receives.","Famous places should close to protect their frescoes.","Lesser-known sites are more interesting than famous ones."],
    hint:"Look at how the article begins (A) and how it ends (F). The summary must include the problem and the solution.", focus:"The ultimate aim is coexistence"}]},
  {skill:"Detail", para:"D", q:[
   {stem:"How long can visitors look at The Last Supper?", opts:["For fifteen minutes","For thirty minutes","For one hour","For as long as they like"],
    hint:"Look in paragraph D. Find \"The Last Supper\".", focus:"and only for fifteen minutes.",
    explain:"The answer is \"for fifteen minutes\". Paragraph D says people see it \"in small groups, and only for fifteen minutes\"."},
-  {stem:"According to paragraph D, what did Venice start doing in 2024?", opts:["Charging day-trip visitors a fee on its busiest days","Stopping all cruise ships","Using cameras to count visitors","Closing St Mark's Square"],
+  {stem:"According to paragraph D, what did Venice start doing in 2024?", opts:["Charging day-trip visitors a fee on its busiest days","Stopping all cruise ships","Using cameras to count every visitor who arrives by boat","Closing St Mark's Square"],
    hint:"Find \"2024\" in paragraph D. Read that sentence carefully.", focus:"In 2024, Venice began charging day-trip visitors a small fee on its busiest days."},
   {stem:"According to paragraph D, why do some sites monitor visitor numbers in real time?", opts:["So they can close before crowding causes damage","To charge each visitor more money","To count how many tourists come from cruise ships","To plan conservation work for the following year"],
    hint:"Find \"monitor\" in paragraph D. Read to the end of the sentence.", focus:"closing their doors before crowding becomes damaging"}]},
  {skill:"Vocabulary in context", para:"E", q:[
-  {stem:"In paragraph E, \"neglect\" means…", opts:["not being looked after","having too many visitors","being repaired","being painted again"],
+  {stem:"In paragraph E, \"neglect\" means…", opts:["not being looked after","having too many visitors","being repaired by experts after damage","being painted again"],
    hint:"Find \"neglect\" in paragraph E. Read the words after the colon (:).", focus:"nobody looks after them",
    explain:"The answer is \"not being looked after\". After the colon, the text explains neglect: \"nobody looks after them, and they slowly fall down\"."},
-  {stem:"In paragraph D, \"monitor\" means…", opts:["watch and check carefully","make bigger","stop completely","pay for"], para:"D",
+  {stem:"In paragraph D, \"monitor\" means…", opts:["watch and check carefully","make bigger","stop something from happening completely","pay for"], para:"D",
    hint:"Find \"monitor\" in paragraph D. Why do the sites use tickets and cameras?", focus:"Many sites now use ticket systems and cameras to monitor visitor numbers"},
-  {stem:"In paragraph E, \"prone to\" means…", opts:["likely to suffer from","protected from","famous for","responsible for"],
+  {stem:"In paragraph E, \"prone to\" means…", opts:["likely to suffer from","protected from something by the government","famous for","responsible for"],
    hint:"Find \"prone to\" in paragraph E. Read what happens to these sites after the colon.", focus:"they are prone to neglect"}]},
  {skill:"Detail: two points", para:"C", q:[
   {type:"short", stem:"Write two ways that visitors can damage old places.", groups:VISITOR_DAMAGE, need:2,
@@ -71,12 +71,12 @@ const CROWDS_SLOTS = [
   {type:"short", stem:"Identify two ways in which large numbers of visitors harm historic sites.", groups:VISITOR_DAMAGE, need:2,
    hint:"Paragraph C: look at footsteps, touching, and what breath and body heat do to the air.", focus:"raise humidity levels, gradually degrading pigments that have lasted for centuries"}]},
  {skill:"Inference", para:"A", q:[
-  {stem:"A local woman says, \"Our city is turning into a museum.\" What does she mean?", opts:["The city is for visitors to look at, not for people to live in.","The city is building a lot of new museums.","She works in a museum.","The city is very old and beautiful."],
+  {stem:"A local woman says, \"Our city is turning into a museum.\" What does she mean?", opts:["The city is for visitors to look at, not for people to live in.","The city is building a lot of new museums for all the tourists to visit.","She works in one of the many museums in the city.","The city is very old and beautiful."],
    hint:"Look in paragraph A. What has happened to some families?", focus:"Some families have moved away.",
    explain:"The answer is \"The city is for visitors to look at, not for people to live in\". Families are moving away and the streets are full of tourists, so the city is becoming a place to look at, like a museum."},
-  {stem:"What can we infer about the local woman's feelings?", opts:["She is unhappy about how her city is changing.","She is proud that so many people visit.","She wants more museums in Venice.","She thinks tourists should stay longer."],
+  {stem:"What can we infer about the local woman's feelings?", opts:["She is unhappy about how her city is changing.","She is proud that so many people from around the world visit.","She wants more museums in Venice.","She thinks tourists should stay longer and spend more money in the city."],
    hint:"Paragraph A: what has happened to rents and to many residents? How would you feel?", focus:"rents have risen so much that thousands of residents have moved away"},
-  {stem:"What does \"she does not mean it as a compliment\" suggest?", opts:["She sees the change as a loss, not something to be proud of.","She is joking about the number of museums.","She believes museums are boring places.","She is praising the city's careful conservation."],
+  {stem:"What does \"she does not mean it as a compliment\" suggest?", opts:["She sees the change as a loss, not something to be proud of.","She is joking about the number of museums.","She believes museums are boring places.","She is praising the city's careful conservation of its old buildings and art."],
    hint:"A compliment is something nice you say. If she does not mean it nicely, how does she see the change?", focus:"she does not mean it as a compliment"}]},
  {skill:"Cause and effect", para:"E", q:[
   {type:"short", stem:"Why is it a problem when a place gets almost no visitors? Write one reason.", groups:[NO_MONEY, DECAY], need:1,
@@ -87,20 +87,20 @@ const CROWDS_SLOTS = [
   {type:"short", stem:"Explain how a lack of visitors can lead to damage at lesser-known sites.", groups:[NO_MONEY, DECAY], need:2,
    hint:"Paragraph E: what are these sites \"deprived of\", and what happens to their roofs and walls?", focus:"Deprived of tourist income, they are prone to neglect"}]},
  {skill:"Writer's purpose", para:"D", q:[
-  {stem:"Why does the writer talk about Venice's fee and The Last Supper?", opts:["To give examples of ways to control crowds.","To tell readers which places to visit.","To show that Italy is expensive.","To explain how The Last Supper was painted."],
+  {stem:"Why does the writer talk about Venice's fee and The Last Supper?", opts:["To give examples of ways to control crowds.","To tell readers which places in Italy are worth visiting.","To show that visiting famous places in Italy is now very expensive.","To explain how The Last Supper was painted."],
    hint:"Look at the first sentence of paragraph D. The examples after it show what that sentence means.", focus:"Some cities are trying new ideas.",
    explain:"The answer is \"to give examples of ways to control crowds\". Paragraph D starts \"Some cities are trying new ideas\", and the fee and the small groups are those ideas."},
-  {stem:"Why does the writer include the examples in paragraph D?", opts:["To show how some places are trying to manage crowds","To complain about the cost of visiting Italy","To compare Venice with Milan","To show that technology causes overtourism"],
+  {stem:"Why does the writer include the examples in paragraph D?", opts:["To show how some places are trying to manage crowds","To complain about the cost of visiting famous places in Italy","To compare Venice with Milan","To show that technology causes overtourism"],
    hint:"Paragraph D begins \"Some cities are fighting back.\" Fighting back against what?", focus:"Some cities are fighting back."},
-  {stem:"What is the function of paragraph E in the article?", opts:["It introduces an opposite problem that shapes the writer's conclusion.","It gives more examples of crowd control.","It argues that famous sites should close.","It describes the history of conservation."], para:"E",
+  {stem:"What is the function of paragraph E in the article?", opts:["It introduces an opposite problem that shapes the writer's conclusion.","It gives more examples of crowd control.","It argues that famous sites should close to visitors until they have been repaired.","It describes the history of conservation."], para:"E",
    hint:"Paragraph E begins with \"Yet\". What does it add to the problem described in paragraphs A to D?", focus:"Yet the opposite problem is arguably just as serious."}]},
  {skill:"Writer's view", para:"F", q:[
-  {stem:"What does the writer think?", opts:["We should still travel, but in a smarter way.","Tourists should stop visiting famous places.","Overtourism is not a real problem.","Only small groups should travel."],
+  {stem:"What does the writer think?", opts:["We should still travel, but in a smarter way.","Tourists should stop visiting famous places and stay at home.","Overtourism is not a real problem.","Only small groups should travel to famous places like Venice."],
    hint:"Read paragraph F. The writer asks a question and then answers it.", focus:"So, should we stop visiting famous places? No.",
    explain:"The answer is \"We should still travel, but in a smarter way\". The writer says \"No\" to stopping, then gives ideas: travel at quiet times, stay longer and visit smaller towns."},
-  {stem:"What is the writer's attitude to visiting famous places?", opts:["Positive, as long as people travel thoughtfully","Negative: people should stay at home","Neutral: the writer gives no opinion","Worried that all famous places will close"],
+  {stem:"What is the writer's attitude to visiting famous places?", opts:["Positive, as long as people travel thoughtfully","Negative: people should stay at home","Neutral: the writer gives no opinion","Worried that all famous places will soon have to close to visitors"],
    hint:"Paragraph F: the writer answers the question with \"Not necessarily\" and then gives advice.", focus:"So should we stop visiting famous places? Not necessarily."},
-  {stem:"Which statement best reflects the writer's position?", opts:["Small changes in how people travel can, together, make a real difference.","Tourists are entirely to blame for damage to historic sites.","Only strict government limits can solve overtourism.","Famous destinations should be avoided completely."],
+  {stem:"Which statement best reflects the writer's position?", opts:["Small changes in how people travel can, together, make a real difference.","Tourists are entirely to blame for damage to historic sites.","Only strict government limits on visitor numbers can solve the problem of overtourism.","Famous destinations should be avoided completely."],
    hint:"Paragraph F: find the word \"collectively\". Watch out for answers with \"entirely\", \"only\" or \"completely\".", focus:"are modest choices, but collectively they matter"}]}
 ];
 
@@ -142,23 +142,23 @@ const CAMP_LEVELS = [
 
 const CAMP_SLOTS = [
  {skill:"Main idea", para:"F", q:[
-  {stem:"What is the text mainly about?", opts:["A camping trip that the writer enjoyed much more than expected","How to build a tent in a national park","Why theme parks are better than national parks","A ranger's job in a national park"],
+  {stem:"What is the text mainly about?", opts:["A camping trip that the writer enjoyed much more than expected","How to build a tent in a national park","Why theme parks are better than national parks for a family holiday","A ranger's job in a national park and the rules that visitors must follow"],
    hint:"Read paragraph A (before the trip) and paragraph F (after the trip). How did the writer's feelings change?", focus:"I did not touch my phone for two whole days, and I did not miss it.",
    explain:"The answer is \"A camping trip that the writer enjoyed much more than expected\". In A the writer thinks it will be the worst weekend, but in F they want to go back."},
-  {stem:"What is the text mainly about?", opts:["How a reluctant teenager came to love a weekend of eco camping","The rules of all national parks in the country","The dangers of mosquitoes near rivers","Why the writer's brother wanted to visit a theme park"],
+  {stem:"What is the text mainly about?", opts:["How a reluctant teenager came to love a weekend of eco camping","The rules of all national parks in the country","The dangers of mosquitoes near rivers","Why the writer's brother wanted to visit a theme park instead of a national park"],
    hint:"Compare the writer's feelings in paragraph A with paragraph F.", focus:"to my surprise, I didn't miss it"},
-  {stem:"Which statement best summarises the text?", opts:["A weekend of eco camping changes the writer's expectations and leaves a lasting impression.","The writer argues that phones should be banned on family holidays.","The text explains how hot springs are formed.","The writer describes the problems of poorly managed campsites."],
+  {stem:"Which statement best summarises the text?", opts:["A weekend of eco camping changes the writer's expectations and leaves a lasting impression.","The writer argues that phones should be banned on all family holidays, even short weekends away.","The text explains how hot springs are formed.","The writer describes the problems of poorly managed campsites."],
    hint:"The text is a personal story. How does it begin, and what does the writer \"carry home\" at the end?", focus:"is something you carry home with you"}]},
  {skill:"Detail", para:"B", q:[
   {stem:"How many places for tents does the campsite have?", opts:["Twelve","Two","Nine","Twenty"],
    hint:"Look in paragraph B. Find a number about tents.", focus:"There are only twelve places for tents, so it is never crowded.",
    explain:"The answer is \"twelve\". Paragraph B says: \"There are only twelve places for tents.\" Two is the number of hours to the park, and nine o'clock is when the music stops."},
-  {stem:"According to paragraph B, why does the campsite never feel crowded?", opts:["It only has space for twelve tents.","It is two hours from the city.","It has no shop.","The ranger sends people away."],
+  {stem:"According to paragraph B, why does the campsite never feel crowded?", opts:["It only has space for twelve tents.","It is more than two hours' drive from the city.","It has no shop.","The ranger sends people away."],
    hint:"Look in paragraph B for the word \"crowded\". What comes just before it?", focus:"only twelve spaces for tents, so it never feels crowded"},
-  {stem:"According to paragraph B, what keeps the campsite peaceful?", opts:["A strict limit on the number of tents","The ban on plastic bottles","The distance from the city","The ranger at the gate"],
+  {stem:"According to paragraph B, what keeps the campsite peaceful?", opts:["A strict limit on the number of tents","The ban on plastic bottles","The distance from the city","The ranger at the gate who checks every car"],
    hint:"Find \"peaceful\" in paragraph B. What \"keeps\" it that way?", focus:"a strict limit of twelve tents, which keeps it remarkably peaceful"}]},
  {skill:"Vocabulary in context", para:"D", q:[
-  {stem:"In paragraph D, \"insect repellent\" is…", opts:["something you put on your skin to keep insects away","a kind of mosquito","a long-sleeved shirt","medicine for insect bites"],
+  {stem:"In paragraph D, \"insect repellent\" is…", opts:["something you put on your skin to keep insects away","a kind of mosquito","a long-sleeved shirt that stops mosquitoes from biting your arms","medicine you take after you have been bitten by insects"],
    hint:"Find \"repellent\" in paragraph D. What did the family do with it, and what happened after?", focus:"We put it on our arms and legs and wore long sleeves.",
    explain:"The answer is \"something you put on your skin to keep insects away\". They put it on their arms and legs, and nobody got bitten."},
   {stem:"In paragraph D, \"prepared\" means…", opts:["ready for something","tired after something","surprised by something","worried about something"],
@@ -174,12 +174,12 @@ const CAMP_SLOTS = [
   {type:"short", stem:"Identify two rules that visitors to the campsite must follow.", groups:CAMP_RULES, need:2,
    hint:"Paragraph B: the ranger \"ran through the rules\". They are listed after the colon.", focus:"every scrap of rubbish leaves with you, fires are lit only in the designated area, music stops at nine, and on no account do you feed the wildlife"}]},
  {skill:"Inference", para:"A", q:[
-  {stem:"Why did Mum smile when she said there was no Wi-Fi?", opts:["She knew the writer would not like it.","She was angry with the writer.","She wanted to go to a theme park.","She had forgotten her phone."],
+  {stem:"Why did Mum smile when she said there was no Wi-Fi?", opts:["She knew the writer would not like it.","She was angry with the writer.","She wanted to go to a theme park instead of camping.","She had forgotten her phone, so she did not mind."],
    hint:"Look in paragraph A. How did the writer feel about the trip? What did the writer want to do at home?", focus:"I wanted to stay at home with my phone",
    explain:"The answer is \"She knew the writer would not like it\". The writer wanted to stay at home with a phone, so Mum knew the news about Wi-Fi would be a shock, and she found it a little funny."},
-  {stem:"What does \"smiling a little too much\" suggest about Mum?", opts:["She was enjoying the writer's reaction.","She was nervous about the trip.","She was trying to hide that she was sad.","She did not know about the Wi-Fi."],
+  {stem:"What does \"smiling a little too much\" suggest about Mum?", opts:["She was enjoying the writer's reaction.","She was nervous about the trip.","She was trying to hide that she was sad.","She did not know about the Wi-Fi until they arrived at the campsite."],
    hint:"Paragraph A: the writer was planning a weekend with a phone. Why might Mum find the news funny?", focus:"Mum said, smiling a little too much"},
-  {stem:"What can we infer from Mum's smile in paragraph A?", opts:["She expected the trip to be good for the writer, whatever the writer thought.","She was secretly disappointed about the lack of Wi-Fi.","She had not wanted to go camping either.","She was trying to persuade Bao to choose the theme park."],
+  {stem:"What can we infer from Mum's smile in paragraph A?", opts:["She expected the trip to be good for the writer, whatever the writer thought.","She was secretly disappointed about the lack of Wi-Fi.","She had not wanted to go camping either.","She was trying to persuade Bao to choose the theme park instead of the national park."],
    hint:"Paragraph A: Mum was \"enjoying this rather more than I was\". Then think about how the trip turned out in paragraph F.", focus:"with a smile that suggested she was enjoying this rather more than I was"}]},
  {skill:"Cause and effect", para:"D", q:[
   {type:"short", stem:"Why did the family use insect repellent?", groups:[BUG_CAUSE, BUG_RESULT], need:1,
@@ -190,20 +190,20 @@ const CAMP_SLOTS = [
   {type:"short", stem:"Explain why the family escaped without a bite while their neighbours did not.", groups:[BUG_CAUSE, BUG_RESULT], need:2,
    hint:"Paragraph D: what rose from the riverbank, and what did the family apply?", focus:"Fortunately, Mum had packed insect repellent, so we applied it generously"}]},
  {skill:"Writer's purpose", para:"E", q:[
-  {stem:"Why does the writer include what the ranger said?", opts:["To explain the main idea of eco tourism.","To show that the ranger was unfriendly.","To describe how hot springs work.","To give the rules of the campsite again."],
+  {stem:"Why does the writer include what the ranger said?", opts:["To explain the main idea of eco tourism.","To show that the ranger was unfriendly.","To describe how hot springs work and why the water is warm.","To give the rules of the campsite again in a different way."],
    hint:"Look in paragraph E. What does the ranger say eco tourism means?", focus:"Eco tourism means you leave a place better than you found it.",
    explain:"The answer is \"To explain the main idea of eco tourism\". The ranger's words tell the reader what eco tourism means: leave a place better than you found it."},
-  {stem:"Why does the writer quote the ranger in paragraph E?", opts:["To share an important message about caring for nature","To complain about other visitors","To show that the ranger was funny","To explain why the campsite has no shop"],
+  {stem:"Why does the writer quote the ranger in paragraph E?", opts:["To share an important message about caring for nature","To complain about other visitors","To show that the ranger was funny","To explain why the campsite has no shop and no plastic bottles"],
    hint:"Paragraph E: the writer says the ranger said \"something I still remember\". Why would it be memorable?", focus:"said something I still remember"},
-  {stem:"What is the purpose of ending paragraph E with the ranger's words?", opts:["To give the reader a lasting message about responsible tourism","To criticise the writer's family for being careless","To introduce a new problem with the hot spring","To show that the ranger disliked tourists"],
+  {stem:"What is the purpose of ending paragraph E with the ranger's words?", opts:["To give the reader a lasting message about responsible tourism","To criticise the writer's family for being careless with their rubbish at the hot spring","To introduce a new problem with the hot spring","To show that the ranger disliked tourists"],
    hint:"The writer says the remark \"has stayed with me\". What does the remark teach visitors?", focus:"made a remark that has stayed with me"}]},
  {skill:"Writer's view", para:"F", q:[
-  {stem:"What does the writer think about national parks now?", opts:["A trip there is special and worth repeating.","They are boring without Wi-Fi.","They are only good for a day trip.","Theme parks are much better."],
+  {stem:"What does the writer think about national parks now?", opts:["A trip there is special and worth repeating.","They are boring without Wi-Fi.","They are only good for a short day trip, not a whole weekend.","Theme parks are much better for a family weekend away."],
    hint:"Read paragraph F. What does the writer want to do next year?", focus:"Next year, I want to go back for a longer trip.",
    explain:"The answer is \"A trip there is special and worth repeating\". The writer wants to go back next year for longer, and says a weekend there is something you remember."},
-  {stem:"How does the writer compare theme parks with national parks?", opts:["Theme parks are fun, but a national park trip stays with you longer.","Theme parks are boring and a waste of money.","National parks are only good for families with young children.","They are equally memorable."],
+  {stem:"How does the writer compare theme parks with national parks?", opts:["Theme parks are fun, but a national park trip stays with you longer.","Theme parks are boring and a waste of money compared with national parks.","National parks are only good for families with young children.","They are equally memorable."],
    hint:"Paragraph F: find the last sentence. What is \"fun while it lasts\"?", focus:"A day trip to a theme park is fun while it lasts"},
-  {stem:"Which phrase best describes the writer's tone in paragraph F?", opts:["Honest and slightly amused at having been proved wrong","Angry about the lack of Wi-Fi","Sad that the trip has ended","Critical of theme parks and the people who visit them"],
+  {stem:"Which phrase best describes the writer's tone in paragraph F?", opts:["Honest and slightly amused at having been proved wrong","Angry about the lack of Wi-Fi","Sad that the trip has ended","Critical of theme parks and of the people who choose to visit them"],
    hint:"Paragraph F: the writer did not miss the phone \"somewhat to my annoyance\". Why would that be annoying, and is it serious?", focus:"somewhat to my annoyance, did not miss it at all"}]}
 ];
 
@@ -245,23 +245,23 @@ const ACTIVE_LEVELS = [
 
 const ACTIVE_SLOTS = [
  {skill:"Main idea", para:"B", q:[
-  {stem:"What is the text mainly about?", opts:["Why many families choose sports holidays, and what they are like","How to learn waterskiing in one day","Why theme parks are too expensive","How to stay safe in a storm"],
+  {stem:"What is the text mainly about?", opts:["Why many families choose sports holidays, and what they are like","How to learn waterskiing in one day at a summer sports camp","Why theme parks are too expensive","How to stay safe in a storm"],
    hint:"Read paragraph B and paragraph F. What kind of holiday does the whole text talk about?", focus:"More and more families now choose active holidays like this.",
    explain:"The answer is \"Why many families choose sports holidays, and what they are like\". Minh's camp is one example. The text explains why active holidays are popular, what happens, and the risks."},
-  {stem:"What is the text mainly about?", opts:["The growing popularity of active holidays, their benefits and their risks","Minh's experience of learning to windsurf","The best sports camps for teenagers","Why some people prefer quiet holidays"],
+  {stem:"What is the text mainly about?", opts:["The growing popularity of active holidays, their benefits and their risks","Minh's experience of learning to windsurf","The best sports camps for teenagers","Why some people prefer quiet holidays to sports camps and active trips"],
    hint:"Minh is an example. What do paragraphs B, C and E talk about in general?", focus:"more and more families are choosing active holidays"},
-  {stem:"Which statement best summarises the article?", opts:["Active holidays are becoming popular because they offer real benefits, provided risks are managed.","Active holidays are dangerous and should be carefully avoided.","Every family should replace beach holidays with sports camps.","Failure is the most important part of any holiday."],
+  {stem:"Which statement best summarises the article?", opts:["Active holidays are becoming popular because they offer real benefits, provided risks are managed.","Active holidays are dangerous and should be carefully avoided.","Every family should replace beach holidays with sports camps, because resting on holiday is a waste of time.","Failure is the most important part of any holiday."],
    hint:"Your summary must include the trend (B), the benefits (C) and the risks (E).", focus:"he is part of a growing trend"}]},
  {skill:"Detail", para:"D", q:[
-  {stem:"What did campers do in the morning?", opts:["Windsurfing on the lake","Tennis","Roller skating","Table tennis"],
+  {stem:"What did campers do in the morning?", opts:["Windsurfing on the lake","Tennis","Roller skating in the park","Table tennis"],
    hint:"Look in paragraph D. Find \"In the morning\".", focus:"In the morning there was windsurfing on the lake.",
    explain:"The answer is \"windsurfing on the lake\". Tennis and roller skating were in the afternoon, and table tennis was only on the stormy day."},
-  {stem:"According to paragraph D, where did campers go roller skating?", opts:["Along the paths of the local park","On the tennis court","Around the lake","At an indoor rink"],
+  {stem:"According to paragraph D, where did campers go roller skating?", opts:["Along the paths of the local park","On the tennis court","Around the lake after windsurfing","At an indoor rink"],
    hint:"Find \"roller skating\" in paragraph D. Read to the end of the sentence.", focus:"roller skating along the paths of the local park"},
-  {stem:"According to paragraph D, how were the afternoons organised?", opts:["Campers did tennis or roller skating on different afternoons.","Campers did windsurfing and then tennis.","Campers chose to rest or play table tennis.","Campers went ice skating every afternoon."],
+  {stem:"According to paragraph D, how were the afternoons organised?", opts:["Campers did tennis or roller skating on different afternoons.","Campers did windsurfing and then tennis.","Campers chose whether to rest in their rooms or play table tennis.","Campers went ice skating every afternoon."],
    hint:"Find \"afternoons alternated\" in paragraph D. \"Alternate\" means to change between two things.", focus:"afternoons alternated between matches on the tennis court and roller skating through the local park"}]},
  {skill:"Vocabulary in context", para:"C", q:[
-  {stem:"In paragraph C, \"confident\" means…", opts:["sure that you can do things","very tired","worried about mistakes","good at making friends"],
+  {stem:"In paragraph C, \"confident\" means…", opts:["sure that you can do things","very tired","worried about making mistakes in front of others","good at making friends with people you have just met"],
    hint:"Find \"confident\" in paragraph C. How do you feel after you learn a new skill?", focus:"learning a new skill makes you more confident",
    explain:"The answer is \"sure that you can do things\". When you learn a new skill, you start to believe you can do difficult things."},
   {stem:"In paragraph C, \"mastering\" a skill means…", opts:["learning to do it very well","teaching it to others","trying it for the first time","giving it up"],
@@ -277,12 +277,12 @@ const ACTIVE_SLOTS = [
   {type:"short", stem:"Identify two benefits of active holidays other than physical fitness.", groups:ACTIVE_BENEFITS.slice(1), need:2,
    hint:"Paragraph C: \"The appeal extends well beyond physical fitness.\" What else do campers gain?", focus:"friendships form quickly, and screen time falls dramatically"}]},
  {skill:"Inference", para:"A", q:[
-  {stem:"Why did everyone on the boat cheer when Minh fell?", opts:["To encourage him to keep trying","Because they wanted him to stop","Because he was hurt","Because the boat was too fast"],
+  {stem:"Why did everyone on the boat cheer when Minh fell?", opts:["To encourage him to keep trying","Because they wanted him to stop and let someone else try","Because he was hurt","Because the boat was going too fast for him to hold on"],
    hint:"Look in paragraph A. What happened on Minh's twelfth try? Why would people cheer for someone who is learning?", focus:"Everyone on the boat cheered.",
    explain:"The answer is \"To encourage him to keep trying\". Falling is normal when you learn, and the cheers helped him try again until he succeeded."},
   {stem:"What can we infer about Minh from paragraph A?", opts:["He did not give up easily.","He was already good at waterskiing.","He was afraid of the water.","He did not enjoy the camp."],
    hint:"Paragraph A: how many times did Minh fall, and what happened in the end?", focus:"But on the twelfth try, I stayed up all the way round."},
-  {stem:"What does Minh's grin in paragraph A suggest about his attitude to failure?", opts:["He sees falling as a normal and even enjoyable part of learning.","He is embarrassed about how many times he fell.","He believes he was unlucky that day.","He thinks the instructors should have helped more."],
+  {stem:"What does Minh's grin in paragraph A suggest about his attitude to failure?", opts:["He sees falling as a normal and even enjoyable part of learning.","He is embarrassed about how many times he fell.","He believes he was unlucky that day.","He thinks the instructors should have helped him more on his first few tries."],
    hint:"Paragraph A: Minh \"recalls with a grin\" falling eleven times. Would an embarrassed person grin?", focus:"he recalls with a grin"}]},
  {skill:"Cause and effect", para:"E", q:[
   {type:"short", stem:"Why do good camps have staff with first-aid training?", groups:[RISK, TRAINED], need:1,
@@ -293,20 +293,20 @@ const ACTIVE_SLOTS = [
   {type:"short", stem:"Explain why reputable camps insist on first-aid qualifications: what is common, and what can qualified staff do?", groups:[RISK, TRAINED], need:2,
    hint:"Paragraph E: what is \"an accepted part of learning\"? Link it to the staff.", focus:"Falls and minor injuries are an accepted part of learning, which is why reputable camps insist on staff with first-aid qualifications"}]},
  {skill:"Writer's purpose", para:"E", q:[
-  {stem:"Why does the writer tell the story about the storm?", opts:["To show that good camps keep people safe.","To show that the camp was boring.","To explain how storms start.","To show that table tennis is popular."],
+  {stem:"Why does the writer tell the story about the storm?", opts:["To show that good camps keep people safe.","To show that the camp was boring.","To explain how storms start over lakes in the afternoon.","To show that table tennis is more popular than windsurfing."],
    hint:"Look in paragraph E. What did the camp do when the storm came?", focus:"On one stormy afternoon, the windsurfing was stopped",
    explain:"The answer is \"To show that good camps keep people safe\". The camp stopped the windsurfing because of the storm, which is an example of keeping campers safe."},
-  {stem:"Why does the writer include the storm in paragraph E?", opts:["As an example of how a well-run camp manages risk","To show that the weather ruined Minh's holiday","To criticise the camp for cancelling activities","To compare windsurfing with table tennis"],
+  {stem:"Why does the writer include the storm in paragraph E?", opts:["As an example of how a well-run camp manages risk","To show that the weather ruined Minh's holiday","To criticise the camp for cancelling activities whenever the weather changed","To compare windsurfing with table tennis"],
    hint:"Paragraph E first says camps check the weather every morning. What does the storm story then show?", focus:"the windsurfing was cancelled immediately"},
-  {stem:"What is the function of Minh's comment at the end of paragraph E?", opts:["It shows that the safety decision was clearly sensible, even to the campers.","It suggests the campers were angry about the cancellation.","It shows that Minh was too frightened to windsurf.","It introduces a criticism of the camp's instructors."],
+  {stem:"What is the function of Minh's comment at the end of paragraph E?", opts:["It shows that the safety decision was clearly sensible, even to the campers.","It suggests the campers were angry about the cancellation but too polite to complain to the instructors.","It shows that Minh was too frightened to windsurf.","It introduces a criticism of the camp's instructors."],
    hint:"\"Nobody argued… The lake looked genuinely frightening.\" What does this tell you about the decision to cancel?", focus:"\"Nobody argued,\" Minh concedes."}]},
  {skill:"Writer's view", para:"F", q:[
-  {stem:"What does the writer think about active holidays?", opts:["They are great for many people, but not for everyone.","Everyone should go on one.","They are too dangerous.","They are only for sporty people."],
+  {stem:"What does the writer think about active holidays?", opts:["They are great for many people, but not for everyone.","Everyone should go on one.","They are too dangerous.","They are only for sporty people who are already fit."],
    hint:"Read paragraph F. The writer asks a question and answers it.", focus:"Is an active holiday right for everyone? Probably not.",
    explain:"The answer is \"They are great for many people, but not for everyone\". The writer says some people need a quiet rest, but an active holiday \"could be the best holiday you ever have\"."},
-  {stem:"What is the writer's attitude to active holidays?", opts:["Positive, while accepting that some people prefer to rest","Negative, because of the risk of injury","Neutral: the writer gives no opinion","Critical of people who prefer quiet holidays"],
+  {stem:"What is the writer's attitude to active holidays?", opts:["Positive, while accepting that some people prefer to rest","Negative, because of the risk of injury","Neutral: the writer gives no opinion","Critical of people who prefer quiet holidays where they do nothing at all"],
    hint:"Paragraph F: the writer says \"Probably not\" and then \"But…\". What comes after \"But\"?", focus:"it is hard to beat"},
-  {stem:"Which statement best reflects the writer's position in paragraph F?", opts:["Active holidays offer a special kind of satisfaction, though a restful holiday is equally valid.","Holidays where you do nothing are a waste of time.","Active holidays are only worthwhile if you master a skill.","Everyone should be willing to be uncomfortable on holiday."],
+  {stem:"Which statement best reflects the writer's position in paragraph F?", opts:["Active holidays offer a special kind of satisfaction, though a restful holiday is equally valid.","Holidays where you do nothing are a waste of time.","Active holidays are only worthwhile if you master a skill.","Everyone should be willing to be uncomfortable on holiday, because that is the only way to feel real satisfaction."],
    hint:"Paragraph F: the writer says \"there is nothing wrong with\" doing nothing. Watch out for answers that are too strong.", focus:"and there is nothing wrong with that"}]}
 ];
 
@@ -348,26 +348,26 @@ const MONKEY_LEVELS = [
 
 const MONKEY_SLOTS = [
  {skill:"Main idea", para:"F", q:[
-  {stem:"What is the text mainly about?", opts:["Monkeys in Japan that bathe in hot springs, and the tourists who visit them","How to get to Japan from Tokyo","Why Japanese people like hot springs","How scientists study stress in people"],
+  {stem:"What is the text mainly about?", opts:["Monkeys in Japan that bathe in hot springs, and the tourists who visit them","How to get to Japan from Tokyo","Why Japanese people like hot springs","How scientists study stress in people who live in cold places"],
    hint:"Read paragraph A and paragraph F again. What does the whole text describe?", focus:"people and wild animals can share this special place",
    explain:"The answer is \"Monkeys in Japan that bathe in hot springs, and the tourists who visit them\". Paragraphs A to D are about the monkeys' baths, and E to F are about visitors."},
-  {stem:"What is the text mainly about?", opts:["Why snow monkeys bathe in hot springs, and how people visit them responsibly","The history of hot-spring bathing in Japanese culture","A scientific study about stress hormones","The dangers of tourism for wild animals everywhere"],
+  {stem:"What is the text mainly about?", opts:["Why snow monkeys bathe in hot springs, and how people visit them responsibly","The history of hot-spring bathing in Japanese culture","A scientific study about stress hormones","The dangers of tourism for wild animals everywhere, and why some parks should close"],
    hint:"The text covers the monkeys' habit, the reasons for it and the visitors. Which answer includes all of these?", focus:"the valley is a rare example of coexistence"},
-  {stem:"Which statement best summarises the article?", opts:["A learned bathing habit helps snow monkeys survive winter and draws tourists, which must be carefully managed.","Tourism is destroying the natural behaviour of Japan's snow monkeys.","Scientists have proved that hot springs reduce stress in all animals.","Japanese macaques are the most intelligent monkeys in the world."],
+  {stem:"Which statement best summarises the article?", opts:["A learned bathing habit helps snow monkeys survive winter and draws tourists, which must be carefully managed.","Tourism is destroying the natural behaviour of Japan's snow monkeys.","Scientists have proved that hot springs reduce stress in all animals, not just in the monkeys of this valley.","Japanese macaques are the most intelligent monkeys in the world."],
    hint:"Your summary needs the habit (C), the reason (D) and the visitors (E to F). Watch out for answers that are too strong.", focus:"offers a rare and fragile model of coexistence"}]},
  {skill:"Detail", para:"C", q:[
   {stem:"When did the park open?", opts:["In 1964","In 1960","In 2018","In 1946"],
    hint:"Look in paragraph C. Find a year.", focus:"A park opened in 1964",
    explain:"The answer is \"in 1964\". Paragraph C says: \"A park opened in 1964.\" 2018 is the year of the science study in paragraph D."},
-  {stem:"According to paragraph C, why did the first monkey climb into the hot spring?", opts:["To collect some food that had fallen in","To get warm in the snow","To copy the hotel guests","Because the park staff built a pool"],
+  {stem:"According to paragraph C, why did the first monkey climb into the hot spring?", opts:["To collect some food that had fallen in","To get warm in the snow","To copy the hotel guests","Because the park staff had built a special pool for the monkeys"],
    hint:"Find \"a young female\" in paragraph C. Read to the end of the sentence.", focus:"to collect some food that had fallen in"},
-  {stem:"According to paragraph C, why did staff build a separate pool?", opts:["Partly to keep the monkeys out of the inn's baths","To attract more tourists to the park","To help scientists study the monkeys","Because the hot spring became too crowded"],
+  {stem:"According to paragraph C, why did staff build a separate pool?", opts:["Partly to keep the monkeys out of the inn's baths","To attract more tourists to the park","To help scientists study the monkeys more closely in winter","Because the hot spring became too crowded"],
    hint:"Find \"separate pool\" in paragraph C. What does \"not least\" introduce?", focus:"not least to keep them out of the inn's own baths"}]},
  {skill:"Vocabulary in context", para:"E", q:[
-  {stem:"In paragraph E, a \"threat\" is…", opts:["something that may be dangerous","a kind of food","a friendly sign","a park rule"],
+  {stem:"In paragraph E, a \"threat\" is…", opts:["something that may be dangerous","a kind of food","a friendly sign that an animal wants to play","a park rule that visitors must follow"],
    hint:"Find \"threat\" in paragraph E. Why must visitors not stare at the monkeys?", focus:"because the monkeys see this as a threat",
    explain:"The answer is \"something that may be dangerous\". The monkeys think staring is dangerous, so visitors must not do it."},
-  {stem:"In paragraph E, \"strict\" rules are rules that…", opts:["must be followed carefully","are easy to forget","are only for children","change every day"],
+  {stem:"In paragraph E, \"strict\" rules are rules that…", opts:["must be followed carefully","are easy to forget","are only for children and school groups","change every day"],
    hint:"Find \"strict\" in paragraph E. Look at the rules after the colon. Are they \"no\" rules or suggestions?", focus:"The park has strict rules: no feeding, no touching"},
   {stem:"In paragraph E, \"enforces\" means…", opts:["makes sure people obey","writes down for the first time","suggests politely","removes"],
    hint:"Find \"enforces\" in paragraph E. The rules include things that \"are forbidden\" and \"must be\" done.", focus:"The park enforces strict rules"}]},
@@ -380,12 +380,12 @@ const MONKEY_SLOTS = [
   {type:"short", stem:"Identify two rules that visitors to the park must follow.", groups:MONKEY_RULES, need:2,
    hint:"Paragraph E: find what is \"forbidden\", what \"must be maintained\" and what visitors are \"advised not to\" do.", focus:"feeding and touching the animals are forbidden, a distance of a few metres must be maintained"}]},
  {skill:"Inference", para:"C", q:[
-  {stem:"Why did other young monkeys start bathing?", opts:["They learned it by watching the first monkey.","The park workers taught them.","They were born knowing how to do it.","The tourists asked them to."],
+  {stem:"Why did other young monkeys start bathing?", opts:["They learned it by watching the first monkey.","The park workers taught them how to do it.","They were born knowing how to do it.","The tourists asked them to."],
    hint:"Look in paragraph C. What did the other young monkeys do after the first monkey jumped in?", focus:"Other young monkeys copied her.",
    explain:"The answer is \"They learned it by watching the first monkey\". The text says the other young monkeys \"copied her\", so they learned by watching."},
-  {stem:"What can we infer from the way the bathing habit spread?", opts:["Monkeys can learn new habits from each other.","Only young monkeys like hot water.","The hotel wanted monkeys in its baths.","The monkeys had always bathed in hot springs."],
+  {stem:"What can we infer from the way the bathing habit spread?", opts:["Monkeys can learn new habits from each other.","Only young monkeys like hot water.","The hotel wanted monkeys in its baths to attract more guests.","The monkeys in the valley had always bathed in hot springs."],
    hint:"Paragraph C: one monkey did it first, then others copied, then the whole group. What does this tell you about monkeys?", focus:"within a few years bathing had spread through the group"},
-  {stem:"What does the phrase \"not least to keep them out of the inn's own baths\" suggest?", opts:["The monkeys had been using the inn's baths, which the inn did not want.","The inn wanted to attract monkeys to its baths.","The monkeys were afraid of the inn's baths.","Visitors complained that the monkeys' pool was too small."],
+  {stem:"What does the phrase \"not least to keep them out of the inn's own baths\" suggest?", opts:["The monkeys had been using the inn's baths, which the inn did not want.","The inn wanted to attract monkeys to its baths.","The monkeys were afraid of the inn's baths.","Visitors complained that the monkeys' pool was too small for so many animals."],
    hint:"Why would anyone need to keep monkeys \"out of\" a bath? Think about what the monkeys had probably been doing.", focus:"not least to keep them out of the inn's own baths"}]},
  {skill:"Cause and effect", para:"D", q:[
   {type:"short", stem:"How do the hot baths help the monkeys? Write one way.", groups:[WARM, CALM], need:1,
@@ -396,20 +396,20 @@ const MONKEY_SLOTS = [
   {type:"short", stem:"Explain why the writer calls the baths \"a survival strategy\".", groups:[WARM, CALM], need:2,
    hint:"Paragraph D: what did the bathing females have less of, and what do the baths help them conserve?", focus:"helping the animals to conserve body heat and cope with the strain of winter"}]},
  {skill:"Writer's purpose", para:"A", q:[
-  {stem:"Why does the writer start with the monkeys sitting in hot water in the snow?", opts:["To make the reader interested and want to read more.","To explain how hot springs are made.","To tell readers to visit Japan in winter.","To show that monkeys do not feel the cold."],
+  {stem:"Why does the writer start with the monkeys sitting in hot water in the snow?", opts:["To make the reader interested and want to read more.","To explain how hot springs are made.","To tell readers to visit Japan in winter when there is snow.","To show that monkeys do not feel the cold, even when it snows."],
    hint:"Look in paragraph A. Is this a fact list, or a picture the writer paints for the reader?", focus:"They look very relaxed.",
    explain:"The answer is \"To make the reader interested and want to read more\". Monkeys relaxing in hot water while snow falls is a surprising picture, so it makes readers want to know more."},
-  {stem:"Why does the writer compare the monkeys to \"guests at an expensive spa\"?", opts:["To create a funny, memorable picture that catches the reader's attention","To suggest that the park is expensive to visit","To explain that the monkeys live in a hotel","To criticise tourists who visit spas"],
+  {stem:"Why does the writer compare the monkeys to \"guests at an expensive spa\"?", opts:["To create a funny, memorable picture that catches the reader's attention","To suggest that the park is expensive to visit","To explain that the monkeys live in a hotel and use its expensive spa","To criticise tourists who visit spas"],
    hint:"Paragraph A: a spa is a place where people relax. Why compare monkeys to people?", focus:"They look like guests at an expensive spa."},
-  {stem:"What is the effect of the comparison at the end of paragraph A?", opts:["It makes the scene surprising and amusing, drawing the reader into the article.","It shows the writer's disapproval of luxury tourism.","It suggests the monkeys are kept in captivity.","It introduces the main argument about overcrowding."],
+  {stem:"What is the effect of the comparison at the end of paragraph A?", opts:["It makes the scene surprising and amusing, drawing the reader into the article.","It shows the writer's disapproval of luxury tourism.","It suggests the monkeys are kept in captivity.","It introduces the main argument of the article, which is about overcrowding at the park."],
    hint:"Paragraph A: \"They could easily be mistaken for guests at a luxury spa.\" How does this make a reader feel?", focus:"They could easily be mistaken for guests at a luxury spa."}]},
  {skill:"Writer's view", para:"F", q:[
-  {stem:"What does the writer think about people visiting the monkeys?", opts:["It is fine if visitors follow the rules.","Visitors should stop coming.","The monkeys enjoy meeting people.","Scientists should close the park."],
+  {stem:"What does the writer think about people visiting the monkeys?", opts:["It is fine if visitors follow the rules.","Visitors should stop coming.","The monkeys enjoy meeting people and being photographed by them.","Scientists should close the park to protect the monkeys."],
    hint:"Read paragraph F. Find \"If visitors…\".", focus:"If visitors follow the rules, people and wild animals can share this special place.",
    explain:"The answer is \"It is fine if visitors follow the rules\". The writer says coexistence is possible \"if visitors follow the rules\"."},
-  {stem:"What is the writer's attitude in paragraph F?", opts:["Cautiously positive: visitors and monkeys can share the valley if rules are respected","Very worried: the monkeys will soon leave the valley","Critical of the scientists who study the monkeys","Uninterested in the effect of tourism"],
+  {stem:"What is the writer's attitude in paragraph F?", opts:["Cautiously positive: visitors and monkeys can share the valley if rules are respected","Very worried: the monkeys will soon leave the valley because of all the visitors","Critical of the scientists who study the monkeys","Uninterested in the effect of tourism"],
    hint:"Paragraph F has a worry (\"concerned\") and then \"For now, however…\". Which side does the writer end on?", focus:"As long as visitors respect the rules, people and wild animals can share it."},
-  {stem:"Which statement best reflects the writer's view in paragraph F?", opts:["Coexistence is possible but fragile, and depends on visitors respecting the animals.","Tourism will inevitably destroy the monkeys' natural behaviour.","The monkeys should be moved somewhere without visitors.","Visitors have every right to interact with the monkeys."],
+  {stem:"Which statement best reflects the writer's view in paragraph F?", opts:["Coexistence is possible but fragile, and depends on visitors respecting the animals.","Tourism will inevitably destroy the monkeys' natural behaviour.","The monkeys should be moved somewhere without visitors, where they can live without being watched.","Visitors have every right to interact with the monkeys."],
    hint:"Paragraph F: find \"fragile\" and \"depends entirely on\". Watch out for answers that are too strong.", focus:"one that depends entirely on visitors accepting that they are guests in the monkeys' home"}]}
 ];
 
