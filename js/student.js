@@ -2080,9 +2080,12 @@ function gbHubView() {
     ${placed ? `<div class="gbrank"><span class="gbbadge" aria-hidden="true">${rank[2]}</span><div style="flex:1"><b>${rank[1]}</b>
       <span class="note"> · ${prog.done} of ${prog.total} bricks</span><div class="bar"><i style="width:${low}%"></i></div>
       <span class="note">${nr ? `${nr[0] - prog.done} more brick${nr[0] - prog.done === 1 ? "" : "s"} to ${nr[2]} ${nr[1]}` : "Top rank. Keep every brick solid!"}</span></div></div>` : ""}
+    ${Object.keys(SC.SCENES).map(id => `<a class="gbscene" href="#lesson-${id}"><span class="gbscav">${SC.ZIP}${SC.NOVA}</span><span><b>🎬 Cartoon: ${U.esc(GE.GBLOCKS[id].name)}</b>
+      <span class="note">Zip and Nova act it out. Watch what goes wrong!</span></span></a>`).join("")}
     <div class="gbtower">${T.towerSVG(st, { next: plan.learn, due, fresh: placed ? fresh : [] })}</div>
     <div class="gblegend"><span><i class="lg done"></i>Built</span><span><i class="lg build"></i>Building</span><span><i class="lg next"></i>Next</span><span><i class="lg due"></i>Cracked: needs a check</span><span><i class="lg todo"></i>Not yet</span></div>
     <p class="note">Tap a brick to see what it is.</p>
+    <details class="gblessons"><summary>📚 Watch any lesson</summary><ul>${GE.layers().flat().map(id => `<li><a href="#lesson-${id}">${GE.isMastered(st, id) ? "✅" : id === plan.learn ? "🏗️" : "⬜"} ${U.esc(GE.GBLOCKS[id].name)}${SC.hasScene(id) ? " 🎬" : ""}</a></li>`).join("")}</ul></details>
     ${placed ? `<div class="tcard"><span class="tag gold">${gbToday() ? "Done today ✓" : "Today's build"}</span><h3>${gbToday() ? "Want to build more?" : "Today's build: about 5 minutes"}</h3>
         <ul class="gbplan">${planList}</ul>
         <div class="row"><button class="btn go" data-gbstart="daily">${gbToday() ? "Build more" : "Start building"}</button></div></div>`
