@@ -173,6 +173,7 @@ async function draw() {
   if (view === "lab") return labHubView();
   if (view === "glab") return glabHubView();
   if (view === "build") return gbHubView();
+  if (view === "grammar") return grammarHubView();
   if (view === "quests") return qHubView();
   if (view === "hero") return qHeroView();
   if (view.startsWith("quest-") && Q.questOf(view.slice(6))) return qQuestView(view.slice(6));
@@ -205,12 +206,8 @@ function homeView() {
     if (check && !(paused && paused.kind === "baseline")) h += `<div class="tcard"><span class="tag gold">New</span><h3>${U.esc(check.title)}</h3>
       <p class="note" style="font-size:1rem">Your half-term reading check: four short texts, from easier to Challenge, with 16 questions and no hints. It shows how far your reading has come. About 20 minutes.</p>
       <div class="row"><button class="btn" id="check">Start the check</button></div></div>`;
-    h += workoutCard();
+    h += readTestCard() + workoutCard();
   }
-  if (me.baseline_done && GL.GLAB.some(x => !history.some(a => a.text_id === x.id))) h += `<div class="tcard"><span class="tag gold">New</span><h3>Grammar Lab</h3>
-      <p class="note" style="font-size:1rem">Grammar missions: solve a mystery and write a news story while you work out the rules yourself.</p>
-      <div class="row"><button class="btn" data-glabhub="1">Open the Grammar Lab</button></div></div>`;
-  if (me.baseline_done) h += qHomeCard() + gbHomeCard();
   h += quickTiles(review.length);
   if (me.baseline_done) {
     h += `<div class="stats">
@@ -272,8 +269,28 @@ function quickTiles(due) {
   const t = (href, ic, title, note) => `<a class="qtile" href="${href}">${I.tile(ic, "m")}<b>${title}</b><span class="note">${note}</span></a>`;
   return `<div class="qtiles">${t(`#unit-${fu}`, I.unitIcon(fu), `Unit ${fu}`, `Mission ${m.steps.filter(x => x.done).length} of ${m.steps.length}`)}
     ${t("#review", "review", "Review", due ? `${due} word${due > 1 ? "s" : ""} due` : "Nothing due")}
+    ${t(`#rlab-${RL.RLAB_UNITS.includes(fu) ? fu : rlUnitNow()}`, "lab", "Reading Lab", "Beat the reading tricks")}
+    ${t("#grammar", "grammar", "Grammar", "Builder, Quests and Lab")}
     ${t("#games", "games", "Games", best ? `Best ${best} points` : "Play and practise")}
     ${t("#me", "stats", "My stats", sc == null ? "Score: not yet" : `Score ${sc}`)}</div>`;
+}
+// The class reading test: until the end of test day, Home starts with what to practise for it.
+const READ_TEST = { date: "2026-11-06", units: [2, 3] };
+function readTestCard() {
+  const day = new Date(`${READ_TEST.date}T23:59:59`), left = Math.ceil((day - Date.now()) / 864e5) - 1;
+  if (day < Date.now()) return "";
+  const when = left <= 0 ? "today" : left === 1 ? "tomorrow" : `in ${left} days`, wd = day.toLocaleDateString("en-GB", { weekday: "long" });
+  const done = new Set(history.map(h => h.text_id));
+  const rows = READ_TEST.units.map(u => {
+    const texts = PRACTICE_TEXTS.filter(t => t.unitNo === u), td = texts.filter(t => done.has(t.id)).length;
+    const lab = RL.RLAB.filter(m => history.some(h => h.text_id === m.id && (h.answers || []).some(a => RL.rItemUnit(a.rlab) === u))).length;
+    const mini = M.MINI[u] && history.filter(h => h.text_id === `mini-u${u}`), passed = mini && mini.some(h => h.max_score && h.score / h.max_score >= 0.7);
+    return `<div class="rtrow"><b>Unit ${u}: ${U.esc(UNITS[u].title)}</b><div class="row">
+      <button class="btn small" data-rlabhub="${u}">🔎 Reading Lab ${lab}/${RL.RLAB.length}</button>
+      <a class="btn small alt" href="#unit-${u}/read">📖 Texts ${td}/${texts.length}</a>
+      ${M.MINI[u] ? `<button class="btn small alt" data-mini="${u}">📝 Practice test${passed ? " ✓" : ""}</button>` : ""}</div></div>`; }).join("");
+  return `<div class="tcard rtest"><span class="tag gold">📖 Reading test ${when}</span><h3>Get ready for ${wd}'s reading test</h3>
+    <p class="note" style="font-size:1rem">It covers Units ${READ_TEST.units.join(" and ")}. Practise the Reading Lab missions and the unit texts first.</p>${rows}</div>`;
 }
 
 /* ---------------- units ---------------- */
@@ -295,7 +312,7 @@ function unitSections(u) {
       <div class="tiles">${aTile("words", `data-vocab="${u}"`, "Practise 10 words", "Questions on the words you need most")}
         ${aTile("cards", `data-cards="${u}"`, "Word cards", "Meet the words and hear them")}${aTile("family", `data-family="${u}"`, "Word families", "Choose the right form of the word")}</div></div>` });
   const glabs = GL.GLAB.filter(x => x.unit === u);
-  secs.push({ key: "grammar", label: "Grammar", html: `<div class="usec">${glabs.length ? `<div class="tiles">${glabs.map(x => aTile("grammar", `data-glab="${x.id}"`, `Grammar Lab: ${x.title}`, `New · ${x.point} ${x.short}. Work out the rule, then use it.`, history.some(h => h.text_id === x.id))).join("")}</div>` : ""}${P.unitGrammar(u).map(g => { const m = P.grammarMastery(g.id, history), gl = GL.glabForPoint(g.id);
+  secs.push({ key: "grammar", label: "Grammar", html: `<div class="usec"><div class="tiles">${aTile("grammar", "data-gramhub", "Grammar Builder and Quests", "Build your tower and power up your hero")}</div>${glabs.length ? `<div class="tiles">${glabs.map(x => aTile("grammar", `data-glab="${x.id}"`, `Grammar Lab: ${x.title}`, `New · ${x.point} ${x.short}. Work out the rule, then use it.`, history.some(h => h.text_id === x.id))).join("")}</div>` : ""}${P.unitGrammar(u).map(g => { const m = P.grammarMastery(g.id, history), gl = GL.glabForPoint(g.id);
         return `<div class="urow">${I.tile("grammar", "s")}<div><b>${g.id} ${U.esc(g.title)}</b><br><span class="note">${g.code ? g.code + " · " : ""}${m == null ? "Not tried yet" : m + "% right first time"}</span></div>
           <span class="row" style="gap:6px;flex-wrap:nowrap">${gl ? `<button class="btn small" data-glab="${gl.id}">Lab</button>` : ""}<button class="btn small alt" data-gram="${g.id}">Practise</button></span></div>`; }).join("")}
       <div class="row"><button class="btn small" data-gramunit="${u}">Mixed quiz: all of Unit ${u}</button></div></div>` });
@@ -424,6 +441,7 @@ function bindActivities() {
   $app.querySelectorAll("[data-glab]").forEach(btn => btn.onclick = () => startGLab(btn.dataset.glab));
   $app.querySelectorAll("[data-glabhub]").forEach(btn => btn.onclick = () => { location.hash = "#glab"; });
   $app.querySelectorAll("[data-gbhub]").forEach(btn => btn.onclick = () => { location.hash = "#build"; });
+  $app.querySelectorAll("[data-gramhub]").forEach(btn => btn.onclick = () => { location.hash = "#grammar"; });
   $app.querySelectorAll("[data-gbstart]").forEach(btn => btn.onclick = () => gbStart(btn.dataset.gbstart));
   $app.querySelectorAll("[data-rlabhub]").forEach(btn => btn.onclick = () => { location.hash = `#rlab-${btn.dataset.rlabhub}`; });
   $app.querySelectorAll("[data-cards]").forEach(btn => btn.onclick = () => startCards(+btn.dataset.cards));
@@ -2069,6 +2087,17 @@ function gbPick(block, n, avoid = []) {
 }
 const gbItem = e => GB.blockLesson(e.block).items.find(it => it.id === e.item);
 
+// Everything grammar in one place: Grammar Builder, Grammar Quests and the Grammar Lab (Home keeps reading first).
+function grammarHubView() {
+  const glNew = GL.GLAB.some(x => !history.some(a => a.text_id === x.id));
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Grammar</p><h1>Grammar</h1>
+      <p class="lede">Build your grammar tower, go on quests with your hero, or solve a Grammar Lab mission.</p></div>
+    ${me.baseline_done ? gbHomeCard() + qHomeCard() : `<p class="note">Take the baseline reading on the Home page first.</p>`}
+    <div class="tcard">${glNew ? `<span class="tag gold">New</span>` : ""}<h3>Grammar Lab</h3>
+      <p class="note" style="font-size:1rem">Grammar missions: solve a mystery and write a news story while you work out the rules yourself.</p>
+      <div class="row"><button class="btn" data-glabhub="1">Open the Grammar Lab</button></div></div></div>`;
+  bindActivities();
+}
 function gbHomeCard() {
   const st = GE.mastery(history), prog = GE.strandProgress(st), placed = GE.placed(history), rank = T.rankOf(prog.done);
   return `<div class="tcard gbcard"><span class="tag gold">${placed ? (gbToday() ? "Done today ✓" : "5 minutes") : "New"}</span>
