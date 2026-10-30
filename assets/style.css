@@ -870,3 +870,10 @@ button.schip{cursor:pointer;font-family:inherit} .sumcard .btn{align-self:flex-s
 .glbins{display:flex;gap:6px;flex-wrap:wrap} .glbin{font:inherit;font-size:.82rem;padding:6px 10px;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
 .glbin.on{border-color:var(--teal);background:var(--teal);color:#fff} .glbin.ans{box-shadow:0 0 0 2px var(--ok-line)} .glbin:disabled{cursor:default}
 .glclues ul{margin:6px 0 0;padding-left:0;list-style:none;display:grid;gap:6px} .glclues li{font-size:.95rem}
+/* Grammar Lab verb helper and grammar-word sheet */
+.glbank{border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--card)}
+.glbank summary{cursor:pointer;font-weight:600}
+.glbank[open] summary{margin-bottom:8px}
+.glbank-in{display:flex;flex-wrap:wrap;gap:6px}
+.glbank-in span{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:.92rem}
+.glbank .note{margin:8px 0 0}

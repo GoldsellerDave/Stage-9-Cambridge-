@@ -300,6 +300,34 @@ for (const m of GLAB) {
   [...m.get, ...m.use.items, ...m.prove].forEach(it => Object.assign(it, HELP[it.id]));
 }
 
+// Grammar words that students may not know yet. In the Lab, these words are buttons: tapping one opens a short
+// explanation with examples and the Vietnamese name. TERM_RE finds them in any Lab text (hints, rules, feedback).
+export const TERMS = {
+  pp: { t: "past participle", vi: "quá khứ phân từ (V3)", def: "The third form of a verb. Regular verbs add -ed, like the past simple. Irregular verbs have their own form, so learn them.",
+    ex: [["clean", "cleaned"], ["repair", "repaired"], ["take", "taken"], ["see", "seen"], ["go", "gone"], ["fall", "fallen"]],
+    tip: "Use it after have (must have taken) and after being (was being cleaned)." },
+  ps: { t: "past simple", vi: "quá khứ đơn (V2)", def: "The second form of a verb, for finished actions in the past: took, saw, went, fell.",
+    ex: [["take", "took"], ["see", "saw"], ["go", "went"], ["fall", "fell"]],
+    tip: "Don't use it after have or being. must have took ✗ → must have taken ✓" },
+  pl: { t: "plural", vi: "số nhiều", def: "More than one. Plural nouns usually end in -s: statues, cameras, roads, tourists.",
+    ex: [["one statue", "was being moved"], ["two statues", "were being moved"], ["I / he / she / it", "was"], ["you / we / they", "were"]],
+    tip: "Find the noun. One → was. More than one → were." },
+  md: { t: "modal", vi: "động từ khiếm khuyết", def: "A small verb that shows how sure you are, or what is possible: must, might, may, could, can't.",
+    ex: [["must have", "I'm sure it happened"], ["might / could have", "maybe it happened"], ["can't have", "I'm sure it didn't happen"]],
+    tip: "modal + have + past participle = a guess about the past." },
+  pv: { t: "passive", vi: "câu bị động", def: "The thing receives the action. We use it when who did it isn't known or isn't important.",
+    ex: [["Someone cleaned the hall.", "The hall was cleaned."], ["Someone was cleaning the hall.", "The hall was being cleaned."]],
+    tip: "be + past participle. The hall didn't clean anything: someone cleaned it." }
+};
+const TERM_KEY = { "past participle": "pp", "past participles": "pp", "past simple": "ps", plural: "pl", modal: "md", modals: "md", passive: "pv" };
+export const TERM_RE = /\b(past participles?|past simple|plural|modals?|passive)\b/gi;
+export const termKey = w => TERM_KEY[w.toLowerCase()];
+// The verbs each mission uses, as base form → past participle, for the verb helper in Use it.
+export const VERBS = {
+  "glab-2.4": [["pick up", "picked up"], ["take", "taken"], ["leave", "left"], ["fall", "fallen"], ["see", "seen"], ["forget", "forgotten"], ["put", "put"], ["drop", "dropped"]],
+  "glab-3.3": [["clean", "cleaned"], ["move", "moved"], ["repair", "repaired"], ["fix", "fixed"], ["paint", "painted"], ["steal", "stolen"], ["watch", "watched"], ["check", "checked"]]
+};
+
 export const glabMission = id => GLAB.find(m => m.id === id);
 export const glabForPoint = point => GLAB.find(m => m.point === point) || null;
 export const isGLab = id => /^glab-/.test(id || "") && !!glabMission(id);

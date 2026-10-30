@@ -64,3 +64,11 @@ test("XP and start level", () => {
   assert.equal(GL.glabStartLevel([{ text_id: "glab-2.4", created_at: "2026-10-30", answers: r }], 0), 2);
   assert.equal(GL.glabStartLevel([], 1), 1);
 });
+
+test("grammar words in Lab text open an explanation, and every mission has a verb helper", () => {
+  for (const m of GL.GLAB) {
+    assert.ok(GL.VERBS[m.id] && GL.VERBS[m.id].length >= 6, m.id);
+    const text = [m.rule, m.spot.hint, m.spot.explain, m.use.write.stem, ...[...m.get, ...m.use.items, ...m.prove].flatMap(it => [it.hint, it.explain, ...(it.opts || []).map(o => o.why || "")])].join(" ");
+    for (const w of text.match(GL.TERM_RE) || []) assert.ok(GL.TERMS[GL.termKey(w)], w);
+  }
+});
