@@ -1694,13 +1694,13 @@ async function drillCheck() {
   if (q.type !== "short" && response === null) return;
   let m = E.mark(q, response), ai = null;
   if (m.tooShort) { run.fb = { kind: "bad", tooShort: true }; saveRun(); return runView(); }
-  if (q.type === "short" && !m.ok) {
+  if (q.type === "short") {
     const btn = document.getElementById("dcheck"); if (btn) { btn.disabled = true; btn.textContent = "Checking your answer…"; }
     const lv = text.levels[it.level], para = lv.paras.find(x => x[0] === it.para[0]);
     ai = await api.aiMark(session.token, { text_id: text.id, slot: it.slot, level: it.level, stem: q.stem,
       paragraph: para ? para[1] : lv.paras.map(x => x[1]).join("\n"), points: q.groups.map(g => g.label), need: q.need, answer: response });
     if (!run || run.kind !== "drill" || run.i !== iNow) return;
-    if (ai && ai.ok) m = { ok: true, hits: ai.hits };
+    if (ai) m = { ok: ai.ok, hits: ai.hits };
   }
   const res = support => ({ skill: run.skill, first_try: support === "none", support, text: it.text, level: it.level, drill: true });
   if (m.ok) {
@@ -2126,16 +2126,16 @@ async function check(text) {
   if (q.type !== "short" && response === null) return;
   let m = E.mark(q, response), ai = null;
   if (m.tooShort) { run.fb = { kind: "bad", tooShort: true }; saveRun(); return runView(); }
-  // The keyword marker missed it: ask the AI marker, which accepts the same points in other words.
-  // Any problem returns null and the keyword result stands.
-  if (q.type === "short" && !m.ok) {
+  // Every short answer goes to the AI marker, which accepts the same points in other words and catches answers
+  // that only borrow the keywords. Any problem returns null and the keyword result stands.
+  if (q.type === "short") {
     const btn = document.getElementById("check"); if (btn) { btn.disabled = true; btn.textContent = "Checking your answer…"; }
     const para = text.levels[r.level].paras.find(x => x[0] === (q.para || text.slots[r.slot].para));
     ai = await api.aiMark(session.token, { text_id: text.id, slot: r.slot, level: r.level, stem: q.stem,
       paragraph: para ? para[1] : text.levels[r.level].paras.map(x => x[1]).join("\n"),
       points: q.groups.map(g => g.label), need: q.need, answer: response });
     if (!run || run.r !== r || r.slot !== slotNow || r.level !== levelNow) return; // left the question while waiting
-    if (ai && ai.ok) m = { ok: true, hits: ai.hits };
+    if (ai) m = { ok: ai.ok, hits: ai.hits };
   }
   const res = E.submit(text, r, m.ok);
   if (res.outcome === "correct") {
