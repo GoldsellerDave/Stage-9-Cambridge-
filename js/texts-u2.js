@@ -42,26 +42,26 @@ const FOOD_LEVELS = [
 
 const FOOD_SLOTS = [
  {skill:"Main idea", para:"A", q:[
-  {stem:"What is the text mainly about?", opts:["Two kinds of malnutrition: not enough food and too much of the wrong food","How to cook beans and lentils","Why supermarkets throw food away","How children grow"],
+  {stem:"What is the text mainly about?", opts:["Two kinds of malnutrition: not enough food and too much of the wrong food","How to cook beans and lentils","Why supermarkets throw away so much food that could still be eaten","How children grow"],
    hint:"Read paragraph A and paragraph F again. What two groups of people does the text talk about?", focus:"Both groups are not getting the nutrition their bodies need.",
    explain:"The answer is \"Two kinds of malnutrition: not enough food and too much of the wrong food\". Paragraph B is about hungry people, C is about obesity, and D shows how they are connected."},
-  {stem:"What is the text mainly about?", opts:["Why malnutrition includes both hunger and obesity, and how the two are linked","The dangers of fast food for teenagers","How charities help hungry children","The causes of heart disease"],
+  {stem:"What is the text mainly about?", opts:["Why malnutrition includes both hunger and obesity, and how the two are linked","The dangers of fast food for teenagers","How charities collect unsold food from supermarkets to help hungry children","The causes of heart disease"],
    hint:"Paragraph A says the usual image is \"only half the story\". What is the whole story?", focus:"That image is accurate, but it is only half the story."},
-  {stem:"Which statement best summarises the article?", opts:["Malnutrition includes both undernourishment and obesity, problems often linked by poverty and the cost of healthy food.","Obesity is now a bigger problem than hunger in every country.","Food waste is the main cause of malnutrition.","Eating beans and lentils would end world hunger."],
+  {stem:"Which statement best summarises the article?", opts:["Malnutrition includes both undernourishment and obesity, problems often linked by poverty and the cost of healthy food.","Obesity is now a bigger problem than hunger in every country, so helping hungry people should no longer be a priority.","Food waste is the main cause of malnutrition.","Eating beans and lentils would end world hunger."],
    hint:"The summary needs both sides of the \"double burden\" and what links them (D). Watch out for answers that are too strong.", focus:"a definition that embraces not only those who eat too little"}]},
  {skill:"Detail", para:"E", q:[
   {stem:"How much of the food in shops and homes is thrown away?", opts:["About one fifth","About half","Almost all of it","About one tenth"],
    hint:"Look in paragraph E. Find \"thrown away\".", focus:"About one fifth of the food in shops and homes is thrown away.",
    explain:"The answer is \"about one fifth\". Paragraph E says \"About one fifth of the food in shops and homes is thrown away.\""},
-  {stem:"According to paragraph E, what are some countries encouraging supermarkets to do?", opts:["Give unsold food to charities","Sell food more cheaply","Stop selling junk food","Grow their own vegetables"],
+  {stem:"According to paragraph E, what are some countries encouraging supermarkets to do?", opts:["Give unsold food to charities","Sell food more cheaply","Stop selling junk food and fizzy drinks to children","Grow their own fruit and vegetables to sell"],
    hint:"Find \"supermarkets\" in paragraph E. Read to the end of the sentence.", focus:"donate unsold food to charities instead of putting it in the bin"},
-  {stem:"According to paragraph E, what is frustrating about food waste?", opts:["Much of the food thrown away is still safe to eat.","Supermarkets refuse to give food to charities.","Most waste comes from restaurants.","Charities cannot store fresh food."],
+  {stem:"According to paragraph E, what is frustrating about food waste?", opts:["Much of the food thrown away is still safe to eat.","Supermarkets refuse to give any of their unsold food to charities.","Most waste comes from restaurants.","Charities cannot store fresh food."],
    hint:"Paragraph E: find \"much of it\". What is true about the discarded food?", focus:"much of it perfectly edible"}]},
  {skill:"Vocabulary in context", para:"B", q:[
-  {stem:"In paragraph B, \"undernourished\" children…", opts:["do not get enough food","eat too much","are very tall","do not go to school"],
+  {stem:"In paragraph B, \"undernourished\" children…", opts:["do not get enough food","eat too much of the wrong kind of food","are very tall","do not go to school because they are ill"],
    hint:"Find \"undernourished\" in paragraph B. The paragraph is about people who do not have enough to eat.", focus:"Children who are undernourished often grow more slowly",
    explain:"The answer is \"do not get enough food\". Paragraph B is about people who \"do not have enough to eat\", and undernourished children grow more slowly."},
-  {stem:"In paragraph B, \"struggle to concentrate\" means…", opts:["find it hard to think carefully","refuse to think","think very quickly","enjoy thinking"],
+  {stem:"In paragraph B, \"struggle to concentrate\" means…", opts:["find it hard to think carefully","refuse to think","think very quickly about many things at once","enjoy thinking"],
    hint:"Find \"struggle\" in paragraph B. Is it easy or difficult for these children at school?", focus:"struggle to concentrate at school"},
   {stem:"In paragraph B, \"succumb to\" infections means…", opts:["be defeated by them","protect others from them","recover quickly from them","study them"],
    hint:"Find \"succumb to\" in paragraph B. It is in a list of bad consequences for undernourished children.", focus:"to succumb to infections"}]},
@@ -74,12 +74,12 @@ const FOOD_SLOTS = [
   {type:"short", stem:"Identify two modest changes that could help to address malnutrition.", groups:FOOD_FIXES, need:2,
    hint:"Paragraph F: look for what is \"inexpensive and highly nutritious\" and what the \"sensible starting points\" are.", focus:"Consuming less junk food and wasting less are sensible starting points."}]},
  {skill:"Inference", para:"D", q:[
-  {stem:"Why do some families with little money buy junk food?", opts:["Because it is cheaper than healthy food","Because they do not like vegetables","Because doctors tell them to","Because there are no shops near them"],
+  {stem:"Why do some families with little money buy junk food?", opts:["Because it is cheaper than healthy food","Because they do not like the taste of fresh vegetables and fruit","Because doctors tell them to","Because there are no shops selling fresh food near their homes"],
    hint:"Look in paragraph D. Compare the price of junk food and fresh food.", focus:"junk food is cheaper than fresh fruit and vegetables",
    explain:"The answer is \"Because it is cheaper than healthy food\". Paragraph D says junk food is cheaper, so families with little money often buy it."},
-  {stem:"What can we infer from paragraph D about families on low incomes?", opts:["They often have to choose food by price, not by health.","They do not care about their health.","They prefer fast food to home cooking.","They do not know which foods are healthy."],
+  {stem:"What can we infer from paragraph D about families on low incomes?", opts:["They often have to choose food by price, not by health.","They do not care about their health.","They prefer fast food to home cooking because it tastes better.","They do not know which foods are healthy and which are not."],
    hint:"Paragraph D: what do these families \"tend to buy\", and why? Is it really a free choice?", focus:"Families on low incomes therefore tend to buy food that fills them up cheaply"},
-  {stem:"What does the phrase \"are pushed towards\" suggest about low-income families' food choices?", opts:["Their choices are shaped by price more than by preference.","They are forced to buy food by supermarkets.","They choose junk food because they enjoy it most.","They have no interest in eating healthily."],
+  {stem:"What does the phrase \"are pushed towards\" suggest about low-income families' food choices?", opts:["Their choices are shaped by price more than by preference.","They are forced to buy food by supermarkets.","They choose junk food because they enjoy its taste more than anything else.","They have no interest in eating healthily."],
    hint:"Paragraph D: if you are \"pushed\" somewhere, did you choose to go there freely? What is doing the pushing?", focus:"families on low incomes are pushed towards food that satisfies hunger cheaply"}]},
  {skill:"Cause and effect", para:"D", q:[
   {type:"short", stem:"How can a person be overweight and malnourished at the same time? Write one reason.", groups:[JUNK_CAUSE, JUNK_RESULT], need:1,
@@ -90,20 +90,20 @@ const FOOD_SLOTS = [
   {type:"short", stem:"Explain the paradox described at the end of paragraph D.", groups:[JUNK_CAUSE, JUNK_RESULT], need:2,
    hint:"Paragraph D: why do families buy cheap food? Paragraph C: what is that food \"dense in\" and \"poor in\"?", focus:"The result is a paradox: a person can be overweight and malnourished at the same time."}]},
  {skill:"Writer's purpose", para:"A", q:[
-  {stem:"Why does the writer begin with the picture of thin, hungry children?", opts:["To show what most people think before explaining the other side.","To ask readers to give money.","To describe a famous photo.","To show that only children are malnourished."],
+  {stem:"Why does the writer begin with the picture of thin, hungry children?", opts:["To show what most people think before explaining the other side.","To ask readers to give money.","To describe a famous photo of a hungry child in a poor country.","To show that only children in poor countries are ever malnourished."],
    hint:"Look in paragraph A. After the picture, the writer says \"But…\".", focus:"But doctors say there is another side",
    explain:"The answer is \"To show what most people think before explaining the other side\". The writer starts with the usual picture, then says \"But doctors say there is another side\"."},
-  {stem:"Why does the writer open the article with a common image of malnutrition?", opts:["To correct a common idea and introduce a wider definition","To make readers feel guilty","To show that the problem is only in poor countries","To introduce a story about one child"],
+  {stem:"Why does the writer open the article with a common image of malnutrition?", opts:["To correct a common idea and introduce a wider definition","To make readers feel guilty","To show that malnutrition is a problem only in the world's poorest countries","To introduce a story about one child"],
    hint:"Paragraph A: the image is \"only half the story\". What does the writer do next?", focus:"Doctors now use the word for anyone whose diet does not give them the nutrition they need"},
-  {stem:"What is the function of the words \"accurate, but incomplete\" in paragraph A?", opts:["They accept the familiar view while signalling that the article will widen it.","They suggest that the familiar image is completely false.","They criticise doctors for using the wrong definition.","They show that the writer is uncertain about the facts."],
+  {stem:"What is the function of the words \"accurate, but incomplete\" in paragraph A?", opts:["They accept the familiar view while signalling that the article will widen it.","They suggest that the familiar image of hungry children is completely false and should be forgotten.","They criticise doctors for using the wrong definition.","They show that the writer is uncertain about the facts."],
    hint:"Paragraph A: is the image wrong? What does \"incomplete\" tell you the rest of the article will do?", focus:"That image is accurate, but incomplete."}]},
  {skill:"Writer's view", para:"F", q:[
-  {stem:"What does the writer think about healthy food?", opts:["Everyone should be able to have it.","Only rich people need it.","It is too expensive to buy.","Junk food is just as good."],
+  {stem:"What does the writer think about healthy food?", opts:["Everyone should be able to have it.","Only rich people need it.","It is too expensive for most families to buy, so it is not worth trying.","Junk food is just as good, as long as you eat enough of it."],
    hint:"Read the last two sentences of paragraph F.", focus:"Everyone has the right to healthy food.",
    explain:"The answer is \"Everyone should be able to have it\". The writer says healthy food \"should not be a luxury\" and \"Everyone has the right to healthy food\"."},
-  {stem:"What is the writer's attitude in paragraph F?", opts:["Realistic: there are no easy answers, but small changes and fairer prices matter","Hopeless: nothing can be done","Angry with people who eat junk food","Certain that vegetarian diets are the only answer"],
+  {stem:"What is the writer's attitude in paragraph F?", opts:["Realistic: there are no easy answers, but small changes and fairer prices matter","Hopeless: nothing can be done","Angry with people who eat junk food","Certain that vegetarian diets are the only real answer to the problem of malnutrition"],
    hint:"Paragraph F: \"There are no simple solutions, but…\". What comes after \"but\"?", focus:"There are no simple solutions, but small changes help."},
-  {stem:"Which statement best reflects the writer's conclusion?", opts:["Individual choices help, but the deeper problem is the cost of healthy food.","Malnutrition will be solved if people simply eat more beans.","People who eat junk food are responsible for their own health.","Supermarkets are entirely to blame for the double burden."],
+  {stem:"Which statement best reflects the writer's conclusion?", opts:["Individual choices help, but the deeper problem is the cost of healthy food.","Malnutrition will be solved if people simply eat more beans and lentils instead of meat.","People who eat junk food are responsible for their own health.","Supermarkets are entirely to blame for the double burden."],
    hint:"Paragraph F: \"Ultimately, however…\". What must change for good nutrition to be within reach?", focus:"until healthy food stops being a luxury and becomes something everyone can afford"}]}
 ];
 
@@ -146,26 +146,26 @@ const ANGER_LEVELS = [
 
 const ANGER_SLOTS = [
  {skill:"Main idea", para:"B", q:[
-  {stem:"What is the text mainly about?", opts:["How to control anger so it does not cause problems","How to win a football match","Why referees make mistakes","Why anger is always bad"],
+  {stem:"What is the text mainly about?", opts:["How to control anger so it does not cause problems","How to win a football match","Why referees make mistakes","Why anger is always bad and should never be felt"],
    hint:"Read paragraph B and paragraph F. What is the problem, and what does Khoa learn?", focus:"The problem is what we do when we are angry.",
    explain:"The answer is \"How to control anger so it does not cause problems\". The text says anger is normal, explains what it does to the body, and gives ways to keep self-control."},
-  {stem:"What is the text mainly about?", opts:["Why anger happens and how we can learn to manage it","Khoa's career as a football player","The rules of school football","How empathy makes people more competitive"],
+  {stem:"What is the text mainly about?", opts:["Why anger happens and how we can learn to manage it","Khoa's career as a football player","The rules of school football","How empathy makes people more competitive in sport and at school"],
    hint:"Khoa's story is an example. What do paragraphs B to E explain?", focus:"the problem is not anger itself, but what we do while we are feeling it"},
-  {stem:"Which statement best summarises the article?", opts:["Anger is natural, but self-control and empathy can stop it from causing harm.","Competitive people should avoid sport to control their anger.","Anger is a dangerous emotion that should be suppressed.","Referees are responsible for players losing their temper."],
+  {stem:"Which statement best summarises the article?", opts:["Anger is natural, but self-control and empathy can stop it from causing harm.","Competitive people should avoid sport to control their anger.","Anger is a dangerous emotion that should be suppressed, because it always leads to harm.","Referees are responsible for players losing their temper."],
    hint:"The summary must include what anger is (B) and what helps (D and E). Watch out for answers that are too strong.", focus:"the difficulty lies not in experiencing anger, but in how we act while in its grip"}]},
  {skill:"Detail", para:"C", q:[
   {stem:"What does the body make when you get angry?", opts:["Adrenaline","Melatonin","Sugar","Vitamins"],
    hint:"Look in paragraph C. Find the name of a hormone.", focus:"your body makes a hormone called adrenaline",
    explain:"The answer is \"adrenaline\". Paragraph C says \"your body makes a hormone called adrenaline\". Melatonin is the sleep hormone from another text."},
-  {stem:"According to paragraph C, what happens to the brain when we are angry?", opts:["The parts used for careful thinking become less active.","The brain stops working completely.","The brain makes more melatonin.","The brain becomes better at planning."],
+  {stem:"According to paragraph C, what happens to the brain when we are angry?", opts:["The parts used for careful thinking become less active.","The brain stops working completely.","The brain makes more melatonin.","The brain becomes better at planning what to say next."],
    hint:"Find \"brain\" in paragraph C. Read the whole sentence.", focus:"the parts of the brain responsible for careful thinking become less active"},
-  {stem:"According to paragraph C, what does adrenaline do?", opts:["It prepares the muscles for confrontation.","It slows down the heart.","It improves judgement and planning.","It makes people feel calm."],
+  {stem:"According to paragraph C, what does adrenaline do?", opts:["It prepares the muscles for confrontation.","It slows down the heart.","It improves judgement and planning in difficult moments.","It makes people feel calm."],
    hint:"Find \"adrenaline\" in paragraph C. What does it \"prime\" the muscles for?", focus:"a hormone that primes the muscles for confrontation"}]},
  {skill:"Vocabulary in context", para:"D", q:[
-  {stem:"In paragraph D, \"self-control\" means…", opts:["being able to control how you act","being alone","feeling angry","being very good at sport"],
+  {stem:"In paragraph D, \"self-control\" means…", opts:["being able to control how you act","being alone","feeling angry with yourself after a mistake","being very good at sport and winning matches"],
    hint:"Find \"self-control\" in paragraph D. The tips after it help you to stay calm and not shout.", focus:"Experts say there are simple ways to keep self-control.",
    explain:"The answer is \"being able to control how you act\". The tips in paragraph D (breathe, count, walk away) help you control what you do when you are angry."},
-  {stem:"In paragraph D, a \"technique\" is…", opts:["a way of doing something","a type of feeling","a kind of hormone","a sports rule"],
+  {stem:"In paragraph D, a \"technique\" is…", opts:["a way of doing something","a type of feeling that comes suddenly","a kind of hormone","a sports rule"],
    hint:"Find \"technique\" in paragraph D. What is the technique described?", focus:"Another surprisingly effective technique is to name the emotion"},
   {stem:"In paragraph D, \"counteracts\" means…", opts:["works against","makes stronger","is caused by","depends on"],
    hint:"Find \"counteracts\" in paragraph D. Does slow breathing increase or reduce the body's alarm?", focus:"Slow, deep breathing counteracts the body's alarm response"}]},
@@ -178,12 +178,12 @@ const ANGER_SLOTS = [
   {type:"short", stem:"Identify two techniques described in paragraph D for managing anger.", groups:CALM_TIPS, need:2,
    hint:"Paragraph D: look at breathing, counting, naming the emotion and stepping away.", focus:"physically stepping away for a few minutes allows the body to settle"}]},
  {skill:"Inference", para:"A", q:[
-  {stem:"Why did Khoa feel terrible after the match?", opts:["His red card made things harder for his team.","He was hurt in the game.","His team won without him.","The referee shouted at him."],
+  {stem:"Why did Khoa feel terrible after the match?", opts:["His red card made things harder for his team.","He was hurt in the game.","His team won the match easily without him.","The referee shouted at him in front of the whole team."],
    hint:"Look in paragraph A. How many players did his team have after the red card?", focus:"his team finished the game with ten players",
    explain:"The answer is \"His red card made things harder for his team\". After his red card, his team had only ten players, so he felt he let them down."},
-  {stem:"What does \"something snapped\" suggest about Khoa?", opts:["He suddenly lost control of his anger.","He broke his leg.","He decided to leave the team.","He started to feel tired."],
+  {stem:"What does \"something snapped\" suggest about Khoa?", opts:["He suddenly lost control of his anger.","He broke his leg.","He decided to leave the team after the match.","He started to feel tired near the end of the match."],
    hint:"Paragraph A: what did Khoa do right after \"something snapped\"?", focus:"something snapped"},
-  {stem:"What can we infer from Khoa's comment \"at the worst possible moment\"?", opts:["He realises his reaction cost his team when they needed him most.","He thinks the referee chose a bad moment to give the card.","He believes his team would have lost anyway.","He is blaming the opponent who shoved him."],
+  {stem:"What can we infer from Khoa's comment \"at the worst possible moment\"?", opts:["He realises his reaction cost his team when they needed him most.","He thinks the referee chose a bad moment to give the card, so it was the referee's fault.","He believes his team would have lost anyway.","He is blaming the opponent who shoved him."],
    hint:"Paragraph A: what was happening in the match? Why would losing a player then be so bad?", focus:"I'd let the whole team down at the worst possible moment."}]},
  {skill:"Cause and effect", para:"C", q:[
   {type:"short", stem:"Why do people sometimes do things they are sorry about when they are angry?", groups:[ANGER_BODY, ANGER_THINK], need:1,
@@ -194,20 +194,20 @@ const ANGER_SLOTS = [
   {type:"short", stem:"Explain the physical and mental changes that make angry people act in ways they regret.", groups:[ANGER_BODY, ANGER_THINK], need:2,
    hint:"Paragraph C: what happens to the heart and adrenaline, and what happens to \"judgement and planning\"?", focus:"activity in the brain regions responsible for judgement and planning is dampened"}]},
  {skill:"Writer's purpose", para:"A", q:[
-  {stem:"Why does the writer tell Khoa's story at the start?", opts:["To give a real example of anger causing a problem.","To report the football score.","To show that referees are unfair.","To tell readers to play football."],
+  {stem:"Why does the writer tell Khoa's story at the start?", opts:["To give a real example of anger causing a problem.","To report the football score.","To show that referees in school football are often unfair.","To tell readers to play more football at school."],
    hint:"Look in paragraph A. What happened because Khoa was angry?", focus:"He got a red card",
    explain:"The answer is \"To give a real example of anger causing a problem\". Khoa got angry and got a red card. This example helps us understand the rest of the text."},
-  {stem:"Why does the writer return to Khoa in paragraph F?", opts:["To show how learning self-control has changed him","To report another red card","To criticise his team","To explain the rules of football"], para:"F",
+  {stem:"Why does the writer return to Khoa in paragraph F?", opts:["To show how learning self-control has changed him","To report another red card","To criticise his team for losing the final without him","To explain the rules of football"], para:"F",
    hint:"Paragraph F: what does Khoa do now before every match? How is he different from paragraph A?", focus:"These days, Khoa does breathing exercises before every match."},
-  {stem:"What is the effect of beginning and ending the article with Khoa?", opts:["It frames the advice with a personal story that shows change is possible.","It suggests the article is mainly about football.","It shows that the advice did not work for Khoa.","It makes the scientific information seem less important."], para:"F",
+  {stem:"What is the effect of beginning and ending the article with Khoa?", opts:["It frames the advice with a personal story that shows change is possible.","It suggests the article is mainly about football.","It shows that the advice did not work for Khoa.","It makes the scientific information in the middle of the article seem less important."], para:"F",
    hint:"Compare Khoa in paragraph A and in paragraph F. What does this before-and-after show the reader?", focus:"Khoa now follows a breathing routine before every match."}]},
  {skill:"Writer's view", para:"F", q:[
-  {stem:"What does the writer think about being competitive?", opts:["It is good, but you also need self-control.","It is always bad.","It causes all anger.","It is only important in football."],
+  {stem:"What does the writer think about being competitive?", opts:["It is good, but you also need self-control.","It is always bad.","It causes all of the anger we feel.","It is only important in football and other team sports."],
    hint:"Read paragraph F. The writer says being competitive is good, \"But…\".", focus:"Being competitive is good. It makes us work hard and try our best. But we also need self-control.",
    explain:"The answer is \"It is good, but you also need self-control\". The writer says being competitive makes us work hard, but we also need self-control."},
-  {stem:"What is the writer's attitude to competitiveness?", opts:["Positive, as long as it goes with self-control","Negative: it should be avoided","Neutral: the writer says nothing about it","Critical of competitive sport in schools"],
+  {stem:"What is the writer's attitude to competitiveness?", opts:["Positive, as long as it goes with self-control","Negative: it should be avoided","Neutral: the writer says nothing about it","Critical of competitive sport in schools, because it makes young people angry"],
    hint:"Paragraph F: \"Being competitive is no bad thing… But…\".", focus:"But competitiveness works best alongside self-control"},
-  {stem:"Which statement best reflects the writer's position in paragraph F?", opts:["Competitiveness is valuable, and it is most valuable when combined with self-control.","Competitiveness is the main cause of anger in young people.","Self-control matters more than winning in every situation.","Schools should discourage competitive sports."],
+  {stem:"Which statement best reflects the writer's position in paragraph F?", opts:["Competitiveness is valuable, and it is most valuable when combined with self-control.","Competitiveness is the main cause of anger in young people.","Self-control matters more than winning in every situation, so competitive people should try to change.","Schools should discourage competitive sports."],
    hint:"Paragraph F: \"None of this means…\" and \"The point is…\". Watch out for answers that are too strong.", focus:"competitiveness is most valuable when paired with self-control"}]}
 ];
 
@@ -250,28 +250,28 @@ const GERM_LEVELS = [
 
 const GERM_SLOTS = [
  {skill:"Main idea", para:"A", q:[
-  {stem:"What is the text mainly about?", opts:["How the body fights germs and what helps us get better","How to make a cold go away with medicine","Why bacteria are always bad","How doctors work"],
+  {stem:"What is the text mainly about?", opts:["How the body fights germs and what helps us get better","How to make a cold go away quickly with the right medicine","Why bacteria are always bad","How doctors decide which medicine to give to sick people"],
    hint:"Read paragraph A and paragraph F again. What is happening inside your body when you have a cold?", focus:"Your immune system is fighting the infection",
    explain:"The answer is \"How the body fights germs and what helps us get better\". The text explains germs, the body's defences, and what helps recovery."},
-  {stem:"What is the text mainly about?", opts:["How the immune system fights infections, and how we can support recovery","The history of antibiotics","The differences between colds and flu","Why bacteria help us digest food"],
+  {stem:"What is the text mainly about?", opts:["How the immune system fights infections, and how we can support recovery","The history of antibiotics","The differences between colds and flu, and how to tell which one you have","Why bacteria help us digest food"],
    hint:"Your answer must be true for paragraphs A to F, not only one paragraph.", focus:"Your immune system is fighting the infection, and within a week or so, it will almost certainly win."},
-  {stem:"Which statement best summarises the article?", opts:["The body has layered defences against germs, and recovery usually depends more on time than on medicine.","Antibiotics are the most effective treatment for common infections.","All bacteria and viruses are dangerous enemies of the body.","Fever is a harmful side effect that should always be stopped."],
+  {stem:"Which statement best summarises the article?", opts:["The body has layered defences against germs, and recovery usually depends more on time than on medicine.","Antibiotics are the most effective treatment for common infections, so they should be taken as soon as symptoms appear.","All bacteria and viruses are dangerous enemies of the body.","Fever is a harmful side effect that should always be stopped."],
    hint:"Look at how the article ends (F). The summary should include the defences and the advice about recovery.", focus:"Your immune system is mounting a coordinated response to the infection"}]},
  {skill:"Detail", para:"B", q:[
   {stem:"What causes colds and flu?", opts:["Viruses","Bacteria","Cold weather","Antibiotics"],
    hint:"Look at the last sentence of paragraph B.", focus:"Colds and flu are caused by viruses.",
    explain:"The answer is \"viruses\". Paragraph B says \"Colds and flu are caused by viruses.\""},
-  {stem:"According to paragraph B, what must a virus do to reproduce?", opts:["Get inside one of your cells","Find some bacteria","Stay outside the body","Grow on your skin"],
+  {stem:"According to paragraph B, what must a virus do to reproduce?", opts:["Get inside one of your cells","Find some bacteria","Stay outside the body","Grow on your skin until it can break through"],
    hint:"Find \"to reproduce\" in paragraph B. Read the rest of the sentence.", focus:"to reproduce, a virus must get inside one of your cells"},
-  {stem:"According to paragraph B, how does a virus multiply?", opts:["It takes over one of your cells to make copies of itself.","It divides in two, like bacteria.","It feeds on the food in your stomach.","It releases chemicals into the blood."],
+  {stem:"According to paragraph B, how does a virus multiply?", opts:["It takes over one of your cells to make copies of itself.","It divides in two, like bacteria.","It feeds on the food in your stomach.","It releases chemicals into the blood that make copies of it."],
    hint:"Paragraph B: find \"hijack\". What does the virus make the cell do?", focus:"hijack its machinery to manufacture copies of itself"}]},
  {skill:"Vocabulary in context", para:"D", q:[
-  {stem:"In paragraph D, \"resistant\" bacteria are bacteria that…", opts:["are not killed by the medicine","are very small","help us digest food","cause colds"],
+  {stem:"In paragraph D, \"resistant\" bacteria are bacteria that…", opts:["are not killed by the medicine","are very small","help us digest the food that we eat","cause colds"],
    hint:"Find \"resistant\" in paragraph D. What happens to the medicine after that?", focus:"Then the medicine does not work when we really need it.",
    explain:"The answer is \"are not killed by the medicine\". After bacteria become resistant, \"the medicine does not work\"."},
-  {stem:"In paragraph C, a \"barrier\" is…", opts:["something that stops things getting through","a kind of germ","a type of medicine","a hot temperature"], para:"C",
+  {stem:"In paragraph C, a \"barrier\" is…", opts:["something that stops things getting through","a kind of germ","a type of medicine that kills germs on the skin","a hot temperature that kills germs inside the body"], para:"C",
    hint:"Find \"barrier\" in paragraph C. The skin is the barrier. What does it do to germs?", focus:"The skin acts as a barrier"},
-  {stem:"In paragraph D, a \"misconception\" is…", opts:["a wrong idea that many people have","a scientific discovery","a type of medicine","a rule for doctors"],
+  {stem:"In paragraph D, a \"misconception\" is…", opts:["a wrong idea that many people have","a scientific discovery that changes what doctors do","a type of medicine","a rule for doctors"],
    hint:"Find \"misconception\" in paragraph D. Is the idea that antibiotics cure a cold true or false?", focus:"One persistent misconception is that antibiotics can cure a cold."}]},
  {skill:"Detail: two points", para:"C", q:[
   {type:"short", stem:"Write two ways your body stops germs.", groups:DEFENCES, need:2,
@@ -282,12 +282,12 @@ const GERM_SLOTS = [
   {type:"short", stem:"Identify two layers of the body's defence against infection.", groups:DEFENCES, need:2,
    hint:"Paragraph C: the defences are \"layered\". Think about the outer defences and what happens to germs that \"breach\" them.", focus:"Those that breach these outer defences are hunted down by white blood cells."}]},
  {skill:"Inference", para:"F", q:[
-  {stem:"\"Sometimes the best thing you can do is give it time.\" What does the writer mean?", opts:["Your body will usually fight the cold by itself.","You should wait a long time before seeing a doctor.","You should never take any medicine.","Colds last for many months."],
+  {stem:"\"Sometimes the best thing you can do is give it time.\" What does the writer mean?", opts:["Your body will usually fight the cold by itself.","You should wait a long time before seeing a doctor.","You should never take any medicine, even when you feel very ill.","Colds last for many months."],
    hint:"Look in paragraph F. What does the writer say about your body before this sentence?", focus:"Your body knows how to fight.",
    explain:"The answer is \"Your body will usually fight the cold by itself\". The writer says \"Your body knows how to fight\", so resting and waiting is often enough."},
-  {stem:"What can we infer from \"Your immune system has been doing this job for millions of years\"?", opts:["The immune system is very experienced and usually reliable.","The immune system gets weaker as we get older.","Humans did not catch colds in the past.","Modern medicine has made the immune system unnecessary."],
+  {stem:"What can we infer from \"Your immune system has been doing this job for millions of years\"?", opts:["The immune system is very experienced and usually reliable.","The immune system gets weaker as we get older.","Humans did not catch colds in the past.","Modern medicine has made the immune system unnecessary for most people today."],
    hint:"Paragraph F: if someone has done a job for a very long time, what are they probably like at it?", focus:"Your immune system has been doing this job for millions of years."},
-  {stem:"What does the writer suggest by describing fever as \"part of the counter-attack\"?", opts:["Something we see as a problem is actually helping the body.","Fever is the most dangerous symptom of a cold.","Doctors should always try to raise a patient's temperature.","Fever is caused by antibiotics."], para:"C",
+  {stem:"What does the writer suggest by describing fever as \"part of the counter-attack\"?", opts:["Something we see as a problem is actually helping the body.","Fever is the most dangerous symptom of a cold.","Doctors should always try to raise a patient's temperature when they have a cold.","Fever is caused by antibiotics."], para:"C",
    hint:"Paragraph C: we \"find so unpleasant\" the fever, \"Even\"… What is the writer's surprising point?", focus:"Even the fever we find so unpleasant is part of the counter-attack"}]},
  {skill:"Cause and effect", para:"D", q:[
   {type:"short", stem:"Why can't antibiotics cure a cold?", groups:[ANTI_CAUSE, ANTI_RESULT], need:1,
@@ -298,20 +298,20 @@ const GERM_SLOTS = [
   {type:"short", stem:"Explain why prescribing antibiotics for a cold is \"worse than pointless\".", groups:[ANTI_CAUSE, ANTI_RESULT], need:2,
    hint:"Paragraph D: why is it pointless (what causes colds, and what do antibiotics target)? Mention why it is worse, too.", focus:"Antibiotics target bacteria and are entirely ineffective against viruses."}]},
  {skill:"Writer's purpose", para:"E", q:[
-  {stem:"Why does the writer include paragraph E?", opts:["To show that many bacteria are good for us.","To tell readers to eat more bacteria.","To explain how to cure a cold.","To show that bacteria cause most illnesses."],
+  {stem:"Why does the writer include paragraph E?", opts:["To show that many bacteria are good for us.","To tell readers to eat more food that contains bacteria.","To explain how to cure a cold with the help of good bacteria.","To show that bacteria cause most illnesses."],
    hint:"Look at the first sentence of paragraph E.", focus:"Not all bacteria are bad.",
    explain:"The answer is \"To show that many bacteria are good for us\". Paragraph E starts \"Not all bacteria are bad\" and explains how they help."},
-  {stem:"Why does the writer include paragraph E?", opts:["To correct the idea that all bacteria are harmful","To explain why antibiotics do not work","To describe how viruses reproduce","To give advice about recovery"],
+  {stem:"Why does the writer include paragraph E?", opts:["To correct the idea that all bacteria are harmful","To explain why antibiotics do not work against colds and flu","To describe how viruses reproduce","To give advice about recovery"],
    hint:"Paragraph E begins \"It is easy to think of all bacteria as enemies, but…\".", focus:"It is easy to think of all bacteria as enemies"},
-  {stem:"How does paragraph E connect to the argument in paragraph D?", opts:["It gives a further reason not to treat all bacteria as enemies to be destroyed.","It explains how bacteria become resistant.","It contradicts the warning about antibiotics.","It introduces a new disease caused by gut bacteria."],
+  {stem:"How does paragraph E connect to the argument in paragraph D?", opts:["It gives a further reason not to treat all bacteria as enemies to be destroyed.","It explains how bacteria become resistant.","It contradicts the warning about antibiotics.","It introduces a new disease caused by bacteria in the gut that antibiotics cannot treat."],
    hint:"Paragraph D warns against using antibiotics unnecessarily. Paragraph E begins \"Nor should bacteria be regarded simply as enemies\". How do they fit together?", focus:"Nor should bacteria be regarded simply as enemies."}]},
  {skill:"Writer's view", para:"F", q:[
-  {stem:"What does the writer think we should do when we have a cold?", opts:["Rest, sleep, drink water and give the body time.","Take antibiotics straight away.","Go to school as normal.","Stay away from water."],
+  {stem:"What does the writer think we should do when we have a cold?", opts:["Rest, sleep, drink water and give the body time.","Take antibiotics straight away to stop it getting worse.","Go to school as normal.","Stay away from water."],
    hint:"Read paragraph F.", focus:"Rest, sleep and drinking lots of water.",
    explain:"The answer is \"Rest, sleep, drink water and give the body time\". The writer lists rest, sleep and water, and says the best thing is to give the body time."},
-  {stem:"What is the writer's attitude towards the immune system?", opts:["Confident that it can usually deal with a cold","Worried that it often fails","Doubtful about how it works","Critical of people who rely on it"],
+  {stem:"What is the writer's attitude towards the immune system?", opts:["Confident that it can usually deal with a cold","Worried that it often fails","Doubtful about how it works and whether it can really protect us","Critical of people who rely on it instead of seeing a doctor"],
    hint:"Paragraph F: the immune system has done this job \"for millions of years\". What does \"Usually, the best medicine…\" suggest?", focus:"Usually, the best medicine is simply to give it time."},
-  {stem:"Which statement best reflects the writer's view in paragraph F?", opts:["For common infections, supporting the body's own defences is usually more useful than medicine.","Medicine is never necessary for any infection.","The immune system can defeat every disease without help.","Hand-washing is more important than rest and sleep."],
+  {stem:"Which statement best reflects the writer's view in paragraph F?", opts:["For common infections, supporting the body's own defences is usually more useful than medicine.","Medicine is never necessary for any infection.","The immune system can defeat every disease without help, so doctors are rarely needed at all.","Hand-washing is more important than rest and sleep."],
    hint:"Paragraph F: \"more often than not\". Watch out for answers with \"never\" or \"every\".", focus:"more often than not, the most effective treatment is simply to give it time to do its job"}]}
 ];
 

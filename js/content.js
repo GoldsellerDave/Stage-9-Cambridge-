@@ -58,23 +58,23 @@ const SLEEP_LEVELS = [
 
 const SLEEP_SLOTS = [
  {skill:"Main idea", para:"F", q:[
-  {stem:"What is the text mainly about?", opts:["Why teenagers find it hard to sleep early and get up early","How to use your phone less at night","Why Maya's dad is angry with her","How schools in the USA are different"],
+  {stem:"What is the text mainly about?", opts:["Why teenagers find it hard to sleep early and get up early","How to use your phone less at night so that you can fall asleep sooner","Why Maya's dad is angry with her","How schools in the USA are different from schools in other countries"],
    hint:"Read paragraph A and paragraph F again. Your answer must be true for the whole text, not one paragraph.", focus:"Their body clock is the problem.",
    explain:"The answer is \"Why teenagers find it hard to sleep early and get up early\". Every paragraph is about teenagers and sleep. Phones (D) and schools (E) are only one part of the text."},
-  {stem:"What is the text mainly about?", opts:["Why many teenagers struggle with sleep, and what can help","The dangers of using phones at night","How parents can make teenagers go to bed earlier","A study about school start times in the USA"],
+  {stem:"What is the text mainly about?", opts:["Why many teenagers struggle with sleep, and what can help","The dangers of using phones at night","How parents can make teenagers go to bed earlier on school nights","A study about school start times in the USA"],
    hint:"Read paragraph A and paragraph F again. Your answer must be true for the whole text, not one paragraph.", focus:"biology, not laziness, is often to blame"},
-  {stem:"Which statement best summarises the writer's main argument?", opts:["Teenagers' sleep problems are mainly biological, so adults should respond with understanding rather than blame.","Teenagers should take full responsibility for getting enough sleep.","Schools around the world must start the day later.","Phones are the main reason teenagers are tired in the morning."],
+  {stem:"Which statement best summarises the writer's main argument?", opts:["Teenagers' sleep problems are mainly biological, so adults should respond with understanding rather than blame.","Teenagers should take full responsibility for getting enough sleep, because good habits are simply a matter of choice.","Schools around the world must start the day later.","Phones are the main reason teenagers are tired in the morning."],
    hint:"Look at how the article begins (A) and how it ends (F). The main argument links them.", focus:"stop mistaking it for a flaw"}]},
  {skill:"Detail", para:"B", q:[
   {stem:"When do many teenagers start to feel sleepy?", opts:["At about 11 p.m.","At about 10 p.m.","After midnight","Two hours after dinner"],
    hint:"Look in paragraph B. Find a time in the text.", focus:"So many teenagers do not feel sleepy until about 11 p.m., even if they go to bed early.",
    explain:"The answer is \"at about 11 p.m.\". Paragraph B says: \"many teenagers do not feel sleepy until about 11 p.m.\" Midnight is when Maya fell asleep, and 10 o'clock is when she went to bed."},
-  {stem:"According to paragraph B, what happens to the body clock during puberty?", opts:["It releases melatonin up to two hours later.","It stops releasing melatonin in the evening.","It releases melatonin two hours earlier.","It makes teenagers sleepy at 10 p.m."],
+  {stem:"According to paragraph B, what happens to the body clock during puberty?", opts:["It releases melatonin up to two hours later.","It stops releasing melatonin in the evening altogether.","It releases melatonin two hours earlier than before.","It makes teenagers sleepy at 10 p.m."],
    hint:"Look in paragraph B for the word \"puberty\". Read the next sentence carefully: earlier or later?", focus:"Their bodies begin to release melatonin up to two hours later than a child's or an adult's."},
-  {stem:"What does paragraph B tell us about a fifteen-year-old who is sent to bed at ten?", opts:["They may not be able to fall asleep for about an hour.","They will fall asleep quickly because they are tired.","They need more melatonin than an adult.","They are choosing to stay awake."],
+  {stem:"What does paragraph B tell us about a fifteen-year-old who is sent to bed at ten?", opts:["They may not be able to fall asleep for about an hour.","They will fall asleep quickly because they are tired after a long school day.","They need more melatonin than an adult.","They are choosing to stay awake."],
    hint:"Find \"fifteen-year-old\" in paragraph B. What does \"unable\" tell you?", focus:"may simply be unable to fall asleep before eleven, however much they might want to"}]},
  {skill:"Vocabulary in context", para:"C", q:[
-  {stem:"In paragraph C, \"concentrate\" means…", opts:["think carefully about one thing","sleep in class","talk to friends","remember the past"],
+  {stem:"In paragraph C, \"concentrate\" means…", opts:["think carefully about one thing","sleep in class","talk to friends quietly during the lesson","remember things that happened in the past"],
    hint:"Find \"concentrate\" in paragraph C. What do tired students find hard to do in class?", focus:"Tired students cannot concentrate well in class",
    explain:"The answer is \"think carefully about one thing\". Tired students \"cannot concentrate well in class\": they find it hard to keep their mind on the lesson."},
   {stem:"In paragraph C, \"irritable\" means…", opts:["easily annoyed","very sleepy","easily frightened","unable to remember"],
@@ -90,12 +90,12 @@ const SLEEP_SLOTS = [
   {type:"short", stem:"Identify two consequences of sleep deprivation mentioned in paragraph C.", groups:EFFECTS, need:2,
    hint:"In paragraph C, the consequences come after \"Sleep-deprived students…\". They are separated by semicolons.", focus:"Sleep-deprived students struggle to concentrate and to retain what they have learned; they are more prone to irritability, anxiety and low mood; and their weakened immune systems leave them more vulnerable to infection."}]},
  {skill:"Inference", para:"A", q:[
-  {stem:"Maya's dad says, \"Go to sleep earlier!\" What does he think?", opts:["Maya can sleep earlier if she wants to.","Maya has a problem with her body clock.","Maya needs a new alarm.","Maya is ill."],
+  {stem:"Maya's dad says, \"Go to sleep earlier!\" What does he think?", opts:["Maya can sleep earlier if she wants to.","Maya has a problem with her body clock and cannot help it.","Maya needs a new alarm that is louder than her old one.","Maya is ill."],
    hint:"Look in paragraph A. What do her parents think about Maya?", focus:"Her parents think she is lazy.",
    explain:"The answer is \"Maya can sleep earlier if she wants to\". Her parents think she is lazy, so her dad believes sleeping earlier is her choice. The body clock idea comes from the scientists, not from her dad."},
-  {stem:"What can we infer about Maya from paragraph A?", opts:["She tried to sleep but couldn't.","She stayed up late using her phone.","She went to bed after midnight.","She doesn't care about school."],
+  {stem:"What can we infer about Maya from paragraph A?", opts:["She tried to sleep but couldn't.","She stayed up late using her phone.","She went to bed after midnight because she was watching videos.","She doesn't care about school."],
    hint:"Paragraph A: what time did Maya go to bed, and what happened after that?", focus:"Last night she lay awake until after midnight, even though she went to bed at ten."},
-  {stem:"Why does the writer say the explanation is \"obvious\" to Maya's parents?", opts:["To show it seems clear to them, although the writer goes on to disagree.","Because the writer agrees that Maya is lazy.","Because scientists have proved that Maya is lazy.","To show that Maya's parents are experts on sleep."],
+  {stem:"Why does the writer say the explanation is \"obvious\" to Maya's parents?", opts:["To show it seems clear to them, although the writer goes on to disagree.","Because the writer agrees that Maya is lazy.","Because scientists have proved that Maya is lazy.","To show that Maya's parents are experts on sleep and know what they are talking about."],
    hint:"Read to the end of paragraph A. What do sleep scientists say about the parents' \"diagnosis\"?", focus:"according to sleep scientists, it is largely mistaken"}]},
  {skill:"Cause and effect", para:"D", q:[
   {type:"short", stem:"Write one way that phones make the sleep problem worse.", groups:[PHONE_LIGHT,PHONE_ALERT], need:1,
@@ -106,20 +106,20 @@ const SLEEP_SLOTS = [
   {type:"short", stem:"Explain two ways in which technology makes teenagers' sleep problems worse.", groups:[PHONE_LIGHT,PHONE_ALERT], need:2,
    hint:"Paragraph D: one way is linked to blue light, the other comes after \"Meanwhile\".", focus:"The blue light emitted by screens suppresses melatonin still further, effectively persuading the brain that night has not yet fallen. Meanwhile, the constant stream of notifications keeps the mind in a state of alertness"}]},
  {skill:"Writer's purpose", para:"E", q:[
-  {stem:"Why does the writer talk about schools in the USA?", opts:["To show that starting school later can help students.","To tell readers to study in the USA.","To show that American students are lazy.","To describe a normal school day."],
+  {stem:"Why does the writer talk about schools in the USA?", opts:["To show that starting school later can help students.","To tell readers to study in the USA.","To show that American students are lazier than students in other countries.","To describe a normal school day for teenagers in the USA."],
    hint:"Look in paragraph E. What happened to the students when school started later?", focus:"The students slept about 30 minutes more, and their grades got better.",
    explain:"The answer is \"to show that starting school later can help students\". The students slept more and their grades got better, so the study is evidence that a later start helps."},
-  {stem:"Why does the writer include the study in paragraph E?", opts:["To give evidence that a later start can help students.","To prove that phones are bad for sleep.","To compare American schools with other schools.","To show that most schools start too late."],
+  {stem:"Why does the writer include the study in paragraph E?", opts:["To give evidence that a later start can help students.","To prove that phones are bad for sleep.","To compare American schools with schools in other parts of the world.","To show that most schools start too late."],
    hint:"Paragraph E: what did the researchers find? Why would a writer want to report that?", focus:"researchers found that students slept about half an hour longer, and their grades improved"},
-  {stem:"What is the function of paragraph E in the article as a whole?", opts:["It moves from explaining the problem to presenting possible solutions, supported by evidence.","It introduces a counter-argument that the writer then rejects.","It gives a further cause of teenagers' tiredness.","It summarises the writer's conclusion."],
+  {stem:"What is the function of paragraph E in the article as a whole?", opts:["It moves from explaining the problem to presenting possible solutions, supported by evidence.","It introduces a counter-argument about school start times that the writer then rejects as unrealistic.","It gives a further cause of teenagers' tiredness.","It summarises the writer's conclusion."],
    hint:"Paragraphs B to D explain the problem. What does paragraph E start to do instead?", focus:"it makes more sense to accommodate adolescent biology than to fight it"}]},
  {skill:"Writer's view", para:"F", q:[
-  {stem:"What does the writer think about sleepy teenagers?", opts:["It is usually not their fault.","They are lazy.","They should use their phones more.","They do not need much sleep."],
+  {stem:"What does the writer think about sleepy teenagers?", opts:["It is usually not their fault.","They are lazy.","They should use their phones more.","They do not need much sleep at their age."],
    hint:"Read paragraph F. The writer asks a question and then answers it.", focus:"So, are sleepy teenagers lazy? Usually not.",
    explain:"The answer is \"it is usually not their fault\". The writer asks \"are sleepy teenagers lazy?\" and answers \"Usually not. Their body clock is the problem.\""},
   {stem:"What is the writer's attitude towards teenagers who struggle to get up?", opts:["Sympathetic: biology is often to blame.","Critical: they should go to bed earlier.","Amused: it is a funny teenage habit.","Worried: they will probably fail at school."],
    hint:"Paragraph F: what does the writer say is \"often to blame\"? Is that kind or unkind to teenagers?", focus:"biology, not laziness, is often to blame"},
-  {stem:"Which statement best describes the writer's position in paragraph F?", opts:["Teenagers should build good habits, but adults are wrong to see their tiredness as a flaw in character.","Teenagers are entirely to blame for their poor sleep.","Adults are entirely responsible for teenagers' sleep problems.","Biology makes it impossible for teenagers to improve their sleep."],
+  {stem:"Which statement best describes the writer's position in paragraph F?", opts:["Teenagers should build good habits, but adults are wrong to see their tiredness as a flaw in character.","Teenagers are entirely to blame for their poor sleep.","Adults are entirely responsible for teenagers' sleep problems.","Biology makes it impossible for teenagers to improve their sleep, so there is no point in trying to change their habits."],
    hint:"Paragraph F has two parts: what the writer admits first, and then the word \"Yet\". Watch out for answers with \"entirely\" or \"impossible\".", focus:"Teenagers cannot rewrite their biology; what the adults around them can do is stop mistaking it for a flaw."}]}
 ];
 
