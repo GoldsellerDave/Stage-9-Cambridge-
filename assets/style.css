@@ -1091,3 +1091,7 @@ button.qpwb:not(:disabled){cursor:pointer;animation:qpulse 1.4s ease-in-out infi
 .spdn{flex-basis:100%;margin:4px 0 0;padding:8px 12px;border-radius:12px;background:var(--gold-bg);border:2px solid var(--gold);font-weight:600}
 .spdn .spdb{margin:0 2px}
 .dodge .spd{justify-content:center;margin:6px 0}
+
+/* Class reading test card on Home (student.js readTestCard) */
+.rtest{border-color:var(--teal)} .rtrow{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface)}
+.rtrow .row{margin-top:6px;gap:6px;flex-wrap:wrap}
