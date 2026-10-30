@@ -980,8 +980,8 @@ button.schip{cursor:pointer;font-family:inherit} .sumcard .btn{align-self:flex-s
 .scn{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 10px 8px;margin:0 0 12px}
 .scnstage{border-radius:10px;overflow:hidden;cursor:pointer}
 .scnsvg{display:block;width:100%;height:auto}
-.sc-wall{fill:var(--sc-wall)} .sc-floor{fill:var(--sc-floor)} .sc-board{stroke:var(--sc-line)} .sc-win{fill:var(--sc-win);stroke:var(--sc-line);stroke-width:3}
-.sc-winx{stroke:var(--sc-line);stroke-width:2.5} .sc-door{fill:var(--sc-door)} .sc-sign{font:800 11px var(--f-body);fill:var(--muted);letter-spacing:.08em}
+.sc-wall{fill:var(--sc-wall)} .sc-floor{fill:var(--sc-floor)} .sc-win{fill:var(--sc-win);stroke:var(--sc-line);stroke-width:3}
+.sc-winx{stroke:var(--sc-line);stroke-width:2.5} .sc-tiles,.sc-bricks{stroke:#000;stroke-opacity:.12;stroke-width:1.5;fill:none} .sc-board{fill:var(--sc-line)} .sc-door{fill:var(--sc-door)} .sc-sign{font:800 11px var(--f-body);fill:var(--muted);letter-spacing:.08em}
 .dirt{fill:#7A5A3A;opacity:.85;transition:opacity .6s} .spark{fill:#FFD54A;opacity:0;transition:opacity .5s}
 .cl{transition:transform 1.6s cubic-bezier(.45,.05,.3,1)} .cA{transform:translateX(-40px)} .cB{transform:translateX(400px)}
 .bowl,.bench,.hallface,.rewind{opacity:0;transition:opacity .6s}
