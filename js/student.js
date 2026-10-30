@@ -583,7 +583,7 @@ function nextSmallQ() {
     run.phase = "done"; run.xpSoFar = 0;
   } else prepQuestion();
   saveRun(); runView(); top();
-  if (run.phase === "done") run.result.win ? Cel.big({ icon: "🏅", title: "Mission complete!", sub: `${P.MISSION_BADGES[run.boss]} badge`, xp: run.result.xp }) : Cel.set(run.result.xp);
+  if (run.phase === "done") run.result.win ? Cel.big({ icon: "🏅", title: `Mission complete, ${firstName()}!`, sub: `${P.MISSION_BADGES[run.boss]} badge`, xp: run.result.xp }) : Cel.set(run.result.xp);
 }
 // Per-question state that a question type needs before it is shown.
 function prepQuestion() {
@@ -600,7 +600,7 @@ function smallDone() {
                         : `<div class="fb info"><p><strong>So close.</strong> You need ${Math.ceil(P.BOSS_PASS * R.max)} of ${R.max} right first time to win the badge. Look at the answers below, practise those words and grammar points, then try again.</p></div>`) : ""}
     <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${R.max}</b><span>right first time</span></div>
       <div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div><div class="stat"><b>${flat.filter(r => r.support === "explained").length}</b><span>to review</span></div></div>
-    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 activities this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> That's 2 activities this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     <div class="tbl"><table><thead><tr><th>#</th><th>${run.sub === "grammar" ? "Grammar point" : run.boss ? "Word or grammar point" : "Word"}</th><th>Result</th></tr></thead><tbody>${rows}</tbody></table></div>
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="home">Back to home</button></div></div>`;
@@ -1223,7 +1223,7 @@ function finishListen(task) {
   // The big show when this task completes the unit's whole listening section for the first time.
   const done = new Set(history.filter(h => h.mode === "listening").map(h => h.text_id)), all = listeningFor(task.unitNo);
   if (!done.has(task.id) && all.every(t => t.id === task.id || done.has(t.id)))
-    Cel.big({ icon: "🎧", title: `Unit ${task.unitNo} listening complete!`, sub: `All ${all.length} parts done`, xp: run.result.xp });
+    Cel.big({ icon: "🎧", title: `Unit ${task.unitNo} listening complete, ${firstName()}!`, sub: `All ${all.length} parts done`, xp: run.result.xp });
   else Cel.set(run.result.xp);
 }
 function listenDone() {
@@ -1233,7 +1233,7 @@ function listenDone() {
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Finished · ${U.esc(task.topic)}</p><h1>${R.score} of ${task.qs.length} right first time</h1>
     <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${task.qs.length}</b><span>right first time</span></div>
       <div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div><div class="stat"><b>${R.results.filter(r => r.support === "explained").length}</b><span>to review</span></div></div>
-    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 activities this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> That's 2 activities this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     <div class="tbl"><table><thead><tr><th>#</th><th>Skill</th><th>Result</th></tr></thead><tbody>${rows}</tbody></table></div>
     <details class="panel"><summary><b>Read the transcript</b> <span class="note">(the parts with answers are highlighted)</span></summary>
       <div class="transcript">${task.lines.map((l, i) => `<p class="${hot.has(i) ? "hot" : ""}"><b>${U.esc(l[0] === "NARRATOR" ? "Narrator" : l[0][0] + l[0].slice(1).toLowerCase())}:</b> ${U.esc(l[1])}</p>`).join("")}</div></details>
@@ -1453,7 +1453,7 @@ function finishLab() {
                  seconds: Math.round((Date.now() - run.t0) / 1000) };
   run.phase = "done"; saveRun(); runView(); top();
   const m = labM(), first = !history.some(h => h.text_id === m.id);
-  first ? Cel.big({ icon: "🔬", title: `Mission ${m.n} complete!`, sub: m.title, xp: run.result.xp }) : Cel.set(run.result.xp);
+  first ? Cel.big({ icon: "🔬", title: `Mission ${m.n} complete, ${firstName()}!`, sub: m.title, xp: run.result.xp }) : Cel.set(run.result.xp);
 }
 function labDoneView() {
   const m = labM(), R = run.result, main = run.results.filter(r => r.skill === "Listening"), next = Lab.LAB.find(x => x.n === m.n + 1);
@@ -1463,7 +1463,7 @@ function labDoneView() {
       <div class="stat"><b>${labLevel(peak)}</b><span>highest level</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
     <div class="panel"><h3>Your level path</h3><ol class="lvpath">${main.map(r => `<li class="lv${r.level || 0}${r.first_try ? " ok" : ""}"><span>${r.first_try ? "✓" : "✗"}</span>${labLevel(r.level)}</li>`).join("")}</ol>
       <p class="note">${peak === 2 ? "You reached Challenge. Excellent listening!" : peak === 1 ? "You reached Stretch. Get 2 right in a row there to reach Challenge." : "Get 2 right first time in a row to move up to Stretch."}</p></div>
-    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     <div class="panel"><h3>Remember</h3><p style="margin:0">${U.esc(Lab.TRAPS[m.trap].tip)}</p></div>
     ${caught.length ? `<div class="panel"><h3>The traps that caught you</h3><ul>${caught.map(it => `<li>${U.esc(it.stem)} ${it.traps.length ? `<span class="note">(${it.traps.map(t => U.esc(t[1])).join(", ")})</span>` : ""}</li>`).join("")}</ul></div>`
       : `<div class="fb ok winbox"><p class="big">No traps caught you!</p></div>`}
@@ -1612,7 +1612,7 @@ function finishRLab() {
                  seconds: Math.round((Date.now() - run.t0) / 1000) };
   run.phase = "done"; saveRun(); runView(); top();
   const m = rlM(), first = !history.some(h => h.text_id === m.id);
-  first ? Cel.big({ icon: "📖", title: `Mission ${m.n} complete!`, sub: m.title, xp: run.result.xp }) : Cel.set(run.result.xp);
+  first ? Cel.big({ icon: "📖", title: `Mission ${m.n} complete, ${firstName()}!`, sub: m.title, xp: run.result.xp }) : Cel.set(run.result.xp);
 }
 function rlDoneView() {
   const m = rlM(), R = run.result, main = run.results.filter(r => r.skill === "Reading Lab"), next = RL.RLAB.find(x => x.n === m.n + 1);
@@ -1622,7 +1622,7 @@ function rlDoneView() {
       <div class="stat"><b>${labLevel(peak)}</b><span>highest level</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
     <div class="panel"><h3>Your level path</h3><ol class="lvpath">${main.map(r => `<li class="lv${r.level || 0}${r.first_try ? " ok" : ""}"><span>${r.first_try ? "✓" : "✗"}</span>${labLevel(r.level)}</li>`).join("")}</ol>
       <p class="note">${peak === 2 ? "You reached Challenge. Excellent reading!" : peak === 1 ? "You reached Stretch. Get 2 right in a row there to reach Challenge." : "Get 2 right first time in a row to move up to Stretch."}</p></div>
-    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     <div class="panel"><h3>Remember</h3><p style="margin:0">${U.esc(RL.RTRAPS[m.trap].tip)}</p></div>
     ${caught.length ? `<div class="panel"><h3>The questions that caught you</h3><ul>${caught.map(it => `<li>${U.esc(it.stem)} <span class="note">(answer: ${U.esc(it.opts[0].t)})</span></li>`).join("")}</ul></div>`
       : `<div class="fb ok winbox"><p class="big">No traps caught you!</p></div>`}
@@ -1673,7 +1673,7 @@ function drillView() {
   else h += optsHTML(q, order("d" + run.i, q.opts.length), fb ? { right: fb.kind === "ok", wrong: fb.wrong, reveal: fb.kind === "explained", locked } : null);
   if (fb) {
     if (fb.kind === "ok") h += `<div class="fb ok pop"><p><strong>Correct.</strong> ${fb.first ? "Right first time." : "Well done for using the hint."} ${fb.xp ? `<span class="xpgain">+${fb.xp} XP</span>` : ""}</p>${fb.ai ? `<p class="note">Checked by AI: ${U.esc(fb.ai)}</p>` : ""}</div>`;
-    else if (fb.kind === "explained") h += `<div class="fb info pop"><p><strong>Let's look at the answer together.</strong></p>
+    else if (fb.kind === "explained") h += `<div class="fb info pop"><p><strong>Let's look at the answer together, ${U.esc(firstName())}.</strong></p>
         <p>${U.esc(explain || `The answer is "${short ? "" : q.opts[0]}". The highlighted words in the text show why.`)}</p></div>`;
     else h += `<div class="fb bad pop"><p><strong>${fb.tooShort ? "Too short." : "Not quite."}</strong> ${U.esc(fb.tooShort ? "Write at least a few words." : fb.partial || (short ? "Your answer does not match the text yet." : "That is not the answer."))}</p>
         ${fb.tooShort ? "" : `<p><b>Hint:</b> ${U.esc(q.hint)}</p><p class="note">The highlighted words in the text will help. Try once more.</p>`}</div>`;
@@ -1700,7 +1700,7 @@ async function drillCheck() {
     const btn = document.getElementById("dcheck"); if (btn) { btn.disabled = true; btn.textContent = "Checking your answer…"; }
     const lv = text.levels[it.level], para = lv.paras.find(x => x[0] === it.para[0]);
     ai = await api.aiMark(session.token, { text_id: text.id, slot: it.slot, level: it.level, stem: q.stem,
-      paragraph: para ? para[1] : lv.paras.map(x => x[1]).join("\n"), points: q.groups.map(g => g.label), need: q.need, answer: response });
+      paragraph: para ? para[1] : lv.paras.map(x => x[1]).join("\n"), points: q.groups.map(g => g.label), need: q.need, answer: response, name: firstName() });
     if (!run || run.kind !== "drill" || run.i !== iNow) return;
     if (ai) m = { ok: ai.ok, hits: ai.hits };
   }
@@ -1723,8 +1723,8 @@ function drillDoneView() {
   $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Skill drill done</p><h1>${U.esc(run.skill)}: ${R.score} of ${n} right first time</h1>
     <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${n}</b><span>right first time</span></div></div>
     <div class="sumcard ${good ? "good" : "next"}"><p class="sumhead">${good ? "✓ Getting stronger" : "🎯 Keep practising"}</p>
-      <p>${good ? "Nice work. This skill will come up again in your texts, so keep using the strategy." : "This skill still needs work. Try another drill: the questions come from different texts."}</p></div>
-    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+      <p>${good ? `Nice work, ${U.esc(firstName())}. This skill will come up again in your texts, so keep using the strategy.` : `${U.esc(firstName())}, this skill still needs work. Try another drill: the questions come from different texts.`}</p></div>
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     <div class="panel"><h3>Your answers</h3><ul>${run.items.map((it, k) => { const r = run.results[k] || {};
       return `<li>${U.esc(PRACTICE_TEXTS.find(t => t.id === it.text).topic)}: ${U.esc(E.SUPPORT_LABEL[r.support] || "")}</li>`; }).join("")}</ul></div>
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
@@ -1926,7 +1926,7 @@ async function finishBaseline() {
   run.phase = "done"; saveRun(); runView(); top(); levelCel(run.result);
 }
 // A level up gets the big show; any other finish gets the coins.
-function levelCel(R) { R.levelUp ? Cel.big({ icon: "🚀", title: "Level up!", sub: `Your reading level is now ${E.BANDS[R.levelUp.to]}`, xp: R.xp }) : Cel.set(R.xp); }
+function levelCel(R) { R.levelUp ? Cel.big({ icon: "🚀", title: `Level up, ${firstName()}!`, sub: `Your reading level is now ${E.BANDS[R.levelUp.to]}`, xp: R.xp }) : Cel.set(R.xp); }
 async function saveAttempt(payload) {
   const msg = document.getElementById("savemsg");
   try {
@@ -1942,7 +1942,7 @@ async function saveAttempt(payload) {
 function levelUpHTML(up) {
   if (!up) return "";
   return `<div class="lvlup pop"><span class="lvl-from">${E.BANDS[up.from]}</span><span class="lvl-arrow" aria-hidden="true">→</span><span class="lvl-to">${E.BANDS[up.to]}</span>
-    <div><b>Reading level up!</b><p>Your reading level is now <b>${E.BANDS[up.to]}</b>. <span class="xpgain">+${E.LEVEL_UP_XP} XP</span></p></div></div>`;
+    <div><b>Reading level up, ${U.esc(firstName())}!</b><p>Your reading level is now <b>${E.BANDS[up.to]}</b>. <span class="xpgain">+${E.LEVEL_UP_XP} XP</span></p></div></div>`;
 }
 function baselineDone() {
   const R = run.result, T = testOf(run.test), isBase = T.id === "baseline";
@@ -2048,7 +2048,7 @@ function finishMini() {
   run.result = { score, max, passed: score / max >= M.MINI_PASS, xp: M.miniXP(score, max, history, u), seconds: Math.round((Date.now() - run.t0) / 1000),
                  parts: M.PARTS.map(([k, name]) => { const a = run.answers.filter(x => x.part === k); return { name, right: a.filter(x => x.first_try).length, total: a.length }; }) };
   run.phase = "done"; saveRun(); runView(); top();
-  run.result.passed ? Cel.big({ icon: "🏆", title: `Unit ${u} test passed!`, sub: `${Math.round(100 * score / max)}% · the next gate is open`, xp: run.result.xp }) : Cel.set(run.result.xp);
+  run.result.passed ? Cel.big({ icon: "🏆", title: `Unit ${u} test passed, ${firstName()}!`, sub: `${Math.round(100 * score / max)}% · the next gate is open`, xp: run.result.xp }) : Cel.set(run.result.xp);
 }
 function miniDone() {
   const R = run.result, T = M.MINI[run.unit];
@@ -2112,12 +2112,12 @@ function practiceView() {
 function feedbackHTML(text, q, p, T, unit) {
   const f = run.fb, r = run.r;
   if (f.kind === "ok") return `<div class="fb ok pop"><p><strong>Correct.</strong> ${f.firstTry ? "Right first time." : "Well done for sticking with it."} <span class="xpgain">+${f.xp} XP</span></p>${f.ai ? `<p class="note">Checked by AI: ${U.esc(f.ai)}</p>` : ""}</div>`;
-  if (f.kind === "explained") return `<div class="fb info pop"><p><strong>Let's look at the answer together.</strong></p><p>${U.esc(q.explain)}</p><p class="note">No XP for this one. Remember the strategy for next time.</p></div>`;
+  if (f.kind === "explained") return `<div class="fb info pop"><p><strong>Let's look at the answer together, ${U.esc(firstName())}.</strong></p><p>${U.esc(q.explain)}</p><p class="note">No XP for this one. Remember the strategy for next time.</p></div>`;
   const msg = f.partial || (f.tooShort ? "Write at least a few words." : q.type === "short" ? "Your answer does not match the text yet." : "That is not the answer.");
   if (f.tooShort) return `<div class="fb bad pop"><p><strong>Too short.</strong> ${U.esc(msg)}</p></div>`;
   if (r.stage === 1) return `<div class="fb bad pop"><p><strong>Not quite.</strong> ${U.esc(msg)}</p><p><b>Hint:</b> ${U.esc(q.hint)}</p></div>`;
   const st = STRATEGY[text.slots[r.slot].skill], para = T.paras.find(x => x[0] === p);
-  return `<div class="fb bad pop"><p><strong>Not quite.</strong> ${U.esc(msg)}</p></div>
+  return `<div class="fb bad pop"><p><strong>Not quite yet, ${U.esc(firstName())}.</strong> ${U.esc(msg)}</p></div>
     <div class="rescue pop"><p class="eyebrow">Read this part again</p>${U.paraHTML(para, q.focus, true, unit)}
     <div class="strat"><b>Strategy: ${U.esc(st.name)}</b><ol>${st.steps.map(s => `<li>${U.esc(s)}</li>`).join("")}</ol></div>
     <p class="note">${r.level > 0 ? `If this answer is wrong too, you will move to the ${E.LEVELS[r.level - 1]} text.` : "Try once more. The highlighted words will help."}</p></div>`;
@@ -2135,7 +2135,7 @@ async function check(text) {
     const para = text.levels[r.level].paras.find(x => x[0] === (q.para || text.slots[r.slot].para));
     ai = await api.aiMark(session.token, { text_id: text.id, slot: r.slot, level: r.level, stem: q.stem,
       paragraph: para ? para[1] : text.levels[r.level].paras.map(x => x[1]).join("\n"),
-      points: q.groups.map(g => g.label), need: q.need, answer: response });
+      points: q.groups.map(g => g.label), need: q.need, answer: response, name: firstName() });
     if (!run || run.r !== r || r.slot !== slotNow || r.level !== levelNow) return; // left the question while waiting
     if (ai) m = { ok: ai.ok, hits: ai.hits };
   }
@@ -2183,12 +2183,12 @@ function practiceDone() {
     <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${text.slots.length}</b><span>right first time</span></div>
       <div class="stat"><b>${E.LEVELS[r.level]}</b><span>finished on</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
     <div class="sumcards">
-      <div class="sumcard good"><p class="sumhead">✓ Strong</p>${strong.length ? `<div class="sumchips">${strong.map(x => `<span class="schip">${U.esc(x)}</span>`).join("")}</div>` : `<p>Keep going, you will get there.</p>`}</div>
-      <div class="sumcard next${practise.length ? " flash" : ""}"><p class="sumhead">🎯 Practise next</p>${practise.length ? `<div class="sumchips">${practise.map(x => `<button class="schip" data-drill="${U.esc(x)}">${U.esc(x)}</button>`).join("")}</div>
+      <div class="sumcard good"><p class="sumhead">✓ Strong</p>${strong.length ? `<div class="sumchips">${strong.map(x => `<span class="schip">${U.esc(x)}</span>`).join("")}</div>` : `<p>Keep going, ${U.esc(firstName())}. You will get there.</p>`}</div>
+      <div class="sumcard next${practise.length ? " flash" : ""}"><p class="sumhead">🎯 Practise next</p>${practise.length ? `<p>${U.esc(firstName())}, this is your next target:</p><div class="sumchips">${practise.map(x => `<button class="schip" data-drill="${U.esc(x)}">${U.esc(x)}</button>`).join("")}</div>
         <button class="btn" data-drill="${U.esc(practise[0])}">Practise now: ${U.esc(practise[0])}</button><p class="note">Or tap a skill above. Each drill is ${D.DRILL_LEN} quick questions from other texts.</p>`
         : `<p>${r.level < text.levels.length - 1 ? `Nothing. Try to finish on the ${E.LEVELS[r.level + 1]} text next time.` : "Nothing. Brilliant work!"}</p>`}</div></div>
     ${levelUpHTML(R.levelUp)}
-    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept!</strong> That's 2 texts this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> That's 2 texts this week: <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
     ${R.replay ? `<p class="note">You have read this text before, so this time earns half XP.</p>` : ""}
     ${U.resultRows(text.slots, r.results)}<p class="note">Text path: ${U.esc(path)}</p>
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
