@@ -852,3 +852,20 @@ mark.ltrap{background:var(--peach);color:var(--orange);font-weight:700;border-bo
 }
 button.schip{cursor:pointer;font-family:inherit} .sumcard .btn{align-self:flex-start}
 .dwhole{margin:4px 0 12px} .dwhole summary{cursor:pointer;color:var(--teal);font-weight:700}
+/* Grammar Lab */
+.glsteps{margin:0 0 14px;padding-left:22px;display:grid;gap:6px} .glsteps li b{margin-right:6px}
+.glbar{display:flex;gap:4px;margin:4px 0 10px;flex-wrap:wrap} .glbar span{flex:1;min-width:64px;text-align:center;font-size:.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:4px 6px;border-radius:999px;background:var(--line);color:var(--muted)}
+.glbar span.done{background:var(--mint);color:var(--teal)} .glbar span.now{background:var(--gold-bg);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--gold)}
+.glscene{font-family:var(--f-text);font-size:1.05rem} .glscene p{margin:.45em 0} .glscene mark{background:var(--mark);color:inherit;padding:0 2px;border-radius:3px;font-weight:700}
+.glquote{font-family:var(--f-text);font-size:1.1rem;margin:4px 0 10px;padding:10px 14px;border-left:4px solid var(--teal);background:var(--card);border-radius:8px}
+.glmeter{margin:6px 0 12px} .glm-track{position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--bad-line),var(--gold),var(--ok-line))}
+.glm-track i{position:absolute;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;background:var(--card);border:3px solid var(--ink)}
+.glm-labels{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:6px} .glmeter .note{margin:4px 0 0}
+.gltime{margin:6px 0 12px} .glt-line{position:relative;height:30px;border-radius:8px;background:var(--mint);border:1.5px solid var(--teal);display:flex;align-items:center;justify-content:center}
+.glt-span{font-size:.8rem;font-weight:700;color:var(--teal)} .glt-dot{position:absolute;top:-8px;bottom:-8px;width:3px;margin-left:-1.5px;background:var(--orange);border-radius:2px}
+.glt-ends{display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-top:4px} .gltime .note{margin:4px 0 0}
+.glsort{display:grid;gap:10px;margin:12px 0} .glrow{padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--card)}
+.glrow p{margin:0 0 8px;font-family:var(--f-text);font-size:1.02rem} .glrow.ok{border-color:var(--ok-line);background:var(--ok-bg)} .glrow.bad{border-color:var(--bad-line);background:var(--bad-bg)}
+.glbins{display:flex;gap:6px;flex-wrap:wrap} .glbin{font:inherit;font-size:.82rem;padding:6px 10px;border-radius:999px;border:1.5px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.glbin.on{border-color:var(--teal);background:var(--teal);color:#fff} .glbin.ans{box-shadow:0 0 0 2px var(--ok-line)} .glbin:disabled{cursor:default}
+.glclues ul{margin:6px 0 0;padding-left:0;list-style:none;display:grid;gap:6px} .glclues li{font-size:.95rem}
