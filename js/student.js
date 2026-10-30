@@ -27,6 +27,7 @@ import * as T from "./tower.js";
 import * as A from "./anim.js";
 import * as SC from "./scenes.js";
 import * as Q from "./quests.js";
+import * as SP from "./speed.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -1131,7 +1132,7 @@ function startListening(id) {
 function audio() {
   if (!audioEl || audioFor !== run.id) {
     if (audioEl) audioEl.pause();
-    audioEl = new Audio(`audio/listening/${run.id}.mp3?v=${AUDIO_V}`); audioFor = run.id; audioEl.preload = "auto";
+    audioEl = new Audio(`audio/listening/${run.id}.mp3?v=${AUDIO_V}`); audioFor = run.id; audioEl.preload = "auto"; SP.applySpeed(audioEl);
     audioEl.addEventListener("timeupdate", () => {
       if (segEnd != null && audioEl.currentTime >= segEnd) { audioEl.pause(); segEnd = null; }
       playerUpdate();
@@ -1143,6 +1144,12 @@ function audio() {
     audioEl.addEventListener("pause", playerUpdate); audioEl.addEventListener("play", playerUpdate);
   }
   return audioEl;
+}
+// The speed dial under a player (#spd). Challenge Lab clips are locked to normal speed.
+function speedDial(els, locked = false) {
+  const box = document.getElementById("spd"); if (!box) return;
+  box.innerHTML = SP.speedHTML(locked);
+  SP.bindSpeed(box, els, () => { S.play("tap"); speedDial(els, locked); });
 }
 function stopAudio() { if (audioEl) { audioEl.pause(); segEnd = null; } if (miniAudio) miniAudio.pause(); if (labAudio) labAudio.pause(); }
 function playerUpdate() {
@@ -1162,12 +1169,12 @@ function playFull() {
   const a = audio();
   if (!a.paused && !a.seg) return a.pause();
   if (a.seg || a.ended || a.currentTime === 0 || a.currentTime >= a.duration) { if (run.plays >= MAX_PLAYS) return; a.seg = false; segEnd = null; a.currentTime = 0; }
-  a.play().catch(() => {}); S.play("tap");
+  SP.applySpeed(a); a.play().catch(() => {}); S.play("tap");
 }
 function playPart(k) {
   const task = LISTENING.find(t => t.id === run.id), [a, b] = P.cueLines(task, task.qs[k]), span = TIMES[run.id];
   if (!span) return;
-  const el = audio(); el.seg = true; el.currentTime = Math.max(0, span[a][0] - 0.2); segEnd = span[b][1] + 0.3; el.play().catch(() => {});
+  const el = audio(); el.seg = true; el.currentTime = Math.max(0, span[a][0] - 0.2); segEnd = span[b][1] + 0.3; SP.applySpeed(el); el.play().catch(() => {});
 }
 const lockedQ = k => !!run.results[k];
 function canCheckListen() {
@@ -1179,7 +1186,8 @@ function listenView() {
   let h = `<div class="narrow pop"><p class="eyebrow">Unit ${task.unitNo} listening · ${U.esc(task.part)}</p><h1>${U.esc(task.topic)}</h1>
     <div class="panel"><p style="margin:0">${U.esc(task.instructions)}</p><p class="note">You can hear the recording twice, like in the exam. Read the questions first.</p></div>
     <div class="player"><button class="btn" id="lplay">${PLAY} Play</button><div class="lmeta"><div class="bar"><i id="lbar" style="width:0;background:var(--teal)"></i></div>
-      <div class="row" style="justify-content:space-between"><span class="note" id="lplays"></span><span class="note" id="ltime"></span></div></div></div>`;
+      <div class="row" style="justify-content:space-between"><span class="note" id="lplays"></span><span class="note" id="ltime"></span></div></div></div>
+    <div id="spd">${SP.speedHTML()}</div>`;
   if (task.statements) h += `<div class="panel stmts">${task.statements.map(s => `<p style="margin:0">${U.esc(s)}</p>`).join("")}</div>`;
   h += task.qs.map((q, k) => listenQ(task, q, k)).join("");
   const done = task.qs.every((_, k) => lockedQ(k));
@@ -1190,6 +1198,7 @@ function listenView() {
   $app.querySelectorAll("[data-lg]").forEach(inp => inp.oninput = () => { run.resp[+inp.dataset.lg] = inp.value; saveRun(); playerUpdate(); });
   $app.querySelectorAll("[data-part]").forEach(b => b.onclick = () => playPart(+b.dataset.part));
   document.getElementById("lplay").onclick = playFull;
+  speedDial(() => [audioEl]);
   const c = document.getElementById("check"); if (c) c.onclick = () => checkListen(task);
   const f = document.getElementById("lfinish"); if (f) f.onclick = () => finishListen(task);
   audio(); playerUpdate();
@@ -1228,9 +1237,9 @@ function checkListen(task) {
     const ok = P.listenCorrect(q, run.resp[k]), st = run.stage[k] || 0;
     if (ok) {
       if (q.type === "gap" && P.markGap(q, run.resp[k]) === "spelling") run.notes[k] = "spelling";
-      run.results[k] = { skill: "Listening", sub: q.skill, trap: Lab.unitTrap(task.id, k), first_try: st === 0, support: st === 0 ? "none" : "hint" }; right++;
+      run.results[k] = { skill: "Listening", sub: q.skill, trap: Lab.unitTrap(task.id, k), first_try: st === 0, support: st === 0 ? "none" : "hint", ...SP.speedTag() }; right++; SP.noteAnswer(st === 0);
     } else if (st === 0) { run.stage[k] = 1; run.notes[k] = "wrong"; wrong++; }
-    else { run.results[k] = { skill: "Listening", sub: q.skill, trap: Lab.unitTrap(task.id, k), first_try: false, support: "explained" }; wrong++; }
+    else { run.results[k] = { skill: "Listening", sub: q.skill, trap: Lab.unitTrap(task.id, k), first_try: false, support: "explained", ...SP.speedTag() }; wrong++; SP.noteAnswer(false); }
   });
   run.xpSoFar = P.listenXP(Object.values(run.results)) - P.XP_LISTEN.finish;
   S.play(wrong ? (right ? "info" : "bad") : "ok");
@@ -1304,12 +1313,14 @@ const labItem = (i = run.i) => { labSeq(); return labM().items.find(x => x.clip 
 function labClip(clip = labItem().clip) {
   if (!labAudio || labFor !== clip) {
     if (labAudio) labAudio.pause();
-    labAudio = new Audio(`audio/listening/${clip}.mp3?v=${AUDIO_V}`); labFor = clip; labAudio.preload = "auto";
+    labAudio = new Audio(`audio/listening/${clip}.mp3?v=${AUDIO_V}`); labFor = clip; labAudio.preload = "auto"; SP.applySpeed(labAudio, labLocked());
     labAudio.addEventListener("ended", () => { const s = run && run.kind === "lab" && run.phase === "q" && run.st[run.i]; if (s && labFor === labItem().clip) { s.plays++; saveRun(); } labPlayer(); });
     labAudio.addEventListener("play", labPlayer); labAudio.addEventListener("pause", labPlayer);
   }
   return labAudio;
 }
+// Challenge clips play at normal speed, like the exam (a rescue replay can be slowed).
+const labLocked = () => run.phase === "q" && labItem().level >= 2;
 const labPlaysMax = s => Lab.LAB_PLAYS[labItem().level] + (s.wrong || []).length;
 const labPlaysLeft = s => labPlaysMax(s) - s.plays;
 function labPlayer() {
@@ -1327,7 +1338,7 @@ function labPlay() {
   if (run.phase === "q" && labPlaysLeft(s) <= 0) return;
   if (a.ended || a.currentTime === 0 || a.currentTime >= (a.duration || 1e9) - 0.05) a.currentTime = 0;
   if (run.phase === "q") { s.heard = true; saveRun(); }
-  a.play().catch(() => {}); S.play("tap");
+  SP.applySpeed(a, labLocked()); a.play().catch(() => {}); S.play("tap");
 }
 // One line of the transcript with the answer and the traps marked.
 function labLine(it, [who, text]) {
@@ -1347,11 +1358,11 @@ function labRescueView() {
       ${m.teach.map(c => `<p><b>${U.esc(c.h)}</b> ${U.esc(c.p)}</p>`).join("")}</div>
     <div class="panel"><p class="eyebrow">Guided replay</p><p class="stem">${U.esc(it.stem)}</p>
       <p class="egrow"><span class="chip">Answer</span> ${U.esc(it.opts[0].t)}</p>
-      <div class="player labplayer"><button class="btn" id="labplay">${PLAY} Play</button><span class="note">Read along. Listen for the green words, and notice how the orange ones try to trick you.</span></div>
+      <div class="player labplayer"><button class="btn" id="labplay">${PLAY} Play</button><span class="note">Read along. Listen for the green words, and notice how the orange ones try to trick you.</span></div><div id="spd"></div>
       <div class="ltrans">${labTrans(it)}</div></div>
     <div class="row"><button class="btn" id="lnext">Try a similar question</button></div>
     ${down ? `<p class="note">The next question is ${lvChip(run.level - 1)}, so you can practise the strategy.</p>` : ""}</div>`;
-  document.getElementById("labplay").onclick = labPlay; labClip(it.clip); labPlayer();
+  document.getElementById("labplay").onclick = labPlay; labClip(it.clip); labPlayer(); speedDial(() => [labAudio]);
   document.getElementById("lnext").onclick = () => {
     if (labAudio) labAudio.pause(); S.play("tap");
     if (run.level > 0) { run.level--; run.flash = "down"; }
@@ -1407,7 +1418,7 @@ function labRunView() {
   } else {
     const ord = order(`lab${run.i}`, it.opts.length), heard = s.plays > 0 || s.heard;
     if (prime) h += `<p class="note">You need <b>${U.esc(it.type)}</b>. Key words: ${it.keys.map(k => `<u>${U.esc(k)}</u>`).join(", ")}.</p>`;
-    h += `<div class="player labplayer"><button class="btn" id="labplay">${PLAY} Play</button><span class="note">${Lab.LAB_PLAYS[it.level] === 1 ? "Challenge: you hear it once. Read the question first!" : "Read the question first. You can listen twice."}</span></div>
+    h += `<div class="player labplayer"><button class="btn" id="labplay">${PLAY} Play</button><span class="note">${Lab.LAB_PLAYS[it.level] === 1 ? "Challenge: you hear it once. Read the question first!" : "Read the question first. You can listen twice."}</span></div><div id="spd"></div>
       <p class="stem">${U.esc(it.stem)}</p><div class="opts">${ord.map((oi, k) => {
         let cls = "opt"; if (s.done && oi === 0) cls += " right"; else if (s.wrong.includes(oi)) cls += " wrong";
         return `<button class="${cls}" data-lo="${oi}" ${s.done || s.wrong.includes(oi) || !heard ? "disabled" : ""}><span class="k">${"ABCD"[k]}</span><span>${U.esc(it.opts[oi].t)}</span></button>`; }).join("")}</div>`;
@@ -1446,9 +1457,9 @@ function labRunView() {
   $app.querySelectorAll("[data-lo]").forEach(b => b.onclick = () => {
     const oi = +b.dataset.lo, trap = m.trap === "prime" ? null : m.trap;
     if (labAudio) labAudio.pause();
-    if (oi === 0) { run.results.push({ item: run.i, skill: "Listening", sub: "Detail", trap, lab: it.clip, level: it.level, first_try: !s.wrong.length, support: s.wrong.length ? "hint" : "none" }); s.done = true; S.play("ok"); }
+    if (oi === 0) { run.results.push({ item: run.i, skill: "Listening", sub: "Detail", trap, lab: it.clip, level: it.level, first_try: !s.wrong.length, support: s.wrong.length ? "hint" : "none", ...SP.speedTag(labLocked()) }); SP.noteAnswer(!s.wrong.length, labLocked()); s.done = true; S.play("ok"); }
     else { s.wrong.push(oi); S.play("bad");
-      if (s.wrong.length >= 2) { run.results.push({ item: run.i, skill: "Listening", sub: "Detail", trap, lab: it.clip, level: it.level, first_try: false, support: "explained" }); s.done = true; } }
+      if (s.wrong.length >= 2) { run.results.push({ item: run.i, skill: "Listening", sub: "Detail", trap, lab: it.clip, level: it.level, first_try: false, support: "explained", ...SP.speedTag(labLocked()) }); SP.noteAnswer(false); s.done = true; } }
     if (s.done) { s.step = Lab.labStep(run, !s.wrong.length); Object.assign(run, { level: s.step.level, rightRow: s.step.rightRow, wrongRow: s.step.wrongRow }); if (s.step.up) S.play("level"); }
     redraw();
     const fb = $app.querySelector(".fb"); if (fb) fb.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -1465,7 +1476,7 @@ function labRunView() {
     }
     redraw(); top();
   };
-  const pb = document.getElementById("labplay"); if (pb) { pb.onclick = labPlay; labClip(); labPlayer(); }
+  const pb = document.getElementById("labplay"); if (pb) { pb.onclick = labPlay; labClip(); labPlayer(); speedDial(() => [labAudio], labLocked()); }
 }
 function finishLab() {
   if (labAudio) labAudio.pause();

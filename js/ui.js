@@ -14,6 +14,8 @@ import { drillSkill } from "./drill.js";
 export const SKILLS = ["Main idea", "Detail", "Vocabulary in context", "Detail: two points", "Inference",
                        "Cause and effect", "Writer's purpose", "Writer's view", "Reading Lab", "Vocabulary", "Grammar", "Listening"];
 
+// Listening played slower with the speed dial (speed.js): the slowest speed used, e.g. "🐢 -20%".
+const slowTag = h => { const v = Math.min(...(h.answers || []).map(a => a.speed || 1)); return v < 1 ? ` <span class="note" title="Played slower">🐢 -${Math.round(100 - v * 100)}%</span>` : ""; };
 export function esc(t) {
   return String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[c]));
 }
@@ -188,7 +190,7 @@ const labLevels = L => `<span class="lvchip lv${L.start}">${LAB_LEVELS[L.start]}
 export function historyTable(history) {
   if (!history.length) return `<p class="note">No readings yet.</p>`;
   return `<div class="tbl"><table><thead><tr><th>Date</th><th>Reading</th><th>Level</th><th class="num">Score</th><th class="num">XP</th></tr></thead><tbody>${
-    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}</td><td>${isLabAttempt(h) && labSummary(h.answers) ? labLevels(labSummary(h.answers)) : h.mode !== "practice" && h.mode !== "baseline" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== textLevel(h) && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(textLevel(h))} · ${BANDS[readingBand(h)]}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
+    [...history].reverse().map(h => `<tr><td>${fmtDate(h.created_at)}</td><td>${esc(textTitle(h.text_id))}${slowTag(h)}</td><td>${isLabAttempt(h) && labSummary(h.answers) ? labLevels(labSummary(h.answers)) : h.mode !== "practice" && h.mode !== "baseline" ? "–" : `<span class="lvl">${h.level_start != null && h.level_start !== textLevel(h) && h.mode === "practice" ? levelName(h.level_start) + " → " : ""}${levelName(textLevel(h))} · ${BANDS[readingBand(h)]}</span>`}</td><td class="num">${h.score}/${h.max_score}</td><td class="num">${h.xp}</td></tr>`).join("")
   }</tbody></table></div>`;
 }
 
