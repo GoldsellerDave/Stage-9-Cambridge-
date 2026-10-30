@@ -1796,7 +1796,6 @@ function glBlockView() {
       <div class="glbank-in" style="margin-top:8px">${b.ex.map(([a, c]) => `<span>${U.esc(a)} → <b>${U.esc(c)}</b></span>`).join("")}</div></div>
       <div class="row"><button class="btn" id="gbgo">${f.back ? "Try 2 more" : "Quick check: 3 questions"}</button></div></div>`;
     $app.innerHTML = h;
-    if (e.why === "again" || e.why === "back") document.getElementById("gbgo").textContent = "Try again";
     document.getElementById("gbgo").onclick = () => { f.lesson = false; S.play("tap"); redraw(); top(); };
     return;
   }
@@ -2136,7 +2135,7 @@ function gbRunView() {
       ${e.why === "back" ? `<p class="lede">The brick underneath is fixed. Let's try this one again.</p>` : e.why === "again" ? `<p class="lede">Tricky one! Read the rule again, then try two more.</p>` : ""}
       <div class="strat gblesson"><p style="margin:0">${glx(L.say)}</p>
       <div class="glbank-in" style="margin-top:8px">${L.ex.map(([a, c]) => `<span>${U.esc(a)} → <b>${U.esc(c)}</b></span>`).join("")}</div></div>
-      <div class="row"><button class="btn go" id="gbgo">${e.why === "back" ? "Try again" : "Let's build it"}</button></div></div>`;
+      <div class="row"><button class="btn go" id="gbgo">${e.why === "back" || e.why === "again" ? "Try again" : "Let's build it"}</button></div></div>`;
     document.getElementById("gbgo").onclick = () => { run.i++; S.play("tap"); redraw(); top(); };
     return;
   }
