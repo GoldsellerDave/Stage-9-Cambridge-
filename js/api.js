@@ -44,6 +44,7 @@ const live = {
   aiFlag: (t, id, on) => rpc("ck_teacher_ai_flag", { p_token: t, p_id: id, p_overruled: on }),
   addStudents: (t, c, names) => rpc("ck_teacher_add_students", { p_token: t, p_class: c, p_names: names }),
   newPins: (t, c) => rpc("ck_teacher_new_pins", { p_token: t, p_class: c }),
+  englishNames: (t, c, list) => rpc("ck_teacher_english_names", { p_token: t, p_class: c, p_names: list }),
   removeStudent: (t, id) => rpc("ck_teacher_remove_student", { p_token: t, p_student: id }),
   deleteClass: (t, c) => rpc("ck_teacher_delete_class", { p_token: t, p_class: c }),
   setPassword: (t, o, n) => rpc("ck_set_password", { p_token: t, p_old: o, p_new: n }),
@@ -137,12 +138,12 @@ const demo = {
     const db = load(), s = db.students.find(x => x.username === String(u).trim().toLowerCase());
     if (!s || s.pin !== String(p).trim()) throw new Error("Wrong username or PIN.");
     const t = "demo-" + Math.random().toString(36).slice(2); db.tokens[t] = s.id; store(db);
-    return later({ token: t, role: s.role, name: s.display_name, class_code: s.class_code, level: s.level, must_change: !!s.must_change });
+    return later({ token: t, role: s.role, name: s.english_name || s.display_name, class_code: s.class_code, level: s.level, must_change: !!s.must_change });
   },
   async logout(t) { const db = load(); delete db.tokens[t]; store(db); return null; },
   async me(t) {
     const db = load(), s = auth(db, t);
-    return later({ id: s.id, name: s.display_name, username: s.username, class_code: s.class_code, role: s.role, level: s.level,
+    return later({ id: s.id, name: s.english_name || s.display_name, english_name: s.english_name || null, username: s.username, class_code: s.class_code, role: s.role, level: s.level,
       is_admin: !!s.is_admin, must_change: !!s.must_change,
       xp_total: s.xp_total, xp_week: xpSince(db, s.id, weekStart()), baseline_done: db.attempts.some(a => a.student_id === s.id && a.mode === "baseline") });
   },
@@ -164,11 +165,11 @@ const demo = {
     const ws = weekStart();
     const sort = arr => arr.sort((a, b) => b.xp - a.xp || a.name.localeCompare(b.name));
     const improved = kids.map(k => { const b = hist(db, k.id).filter(a => a.mode === "baseline");
-      return b.length >= 2 ? { name: k.display_name, me: k.id === s.id, gain: pc(b[b.length - 1]) - pc(b[0]) } : null; })
+      return b.length >= 2 ? { name: k.english_name || k.display_name, me: k.id === s.id, gain: pc(b[b.length - 1]) - pc(b[0]) } : null; })
       .filter(Boolean).sort((a, b) => b.gain - a.gain);
     return later({ class_code: cls,
-      week: sort(kids.map(k => ({ name: k.display_name, me: k.id === s.id, xp: xpSince(db, k.id, ws) }))),
-      all: sort(kids.map(k => ({ name: k.display_name, me: k.id === s.id, xp: k.xp_total }))), improved });
+      week: sort(kids.map(k => ({ name: k.english_name || k.display_name, me: k.id === s.id, xp: xpSince(db, k.id, ws) }))),
+      all: sort(kids.map(k => ({ name: k.english_name || k.display_name, me: k.id === s.id, xp: k.xp_total }))), improved });
   },
   async teacherClasses(t) {
     const db = load(), s = teacher(db, t);
@@ -184,14 +185,14 @@ const demo = {
       h.forEach(a => (a.answers || []).forEach(x => { const k = skills[x.skill] = skills[x.skill] || { right: 0, total: 0 }; k.total++; if (x.first_try) k.right++; }));
       const traps = {}; h.forEach(a => (a.answers || []).forEach(x => { if ((x.skill !== "Listening" && x.skill !== "Trap game") || !x.trap) return;
         const k = traps[x.trap] = traps[x.trap] || { caught: 0, total: 0 }; k.total++; if (!x.first_try) k.caught++; }));
-      return { id: s.id, name: s.display_name, username: s.username, level: s.level, xp_total: s.xp_total, xp_week: xpSince(db, s.id, ws),
+      return { id: s.id, name: s.display_name, english_name: s.english_name || null, username: s.username, level: s.level, xp_total: s.xp_total, xp_week: xpSince(db, s.id, ws),
         texts_done: h.filter(a => a.mode === "practice").length, baseline_first: b[0] ? pc(b[0]) : null,
         baseline_latest: b.length ? pc(b[b.length - 1]) : null, last_active: h.length ? h[h.length - 1].created_at : null, skills, traps, lab: labOverview(h) };
     }));
   },
   async teacherStudent(t, id) {
     const db = load(); ofStudent(db, t, id); const s = db.students.find(x => x.id === id);
-    return later({ student: { id: s.id, name: s.display_name, username: s.username, class_code: s.class_code, level: s.level, xp_total: s.xp_total }, history: hist(db, id) });
+    return later({ student: { id: s.id, name: s.display_name, english_name: s.english_name || null, username: s.username, class_code: s.class_code, level: s.level, xp_total: s.xp_total }, history: hist(db, id) });
   },
   async resetPin(t, id, pin) {
     const db = load(); ofStudent(db, t, id);
@@ -221,8 +222,14 @@ const demo = {
     const db = load(); ofClass(db, t, c);
     const out = db.students.filter(x => x.class_code === c && x.role === "student").sort((a, b) => a.username.localeCompare(b.username))
       .map(x => { x.pin = newPin(); Object.keys(db.tokens).forEach(k => { if (db.tokens[k] === x.id) delete db.tokens[k]; });
-        return { no: numOf(x.username), name: x.display_name, username: x.username, pin: x.pin }; });
+        return { no: numOf(x.username), name: x.display_name, english_name: x.english_name || null, username: x.username, pin: x.pin }; });
     store(db); return later({ class_code: c, students: out });
+  },
+  async englishNames(t, c, list) {
+    const db = load(); ofClass(db, t, c); let n = 0;
+    (list || []).forEach(x => { const s = db.students.find(k => k.id === x.id && k.class_code === c && k.role === "student");
+      if (s) { s.english_name = String(x.english || "").trim().slice(0, 40) || null; n++; } });
+    store(db); return later(n);
   },
   async removeStudent(t, id) { const db = load(); ofStudent(db, t, id);
     db.students = db.students.filter(x => x.id !== id); db.attempts = db.attempts.filter(a => a.student_id !== id); store(db); return null; },

@@ -90,9 +90,9 @@ function draw() {
       <div class="stat gold"><b>${rows.reduce((t, r) => t + r.xp_week, 0)}</b><span>class XP this week</span></div></div>
     <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"], ["live", "Team escape room"], ["ai", "AI marking"], ["manage", "Manage class"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
   if (tab === "overview") {
-    h += `<div class="tbl"><table><thead><tr><th>Student</th><th>Username</th><th>Level</th><th class="num" title="First baseline and latest baseline or Checkpoint check, as a percentage">Baseline / check</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th title="Listening Lab: the level the next mission starts on, the best level reached and missions done">Listening Lab</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
+    h += `<div class="tbl"><table><thead><tr><th>Student</th><th>English name</th><th>Username</th><th>Level</th><th class="num" title="First baseline and latest baseline or Checkpoint check, as a percentage">Baseline / check</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th title="Listening Lab: the level the next mission starts on, the best level reached and missions done">Listening Lab</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
       rows.map(r => { const w = weakest(r.skills || {});
-        return `<tr><td><button class="linkbtn" style="color:var(--teal);text-align:left" data-s="${r.id}">${U.esc(r.name)}</button></td><td>${U.esc(r.username)}</td>
+        return `<tr><td><button class="linkbtn" style="color:var(--teal);text-align:left" data-s="${r.id}">${U.esc(r.name)}</button></td><td>${r.english_name ? U.esc(r.english_name) : `<span class="note">–</span>`}</td><td>${U.esc(r.username)}</td>
           <td><span class="lvl">${U.levelName(r.level)}</span></td>
           <td class="num">${r.baseline_first == null ? "–" : r.baseline_latest !== r.baseline_first ? `${r.baseline_first}% → ${r.baseline_latest}%` : r.baseline_first + "%"}</td>
           <td class="num">${r.xp_week}</td><td class="num">${r.xp_total}</td><td class="num">${r.texts_done}</td><td>${labCell(r.lab)}</td><td>${ago(r.last_active)}</td>
@@ -182,9 +182,12 @@ async function studentView(id) {
   let d; try { d = await api.teacherStudent(session.token, id); } catch (e) { $app.innerHTML = `<p class="err">${U.esc(e.message)}</p>`; return; }
   const s = d.student;
   $app.innerHTML = `<div class="narrow pop"><div class="row"><button class="linkbtn" style="color:var(--teal)" id="back">← Class ${U.esc(s.class_code)}</button></div>
-    <div class="hero"><p class="eyebrow">${U.esc(s.username)}</p><h1>${U.esc(s.name)}</h1></div>
+    <div class="hero"><p class="eyebrow">${U.esc(s.username)}${s.english_name ? ` · ${U.esc(s.english_name)}` : ""}</p><h1>${U.esc(s.name)}</h1></div>
     ${U.trackerHTML(d.history, s, { links: false })}
     ${dodgeHTML(d.history)}
+    <form class="panel" id="en"><h3>English name</h3><p class="note">The student sees this name when they sign in, and on the leaderboard.</p>
+      <div class="row"><input type="text" id="enn" maxlength="40" value="${U.esc(s.english_name || "")}" placeholder="for example Alex" style="max-width:14em"><button class="btn small" type="submit">Save</button></div>
+      <p class="note" id="enm" aria-live="polite"></p></form>
     <form class="panel" id="pin"><h3>Reset PIN</h3><p class="note">Use this if the student forgets their PIN. They will be signed out on their devices.</p>
       <div class="row"><input type="tel" id="np" inputmode="numeric" maxlength="4" placeholder="New 4-digit PIN" style="max-width:12em"><button class="btn small" type="submit">Set PIN</button></div>
       <p class="note" id="pm" aria-live="polite"></p></form>
@@ -196,6 +199,12 @@ async function studentView(id) {
     catch (e) { document.getElementById("rmm").innerHTML = `<span class="err">${U.esc(e.message)}</span>`; }
   };
   document.getElementById("back").onclick = () => draw();
+  document.getElementById("en").addEventListener("submit", async ev => {
+    ev.preventDefault(); const m = document.getElementById("enm"), v = document.getElementById("enn").value.trim();
+    try { await api.englishNames(session.token, s.class_code, [{ id, english: v }]); m.textContent = v ? "Saved." : "Removed.";
+      const r = rows.find(x => x.id === id); if (r) r.english_name = v || null; }
+    catch (e) { m.innerHTML = `<span class="err">${U.esc(e.message)}</span>`; }
+  });
   document.getElementById("pin").addEventListener("submit", async ev => {
     ev.preventDefault();
     const m = document.getElementById("pm");
@@ -289,6 +298,19 @@ function addClassView(first) {
   });
 }
 
+// "Name<tab>English name" lines, matched to the class by name (ignoring capitals, spaces and a number in front).
+const nameKey = t => t.normalize("NFC").toLowerCase().replace(/^\s*\d+[\s.,)\-]*/, "").replace(/\s+/g, " ").trim();
+function matchEnglish(text, students) {
+  const list = [], missing = [];
+  text.split(/\r?\n/).forEach(line => {
+    const parts = line.includes("\t") ? line.split("\t") : line.split("|");
+    if (parts.length < 2 || !nameKey(parts[0])) return;
+    const st = students.find(r => nameKey(r.name) === nameKey(parts[0]));
+    const en = parts.slice(1).join(" ").trim();
+    if (st) list.push({ id: st.id, english: /^[-–—]*$/.test(en) ? "" : en }); else missing.push(parts[0].trim());
+  });
+  return { list, missing };
+}
 function manageHTML() {
   const others = me.is_admin ? `<form class="panel" id="mv"><h3>Give this class to another teacher</h3>
       <p class="note">They will see it on their dashboard. Students keep their logins and progress.</p>
@@ -296,6 +318,9 @@ function manageHTML() {
       <p class="note" id="mvm" aria-live="polite"></p></form>` : "";
   return `<form class="panel" id="ad"><h3>Add students to ${U.esc(cls)}</h3>${namesField("more")}
       <div class="row"><button class="btn small" type="submit">Add and print their logins</button></div><p class="note" id="adm" aria-live="polite"></p></form>
+    <form class="panel" id="enf"><h3>English names</h3><p class="note">One student per line: their name as it is on the site, then a tab (or a | sign), then their English name. You can paste two columns from a spreadsheet. Leave the English name empty (or write -) to remove it.</p>
+      <label class="fld" for="enl" style="font-weight:400"><textarea id="enl" rows="10">${U.esc(rows.map(r => `${r.name}\t${r.english_name || ""}`).join("\n"))}</textarea></label>
+      <div class="row"><button class="btn small" type="submit">Save English names</button></div><p class="note" id="enfm" aria-live="polite"></p></form>
     <div class="panel"><h3>New login sheet</h3><p class="note">PINs are stored scrambled, so the site can't show old ones. This gives every student in ${U.esc(cls)} a new PIN and prints a fresh sheet. They are signed out, but their progress is kept.</p>
       <div class="row"><button class="btn small alt" id="np2">New PINs for the whole class</button></div><p class="note" id="npm" aria-live="polite"></p></div>
     ${others}
@@ -309,6 +334,13 @@ function manageWire() {
   document.getElementById("ad").addEventListener("submit", async ev => { ev.preventDefault();
     try { const r = await api.addStudents(session.token, cls, parseNames(document.getElementById("more").value)); await refreshClasses(); sheetView(r, "New students"); }
     catch (e) { say("adm", e); } });
+  document.getElementById("enf").addEventListener("submit", async ev => { ev.preventDefault();
+    const { list, missing } = matchEnglish(document.getElementById("enl").value, rows), m = document.getElementById("enfm");
+    if (!list.length) return say("enfm", new Error("No names matched students in " + cls + "."));
+    try { const n = await api.englishNames(session.token, cls, list);
+      list.forEach(x => { const r = rows.find(k => k.id === x.id); if (r) r.english_name = x.english || null; });
+      m.innerHTML = `Saved ${n} English name${n === 1 ? "" : "s"}.` + (missing.length ? ` <span class="err">Not found in ${U.esc(cls)}: ${missing.map(U.esc).join(", ")}</span>` : ""); }
+    catch (e) { say("enfm", e); } });
   document.getElementById("np2").onclick = async () => {
     if (!confirm(`Give every student in ${cls} a new PIN? Their old PINs stop working.`)) return;
     try { sheetView(await api.newPins(session.token, cls), "New PINs"); } catch (e) { say("npm", e); } };
@@ -335,8 +367,8 @@ function sheetView(r, what) {
     <div class="lsheet"><h2 class="printonly">${U.esc(r.class_code)} logins (teacher copy)</h2>
       <p>Website: <b>${U.esc(site)}</b>. Students sign in with their username and 4-digit PIN.</p>
       <div class="tbl"><table><thead><tr><th>No</th><th>Name</th><th>Username</th><th>PIN</th></tr></thead><tbody>${
-        list.map(x => `<tr><td>${x.no}</td><td>${U.esc(x.name)}</td><td class="mono">${U.esc(x.username)}</td><td class="mono">${U.esc(x.pin)}</td></tr>`).join("")}</tbody></table></div>
-      <div class="slips">${list.map(x => `<div class="slip"><div class="sl-t">Checkpoint Reading · ${U.esc(r.class_code)}</div><div class="sl-n">${U.esc(x.name)}</div>
+        list.map(x => `<tr><td>${x.no}</td><td>${U.esc(x.name)}${x.english_name ? ` (${U.esc(x.english_name)})` : ""}</td><td class="mono">${U.esc(x.username)}</td><td class="mono">${U.esc(x.pin)}</td></tr>`).join("")}</tbody></table></div>
+      <div class="slips">${list.map(x => `<div class="slip"><div class="sl-t">Checkpoint Reading · ${U.esc(r.class_code)}</div><div class="sl-n">${U.esc(x.name)}${x.english_name ? ` (${U.esc(x.english_name)})` : ""}</div>
         <div class="sl-l">Website</div><div class="sl-u">${U.esc(site)}</div>
         <div class="sl-g"><div><div class="sl-l">Username</div><b>${U.esc(x.username)}</b></div><div><div class="sl-l">PIN</div><b>${U.esc(x.pin)}</b></div></div>
         <div class="sl-l">Keep your PIN secret.</div></div>`).join("")}</div></div>`);
