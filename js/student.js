@@ -171,6 +171,7 @@ async function draw() {
   if (view === "lab") return labHubView();
   if (view === "glab") return glabHubView();
   if (view === "build") return gbHubView();
+  if (view.startsWith("lesson-") && GE.GBLOCKS[view.slice(7)]) return gbLessonView(view.slice(7));
   const rv = /^rlab(?:-(\d))?$/.exec(view);
   if (rv) return rlabHubView(rv[1] ? +rv[1] : rlUnitNow());
   const m = /^unit-(\d)(?:\/(\w+))?$/.exec(view);
@@ -2091,6 +2092,19 @@ function gbHubView() {
   $app.querySelectorAll("[data-gbk]").forEach(g => { const open = () => gbBrickSheet(g.dataset.gbk, st, due); g.onclick = open; g.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); } }; });
   bindActivities();
 }
+// Any brick's lesson, to watch again: the cartoon or animation, the rule and "Your turn". Nothing is saved.
+function gbLessonView(id) {
+  const sh = document.getElementById("sheet"); if (sh) sh.hidden = true;
+  const L = GB.blockLesson(id);
+  $app.innerHTML = `<div class="narrow pop"><div class="row back"><a href="#build">← My tower</a></div>
+    <p class="eyebrow">Grammar Builder · Lesson</p><h1><span class="gbbrickh">${U.esc(L.name)}</span></h1>
+    ${SC.hasScene(id) ? SC.sceneHTML(id) : A.animHTML(id)}
+    <div class="strat gblesson"><p style="margin:0">${glx(L.say)}</p>
+    <div class="glbank-in" style="margin-top:8px">${L.ex.map(([a, c]) => `<span>${U.esc(a)} → <b>${U.esc(c)}</b></span>`).join("")}</div></div>
+    ${A.buildHTML(id)}
+    <div class="row"><a class="btn alt" href="#build">Back to my tower</a></div></div>`;
+  glAnim(); top();
+}
 function gbBrickSheet(id, st, due) {
   const b = GE.GBLOCKS[id], s = T.brickState(st, id, { next: GE.planSession(st).learn, due });
   let el = document.getElementById("sheet");
@@ -2100,7 +2114,8 @@ function gbBrickSheet(id, st, due) {
   el.innerHTML = `<div class="sheet-in pop" role="dialog" aria-label="${U.esc(b.name)}">
     <div class="row" style="justify-content:space-between"><b class="sw">${U.esc(b.name)}</b><button class="xbtn" id="sclose" aria-label="Close">✕</button></div>
     <p style="margin:0">${what}</p>
-    ${b.pre.length ? `<p class="note" style="margin:0">Built on: ${b.pre.map(q => `${GE.isMastered(st, q) ? "✅" : "⬜"} ${U.esc(GE.GBLOCKS[q].name)}`).join(" · ")}</p>` : `<p class="note" style="margin:0">A foundation brick.</p>`}</div>`;
+    ${b.pre.length ? `<p class="note" style="margin:0">Built on: ${b.pre.map(q => `${GE.isMastered(st, q) ? "✅" : "⬜"} ${U.esc(GE.GBLOCKS[q].name)}`).join(" · ")}</p>` : `<p class="note" style="margin:0">A foundation brick.</p>`}
+    <div class="row"><a class="btn small" href="#lesson-${id}">${SC.hasScene(id) ? "🎬 Watch the cartoon" : "▶ Watch the lesson"}</a></div></div>`;
   el.hidden = false; S.play("tap");
   document.getElementById("sclose").onclick = () => { el.hidden = true; };
 }
