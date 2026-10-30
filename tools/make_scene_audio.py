@@ -19,9 +19,9 @@ def scenes():
     js = 'import("./js/scenes.js").then(m => console.log(JSON.stringify(Object.fromEntries(Object.entries({ ...m.SCENES, ...m.CUTS }).map(([k, v]) => [k, v.beats.map(b => ({ who: b.who, say: b.say }))])))))'
     return json.loads(subprocess.check_output(["node", "-e", js], cwd=ROOT))
 
-def spoken(t):
-    # No emoji; capitals used for stress are read as normal words; V3 is read as "V three".
-    t = t.replace("…", ", ")
+def spoken(t, pause=", "):
+    # No emoji; capitals used for stress are read as normal words; V3 is read as "V three". Google reads "..." as a pause.
+    t = t.replace("…", pause)
     t = re.sub(r"[^\w\s.,!?'\"+:;()-]", "", t)
     t = re.sub(r"\b([A-Z]{2,})\b", lambda m: m.group(1).lower() if m.group(1) not in ("V",) else m.group(1), t)
     return t.replace("V3", "V three").replace("+", "plus").strip()
@@ -44,7 +44,7 @@ def main():
     vers = {}
     for sid, beats in scenes().items():
         for i, b in enumerate(beats):
-            text = spoken(b["say"])
+            text = spoken(b["say"], "... " if use_google else ", ")
             wav = os.path.join(tempfile.gettempdir(), "scene.wav")
             if use_google:
                 voice, speed = GOOGLE[b["who"]], 1.0
