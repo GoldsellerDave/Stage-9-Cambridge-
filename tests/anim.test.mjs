@@ -18,3 +18,7 @@ test("Your turn: the goal sentence checks right, and no extra tile is also a goa
     assert.ok(buildCheck(t.goal, t.goal), id); assert.ok(!buildCheck(t.goal, [...t.goal].reverse()) || t.goal.length < 2, id);
     t.extra.forEach(x => assert.ok(!t.goal.map(g => g.toLowerCase()).includes(x.toLowerCase()), `${id}: ${x}`)); }
 });
+test("scenes: every beat has a speaker from the cast and a line", async () => {
+  const { SCENES } = await import("../js/scenes.js");
+  for (const [id, sc] of Object.entries(SCENES)) { assert.ok(ANIMS[id], id); sc.beats.forEach(b => { assert.ok(["zip", "nova"].includes(b.who) && b.say && b.ms > 1000, id); }); }
+});

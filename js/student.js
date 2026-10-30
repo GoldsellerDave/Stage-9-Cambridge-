@@ -25,6 +25,7 @@ import * as GE from "./gengine.js";
 import * as GB from "./gbank.js";
 import * as T from "./tower.js";
 import * as A from "./anim.js";
+import * as SC from "./scenes.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -1785,7 +1786,7 @@ const glSet = f => f.set ? [3, 4] : [0, 1, 2];
 const glCheckKey = (f, k) => `blk:${f.id}:${f.set}:${k}`;
 // Start the lesson animation and the "Your turn" tiles, if the page has them (anim.js).
 function glAnim() {
-  A.mount(); A.mountBuild(undefined, ok => S.play(ok ? "ok" : "bad"));
+  A.mount(); SC.mountScene(); A.mountBuild(undefined, ok => S.play(ok ? "ok" : "bad"));
 }
 function glBlockView() {
   const f = glFrame(), b = GL.BLOCKS[f.id], set = glSet(f), redraw = () => { saveRun(); glRunView(); backButton(); };
@@ -1797,7 +1798,7 @@ function glBlockView() {
       <p class="lede">${run.warm && run.bstack.length === 1 ? `Last time this was tricky, ${U.esc(firstName())}. Let's make it solid before the mission.`
         : f.back ? "Now you've fixed the step underneath, try this one again."
         : run.bstack.length > 1 ? "Those mistakes come from something underneath. Let's fix that first." : `Your mistakes show this building block needs work, ${U.esc(firstName())}. Two minutes, then back to the mission.`}</p>
-      ${A.animHTML(f.id)}
+      ${SC.hasScene(f.id) ? SC.sceneHTML(f.id) : A.animHTML(f.id)}
       <div class="strat"><b>${U.esc(b.name)}</b><p style="margin:6px 0 0">${glx(b.say)}</p>
       <div class="glbank-in" style="margin-top:8px">${b.ex.map(([a, c]) => `<span>${U.esc(a)} → <b>${U.esc(c)}</b></span>`).join("")}</div></div>
       ${f.back ? "" : A.buildHTML(f.id)}
@@ -2140,7 +2141,7 @@ function gbRunView() {
       <p class="eyebrow" style="margin-top:6px">${e.why === "back" ? "⬆️ Back up" : e.why === "again" ? "🔍 Look again" : e.why === "drop" ? "🔩 Foundation brick" : "🧱 New brick"}</p>
       <h1><span class="gbbrickh">${U.esc(b.name)}</span></h1>
       ${e.why === "back" ? `<p class="lede">The brick underneath is fixed. Let's try this one again.</p>` : e.why === "again" ? `<p class="lede">Tricky one! Read the rule again, then try two more.</p>` : ""}
-      ${A.animHTML(e.block)}
+      ${SC.hasScene(e.block) ? SC.sceneHTML(e.block) : A.animHTML(e.block)}
       <div class="strat gblesson"><p style="margin:0">${glx(L.say)}</p>
       <div class="glbank-in" style="margin-top:8px">${L.ex.map(([a, c]) => `<span>${U.esc(a)} → <b>${U.esc(c)}</b></span>`).join("")}</div></div>
       ${e.why === "back" || e.why === "again" ? "" : A.buildHTML(e.block)}
