@@ -38,6 +38,7 @@ const live = {
   teacherClasses: t => rpc("ck_teacher_classes", { p_token: t }),
   teacherClass: (t, c) => rpc("ck_teacher_class", { p_token: t, p_class: c }),
   teacherStudent: (t, id) => rpc("ck_teacher_student", { p_token: t, p_student: id }),
+  teacherGrammar: (t, c) => rpc("ck_teacher_grammar", { p_token: t, p_class: c }),
   resetPin: (t, id, pin) => rpc("ck_teacher_reset_pin", { p_token: t, p_student: id, p_pin: pin }),
   aiMark,
   aiLog: (t, c) => rpc("ck_teacher_ai_log", { p_token: t, p_class: c }),
@@ -193,6 +194,12 @@ const demo = {
   async teacherStudent(t, id) {
     const db = load(); ofStudent(db, t, id); const s = db.students.find(x => x.id === id);
     return later({ student: { id: s.id, name: s.display_name, english_name: s.english_name || null, username: s.username, class_code: s.class_code, level: s.level, xp_total: s.xp_total }, history: hist(db, id) });
+  },
+  async teacherGrammar(t, c) {
+    const db = load(), G = ["Grammar", "Grammar Block", "Grammar Lab"]; ofClass(db, t, c);
+    return later(db.students.filter(s => s.class_code === c && s.role === "student").sort((a, b) => a.username.localeCompare(b.username)).map(s => ({
+      id: s.id, name: s.display_name, english_name: s.english_name || null, username: s.username,
+      history: hist(db, s.id).map(a => ({ created_at: a.created_at, text_id: a.text_id, answers: (a.answers || []).filter(x => G.includes(x.skill)) })).filter(a => a.answers.length) })));
   },
   async resetPin(t, id, pin) {
     const db = load(); ofStudent(db, t, id);

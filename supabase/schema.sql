@@ -597,6 +597,22 @@ begin
                          from ck_live_teams t where t.live_id = l.id), '[]'::json));
 end $$;
 
+/* ---------------- Grammar Builder: class towers ---------------- */
+-- Every grammar answer of each student in a class, oldest first. The page works out each student's tower from them
+-- (gengine.js mastery), the same way the student's own page does, so no mastery table is needed.
+create or replace function ck_teacher_grammar(p_token uuid, p_class text) returns json
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_class(p_token, p_class);
+begin
+  return coalesce((select json_agg(r order by r.username) from (
+    select st.id, st.display_name as name, st.english_name, st.username,
+      coalesce((select json_agg(json_build_object('created_at', a.created_at, 'text_id', a.text_id, 'answers', a.g) order by a.created_at) from (
+         select a.created_at, a.text_id, (select jsonb_agg(e) from jsonb_array_elements(a.answers) e
+                                           where e->>'skill' in ('Grammar', 'Grammar Block', 'Grammar Lab')) as g
+           from ck_attempts a where a.student_id = st.id) a where a.g is not null), '[]'::json) as history
+    from ck_students st where st.class_code = p_class and st.role = 'student') r), '[]'::json);
+end $$;
+
 -- Only the public entry points can be called from the website.
 revoke execute on function ck_auth(uuid), ck_require_teacher(uuid), ck_require_class(uuid, text), ck_require_student_of(uuid, uuid),
   ck_require_admin(uuid), ck_can_see(ck_students, text), ck_new_pin(), ck_new_password() from public, anon, authenticated;
@@ -609,5 +625,5 @@ grant execute on function ck_login(text, text), ck_logout(uuid), ck_me(uuid), ck
   ck_admin_add_teacher(uuid, text, text), ck_admin_reset_teacher(uuid, uuid), ck_admin_remove_teacher(uuid, uuid),
   ck_admin_move_class(uuid, text, uuid), ck_live_start(uuid, text, int), ck_live_control(uuid, text, text),
   ck_live_board(uuid, text), ck_live_join(uuid, text, text), ck_live_progress(uuid, text, text, int, int, int, boolean),
-  ck_live_feed(uuid, text)
+  ck_live_feed(uuid, text), ck_teacher_grammar(uuid, text)
   to anon;

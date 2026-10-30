@@ -5,6 +5,8 @@ import * as U from "./ui.js";
 import { ESCAPES, GUARD_SECONDS } from "./escape.js";
 import { TRAPS, LAB_LEVELS } from "./lab.js";
 import { dodgeLog } from "./games.js";
+import * as GE from "./gengine.js";
+import * as T from "./tower.js";
 
 const $app = document.getElementById("app");
 const $meta = document.getElementById("meta");
@@ -88,7 +90,7 @@ function draw() {
       <div class="stat"><b>${lv.join(" · ")}</b><span>Easier · Core · Harder · Challenge</span></div>
       <div class="stat"><b>${active}</b><span>active in the last 7 days</span></div>
       <div class="stat gold"><b>${rows.reduce((t, r) => t + r.xp_week, 0)}</b><span>class XP this week</span></div></div>
-    <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"], ["live", "Team escape room"], ["ai", "AI marking"], ["manage", "Manage class"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
+    <div class="tabs" role="tablist" aria-label="View">${[["overview", "Students"], ["heat", "Skills heat map"], ["board", "Leaderboard"], ["live", "Team escape room"], ["grammar", "Grammar towers"], ["ai", "AI marking"], ["manage", "Manage class"]].map(([k, l]) => `<button role="tab" aria-selected="${k === tab}" data-t="${k}">${l}</button>`).join("")}</div>`;
   if (tab === "overview") {
     h += `<div class="tbl"><table><thead><tr><th>Student</th><th>English name</th><th>Username</th><th>Level</th><th class="num" title="First baseline and latest baseline or Checkpoint check, as a percentage">Baseline / check</th><th class="num">XP week</th><th class="num">XP total</th><th class="num">Texts</th><th title="Listening Lab: the level the next mission starts on, the best level reached and missions done">Listening Lab</th><th>Last active</th><th>Weakest skill</th></tr></thead><tbody>${
       rows.map(r => { const w = weakest(r.skills || {});
@@ -119,6 +121,9 @@ function draw() {
     h += manageHTML();
   } else if (tab === "live") {
     h += `<div id="live"><p class="note">Loading…</p></div>`;
+  } else if (tab === "grammar") {
+    h += `<p class="lede">Grammar Builder: each student's tower of grammar bricks (past forms and the passive, Stages 7 to 9). Built = mastered. Students move by their own mastery, not by their class's stage.</p>
+      <div id="gtow"><p class="note">Loading…</p></div>`;
   } else if (tab === "ai") {
     h += `<p class="lede">Short answers the keyword marker missed are checked by AI. Here are its last 200 decisions. Flag any you disagree with: a flag is a note for you and does not change XP or scores.</p>
       <div id="ailog"><p class="note">Loading…</p></div>`;
@@ -136,6 +141,34 @@ function draw() {
   if (tab === "live") liveView(); else stopLive();
   if (tab === "board") boardView();
   if (tab === "ai") aiView();
+  if (tab === "grammar") grammarView();
+}
+
+// Grammar towers: one row per student, one small square per brick (in tower order, foundations first), and the bricks the
+// class is stuck on. Mastery is worked out here from each student's grammar answers (gengine.js).
+async function grammarView() {
+  const el = document.getElementById("gtow");
+  let list; try { list = await api.teacherGrammar(session.token, cls); }
+  catch (e) { el.innerHTML = `<p class="err">${U.esc(e.message)}</p>${LIVE ? `<p class="note">If this says the function doesn't exist, run grammar-towers.sql in the Supabase SQL editor once.</p>` : ""}`; return; }
+  const order = GE.layers().flat(), now = Date.now();
+  const kids = list.map(k => { const st = GE.mastery(k.history), done = order.filter(id => GE.isMastered(st, id)), due = GE.dueReviews(st, now);
+    const last = k.history.filter(h => h.text_id === "gbuild" || h.text_id === "gplace").pop();
+    return { ...k, st, done, due, next: GE.planSession(st).learn, placed: GE.placed(k.history), last: last ? last.created_at : null }; });
+  const started = kids.filter(k => k.placed);
+  // Bricks the class is stuck on: the next brick for several students, or tried 3+ times and still low.
+  const stuck = order.map(id => ({ id, next: started.filter(k => k.next === id).length, low: kids.filter(k => k.st[id] && k.st[id].n >= 3 && !GE.isMastered(k.st, id)).length }))
+    .filter(x => x.next + x.low).sort((a, b) => (b.low * 2 + b.next) - (a.low * 2 + a.next)).slice(0, 6);
+  el.innerHTML = `<div class="stats"><div class="stat"><b>${started.length}/${kids.length}</b><span>did the foundation scan</span></div>
+      <div class="stat"><b>${started.length ? Math.round(started.reduce((t, k) => t + k.done.length, 0) / started.length) : 0} / ${order.length}</b><span>average bricks built</span></div>
+      <div class="stat"><b>${kids.filter(k => k.due.length).length}</b><span>with cracked bricks to check</span></div></div>
+    ${stuck.length ? `<div class="panel"><h3>Bricks to teach</h3><ul>${stuck.map(x => `<li><b>${U.esc(GE.GBLOCKS[x.id].name)}</b> <span class="note">${x.low ? `${x.low} stuck after 3+ tries` : ""}${x.low && x.next ? " · " : ""}${x.next ? `next for ${x.next}` : ""} · first taught ${U.esc(GE.GBLOCKS[x.id].first.join(", "))}</span></li>`).join("")}</ul></div>` : ""}
+    <div class="legend"><span><i class="gtw done"></i>built</span><span><i class="gtw due"></i>built, review due</span><span><i class="gtw build"></i>building</span><span><i class="gtw next"></i>next</span><span><i class="gtw todo"></i>not yet</span></div>
+    <div class="tbl"><table><thead><tr><th>Student</th><th>Rank</th><th class="num">Bricks</th><th>Tower (foundations → top)</th><th>Next brick</th><th>Last build</th></tr></thead><tbody>${
+      kids.map(k => { const r = T.rankOf(k.done.length);
+        return `<tr><td>${U.esc(k.english_name || k.name)}</td><td style="white-space:nowrap">${k.placed ? `${r[2]} ${r[1]}` : `<span class="note">no scan yet</span>`}</td><td class="num">${k.done.length}</td>
+          <td><span class="gtrow">${order.map(id => `<i class="gtw ${T.brickState(k.st, id, { next: k.next, due: k.due })}" title="${U.esc(GE.GBLOCKS[id].name)}"></i>`).join("")}</span></td>
+          <td>${k.next ? U.esc(GE.GBLOCKS[k.next].name) : "–"}</td><td>${ago(k.last)}</td></tr>`; }).join("")
+    }</tbody></table></div>`;
 }
 
 async function aiView() {
@@ -177,6 +210,14 @@ function dodgeHTML(history) {
       <td>${U.esc(r.stem)}<br><span class="note">${U.esc(LAB_LEVELS[r.tier])}</span></td><td>${U.esc(r.answer)}</td><td>${r.trap === "prime" ? "–" : U.esc(TRAPS[r.trap].name)}</td>
       <td>${r.picked.map(t => `“${U.esc(t)}”`).join("<br>") || "–"}</td><td class="num" style="white-space:nowrap">${r.right} of ${r.tries}</td><td style="white-space:nowrap">${r.last ? "✓ Got it" : "✗ To learn"}</td></tr>`).join("")}</tbody></table></div></div>`;
 }
+// The student's grammar tower, as they see it, with the bricks to work on.
+function towerPanel(history) {
+  if (!GE.placed(history) && !history.some(h => (h.answers || []).some(a => a.eng))) return "";
+  const st = GE.mastery(history), due = GE.dueReviews(st), next = GE.planSession(st).learn, done = GE.layers().flat().filter(id => GE.isMastered(st, id)), r = T.rankOf(done.length);
+  return `<div class="panel"><h3>Grammar tower: ${r[2]} ${r[1]}, ${done.length} of ${Object.keys(GE.GBLOCKS).length} bricks</h3>
+    <div class="gbtower" style="max-width:420px">${T.towerSVG(st, { next, due })}</div>
+    <p class="note">Next brick: ${next ? U.esc(GE.GBLOCKS[next].name) : "all built"}${due.length ? ` · review due: ${due.map(id => U.esc(GE.GBLOCKS[id].name)).join(", ")}` : ""}</p></div>`;
+}
 async function studentView(id) {
   $app.innerHTML = `<p class="note">Loading…</p>`;
   let d; try { d = await api.teacherStudent(session.token, id); } catch (e) { $app.innerHTML = `<p class="err">${U.esc(e.message)}</p>`; return; }
@@ -184,6 +225,7 @@ async function studentView(id) {
   $app.innerHTML = `<div class="narrow pop"><div class="row"><button class="linkbtn" style="color:var(--teal)" id="back">← Class ${U.esc(s.class_code)}</button></div>
     <div class="hero"><p class="eyebrow">${U.esc(s.username)}${s.english_name ? ` · ${U.esc(s.english_name)}` : ""}</p><h1>${U.esc(s.name)}</h1></div>
     ${U.trackerHTML(d.history, s, { links: false })}
+    ${towerPanel(d.history)}
     ${dodgeHTML(d.history)}
     <form class="panel" id="en"><h3>English name</h3><p class="note">The student sees this name when they sign in, and on the leaderboard.</p>
       <div class="row"><input type="text" id="enn" maxlength="40" value="${U.esc(s.english_name || "")}" placeholder="for example Alex" style="max-width:14em"><button class="btn small" type="submit">Save</button></div>
