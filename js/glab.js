@@ -303,19 +303,19 @@ for (const m of GLAB) {
 // Grammar words that students may not know yet. In the Lab, these words are buttons: tapping one opens a short
 // explanation with examples and the Vietnamese name. TERM_RE finds them in any Lab text (hints, rules, feedback).
 export const TERMS = {
-  pp: { t: "past participle", vi: "quá khứ phân từ (V3)", def: "The third form of a verb. Regular verbs add -ed, like the past simple. Irregular verbs have their own form, so learn them.",
+  pp: { t: "past participle", def: "The third form of a verb. Regular verbs add -ed, like the past simple. Irregular verbs have their own form, so learn them.",
     ex: [["clean", "cleaned"], ["repair", "repaired"], ["take", "taken"], ["see", "seen"], ["go", "gone"], ["fall", "fallen"]],
     tip: "Use it after have (must have taken) and after being (was being cleaned)." },
-  ps: { t: "past simple", vi: "quá khứ đơn (V2)", def: "The second form of a verb, for finished actions in the past: took, saw, went, fell.",
+  ps: { t: "past simple", def: "The second form of a verb, for finished actions in the past: took, saw, went, fell.",
     ex: [["take", "took"], ["see", "saw"], ["go", "went"], ["fall", "fell"]],
     tip: "Don't use it after have or being. must have took ✗ → must have taken ✓" },
-  pl: { t: "plural", vi: "số nhiều", def: "More than one. Plural nouns usually end in -s: statues, cameras, roads, tourists.",
+  pl: { t: "plural", def: "More than one. Plural nouns usually end in -s: statues, cameras, roads, tourists.",
     ex: [["one statue", "was being moved"], ["two statues", "were being moved"], ["I / he / she / it", "was"], ["you / we / they", "were"]],
     tip: "Find the noun. One → was. More than one → were." },
-  md: { t: "modal", vi: "động từ khiếm khuyết", def: "A small verb that shows how sure you are, or what is possible: must, might, may, could, can't.",
+  md: { t: "modal", def: "A small verb that shows how sure you are, or what is possible: must, might, may, could, can't.",
     ex: [["must have", "I'm sure it happened"], ["might / could have", "maybe it happened"], ["can't have", "I'm sure it didn't happen"]],
     tip: "modal + have + past participle = a guess about the past." },
-  pv: { t: "passive", vi: "câu bị động", def: "The thing receives the action. We use it when who did it isn't known or isn't important.",
+  pv: { t: "passive", def: "The thing receives the action. We use it when who did it isn't known or isn't important.",
     ex: [["Someone cleaned the hall.", "The hall was cleaned."], ["Someone was cleaning the hall.", "The hall was being cleaned."]],
     tip: "be + past participle. The hall didn't clean anything: someone cleaned it." }
 };
@@ -336,7 +336,7 @@ export const VERBS = {
 // checks[0..2] are the first try, checks[3..4] the retry after a lower block.
 const C = (stem, right, ...wrong) => ({ stem, opts: [{ t: right }, ...wrong.map(([t, why, b]) => ({ t, why, ...(b ? { b } : {}) }))] });
 export const BLOCKS = {
-  "modal-have": { name: "Modal + have + past participle", vi: "động từ khiếm khuyết + have + V3", kids: ["pp"],
+  "modal-have": { name: "Modal + have + past participle", kids: ["pp"],
     say: "A guess about the past has three parts: modal + have + past participle (V3). must have taken, might have gone, can't have seen. It's always have (never has or had), and always V3.",
     ex: [["must + have + taken", "must have taken"], ["might + have + gone", "might have gone"], ["can't + have + seen", "can't have seen"]],
     checks: [
@@ -345,7 +345,7 @@ export const BLOCKS = {
       C("They can't have ___ it.", "seen", ["saw", "saw is V2 (past simple). After have, use V3.", "pp"], ["see", "see is V1. After have, use V3.", "pp"]),
       C("Which sentence is a guess about the past?", "It must have rained.", ["It must rain a lot here.", "must + V1 is about now or a rule."], ["It must raining.", "This isn't a correct form. Use must have + V3."]),
       C("You ___ the email. You replied to it!", "must have read", ["must read it now", "must read is about now or a rule."], ["must have readed", "read is irregular: read, read, read.", "pp"])] },
-  certainty: { name: "How sure? must, might, can't", vi: "mức độ chắc chắn", kids: ["clues"],
+  certainty: { name: "How sure? must, might, can't", kids: ["clues"],
     say: "Modals show how sure the speaker is. must = I'm sure it's true. might / may / could = maybe. can't = I'm sure it's NOT true. The clues tell you which one to use.",
     ex: [["The lights are on.", "Someone must be home."], ["I don't know.", "He might be at school."], ["He's in Hanoi today.", "He can't be here."]],
     checks: [
@@ -354,7 +354,7 @@ export const BLOCKS = {
       C("He has just eaten a huge lunch. He ___ hungry now.", "can't be", ["must be", "After a huge lunch? The clue says he isn't.", "clues"], ["might be very", "The clue makes the speaker sure he isn't hungry.", "clues"]),
       C("Which word means \"I'm sure it's NOT true\"?", "can't", ["might", "might means maybe."], ["must", "must means sure it IS true."]),
       C("Which word means \"maybe\"?", "could", ["must", "must means sure it's true."], ["can't", "can't means sure it's not true."])] },
-  clues: { name: "Read the clue", vi: "đọc manh mối", kids: [],
+  clues: { name: "Read the clue", kids: [],
     say: "A clue tells you how sure to be. A strong clue (you can see it, hear it or prove it) → sure. No clear clue → maybe. A clue that makes it impossible → sure it's not true.",
     ex: [["I can hear music in her room.", "sure: she's home"], ["I don't know.", "maybe"], ["She was in Da Nang all day.", "sure: she wasn't here"]],
     checks: [
@@ -363,7 +363,7 @@ export const BLOCKS = {
       C("Clue: \"I don't know.\" How sure is the speaker?", "Not sure", ["Very sure it's true", "\"I don't know\" means not sure."], ["Sure it's not true", "\"I don't know\" means not sure either way."]),
       C("Clue: \"He got 100% in the test.\" Did he study?", "Almost sure: yes", ["Sure: no, he didn't", "100% is a strong clue that he studied."], ["We have no idea", "100% is a clue."]),
       C("Which clue makes you SURE?", "Her bag is open and empty.", ["Maybe someone saw it.", "maybe is not a strong clue."], ["I'm not sure about it.", "\"Not sure\" can't make you sure."])] },
-  pp: { name: "Past participles (V3)", vi: "quá khứ phân từ (V3)", kids: ["v123"],
+  pp: { name: "Past participles (V3)", kids: ["v123"],
     say: "After have and after being, English uses the past participle (V3). Regular verbs add -ed: clean → cleaned. Irregular verbs have their own V3: take → taken, go → gone.",
     ex: [["have + V3", "must have taken"], ["being + V3", "was being cleaned"], ["regular", "move → moved"], ["irregular", "steal → stolen"]],
     checks: [
@@ -372,7 +372,7 @@ export const BLOCKS = {
       C("The statues were being ___ (move).", "moved", ["moving", "-ing is not V3. After being, use V3.", "v123"], ["move", "move is V1. After being, use V3.", "v123"]),
       C("He can't have ___ (go) home.", "gone", ["went", "went is V2 (past simple). After have, use V3.", "v123"], ["goes", "goes is the present. After have, use V3.", "v123"]),
       C("The bridge was being ___ (build).", "built", ["builded", "build is irregular: build, built, built.", "v123"], ["building", "-ing is not V3. After being, use V3.", "v123"])] },
-  v123: { name: "Verb forms: V1, V2, V3", vi: "ba dạng của động từ", kids: [],
+  v123: { name: "Verb forms: V1, V2, V3", kids: [],
     say: "Every verb has three forms. V1 is the base (take). V2 is the past simple (took). V3 is the past participle (taken). Regular verbs: V2 and V3 are the same (cleaned, cleaned). Irregular verbs: learn them.",
     ex: [["go", "went · gone"], ["see", "saw · seen"], ["take", "took · taken"], ["clean", "cleaned · cleaned"]],
     checks: [
@@ -381,7 +381,7 @@ export const BLOCKS = {
       C("What is the V3 of repair?", "repaired", ["repairing", "-ing is not V3."], ["repair", "repair is V1. Regular verbs add -ed."]),
       C("What is the V3 of fall?", "fallen", ["fell", "fell is V2: it fell yesterday."], ["falled", "fall is irregular: fall, fell, fallen."]),
       C("Which list is V1, V2, V3?", "write, wrote, written", ["write, written, wrote", "V2 comes before V3. wrote is V2."], ["write, writed, writed", "write is irregular."])] },
-  "was-were": { name: "was or were?", vi: "was hay were", kids: ["sing-plural"],
+  "was-were": { name: "was or were?", kids: ["sing-plural"],
     say: "Use was with one thing (and with I, he, she, it). Use were with more than one thing (and with you, we, they).",
     ex: [["the hall", "was being cleaned"], ["two statues", "were being moved"], ["I / he / she / it", "was"], ["you / we / they", "were"]],
     checks: [
@@ -390,7 +390,7 @@ export const BLOCKS = {
       C("The children ___ being taken home.", "were", ["was", "children means more than one child.", "sing-plural"], ["are", "The story is in the past: was or were."]),
       C("My bag ___ being checked.", "was", ["were", "My bag is one thing.", "sing-plural"], ["been", "You need was or were."]),
       C("The bus and the car ___ being washed.", "were", ["was", "Two things: the bus AND the car.", "sing-plural"], ["is", "The story is in the past: was or were."])] },
-  "sing-plural": { name: "One or more than one?", vi: "số ít · số nhiều", kids: [],
+  "sing-plural": { name: "One or more than one?", kids: [],
     say: "Singular means one (a statue, the hall). Plural means more than one (statues, the halls). Most plurals end in -s. Some are different: children, people, men, women.",
     ex: [["statue", "statues"], ["camera", "cameras"], ["child", "children"], ["person", "people"]],
     checks: [
@@ -399,7 +399,7 @@ export const BLOCKS = {
       C("Which is singular (one)?", "the painting", ["the paintings", "-s means more than one."], ["the guards", "-s means more than one."]),
       C("\"The children\" is…", "plural", ["singular, only one", "one child, two children."], ["a verb", "children is a noun."]),
       C("Which noun is singular?", "the bridge", ["the roads", "-s means more than one."], ["the tourists", "-s means more than one."])] },
-  "active-passive": { name: "Doing it or receiving it? (passive)", vi: "chủ động · bị động", kids: ["doer"],
+  "active-passive": { name: "Doing it or receiving it? (passive)", kids: ["doer"],
     say: "Active: the subject does the action (The cleaners cleaned the hall). Passive: the subject receives the action (The hall was cleaned). Halls, cameras and paintings can't do these actions, so we use the passive.",
     ex: [["The cleaners cleaned the hall.", "active"], ["The hall was cleaned.", "passive"], ["The hall was being cleaned.", "passive, in progress"]],
     checks: [
@@ -408,7 +408,7 @@ export const BLOCKS = {
       C("The guards ___ the paintings.", "were watching", ["were being watched", "The guards do the watching, so it's active.", "doer"], ["was being watched", "The guards do the watching: active.", "doer"]),
       C("Dinner ___ when we arrived.", "was being served", ["was serving", "Dinner doesn't serve anything. People serve it.", "doer"], ["was serving us", "Dinner can't serve. People served it.", "doer"]),
       C("\"The cameras were being repaired.\" Who did the repairing?", "We don't know", ["The cameras did", "The cameras received the action.", "doer"], ["The museum's cameras", "The sentence doesn't say who.", "doer"])] },
-  doer: { name: "Find the doer", vi: "người thực hiện hành động", kids: [],
+  doer: { name: "Find the doer", kids: [],
     say: "Ask: who or what DOES the action? In \"The cleaner washed the floor\", the cleaner does it. The floor receives it.",
     ex: [["The cleaner washed the floor.", "doer: the cleaner"], ["The dog chased the cat.", "doer: the dog"]],
     checks: [
@@ -417,7 +417,7 @@ export const BLOCKS = {
       C("Can a camera repair something?", "No. People repair it.", ["Yes, cameras repair things.", "A camera is a thing. Someone repairs it."], ["Only at night", "Cameras can't repair anything."]),
       C("\"Mai painted the sign.\" What received the action?", "the sign", ["Mai", "Mai did the painting."], ["the paintbrush", "The sign is what was painted."]),
       C("Which one can do the action \"clean\"?", "a cleaner", ["a hall", "A hall can't clean anything."], ["a statue", "A statue can't clean anything."])] },
-  progress: { name: "Still happening or finished?", vi: "đang diễn ra · đã xong", kids: ["past-cont"],
+  progress: { name: "Still happening or finished?", kids: ["past-cont"],
     say: "was / were + being + V3 = it was still happening at that moment, not finished. was / were + V3 = it was finished.",
     ex: [["The hall was being cleaned at 9:30.", "still happening"], ["The hall was cleaned on Monday.", "finished"]],
     checks: [
@@ -426,7 +426,7 @@ export const BLOCKS = {
       C("At 9:30 the statues ___. The workers were still carrying them.", "were being moved", ["were moved", "were moved sounds finished. They were still carrying them.", "past-cont"], ["had been moved", "had been moved means already finished.", "past-cont"]),
       C("When I arrived, lunch ___, so I waited ten minutes.", "was being cooked", ["was cooked", "You waited, so it wasn't finished.", "past-cont"], ["had been cooked already", "Then it would be ready.", "past-cont"]),
       C("\"My bag was checked.\" Is the check finished?", "Yes, finished", ["No, still happening", "No being: it's finished.", "past-cont"], ["It didn't happen", "was checked says it happened."])] },
-  "past-cont": { name: "Past continuous: was / were + -ing", vi: "quá khứ tiếp diễn", kids: [],
+  "past-cont": { name: "Past continuous: was / were + -ing", kids: [],
     say: "was / were + -ing = an action in progress at a moment in the past. \"At 9:30 I was reading\" means I started before 9:30 and finished after it.",
     ex: [["At 9:30 I was reading.", "in progress"], ["I read a book.", "finished"]],
     checks: [

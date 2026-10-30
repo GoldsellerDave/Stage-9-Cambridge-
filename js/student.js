@@ -21,6 +21,9 @@ import * as Lab from "./lab.js";
 import * as RL from "./rlab.js";
 import * as D from "./drill.js";
 import * as GL from "./glab.js";
+import * as GE from "./gengine.js";
+import * as GB from "./gbank.js";
+import * as T from "./tower.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -65,7 +68,7 @@ function tick() {
   escTick();
   const el = document.getElementById("clock"); if (!el || !run) return;
   const s = run.kind === "escape" ? (run.play ? X.escapeSeconds(run.play) : 0) : Math.floor((Date.now() - run.t0) / 1000), m = Math.floor(s / 60), r = s % 60;
-  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 12, lab: 10, rlab: 10, glab: 12, drill: 6 }[run.kind] || 15;
+  const target = { baseline: 15, practice: 20, small: 10, cards: 5, listen: 12, mini: 20, escape: 12, lab: 10, rlab: 10, glab: 12, drill: 6, gbuild: 5 }[run.kind] || 15;
   el.textContent = `${m < 10 ? "0" : ""}${m}:${r < 10 ? "0" : ""}${r} / ${target}:00`;
   el.classList.toggle("over", s > target * 60);
 }
@@ -165,6 +168,7 @@ async function draw() {
   if (view === "games") return gamesView();
   if (view === "lab") return labHubView();
   if (view === "glab") return glabHubView();
+  if (view === "build") return gbHubView();
   const rv = /^rlab(?:-(\d))?$/.exec(view);
   if (rv) return rlabHubView(rv[1] ? +rv[1] : rlUnitNow());
   const m = /^unit-(\d)(?:\/(\w+))?$/.exec(view);
@@ -198,6 +202,7 @@ function homeView() {
   if (me.baseline_done && GL.GLAB.some(x => !history.some(a => a.text_id === x.id))) h += `<div class="tcard"><span class="tag gold">New</span><h3>Grammar Lab</h3>
       <p class="note" style="font-size:1rem">Grammar missions: solve a mystery and write a news story while you work out the rules yourself.</p>
       <div class="row"><button class="btn" data-glabhub="1">Open the Grammar Lab</button></div></div>`;
+  if (me.baseline_done) h += gbHomeCard();
   h += quickTiles(review.length);
   if (me.baseline_done) {
     h += `<div class="stats">
@@ -410,6 +415,8 @@ function bindActivities() {
   $app.querySelectorAll("[data-rlab]").forEach(btn => btn.onclick = () => startRLab(btn.dataset.rlab, +(btn.dataset.ru || rlUnitNow())));
   $app.querySelectorAll("[data-glab]").forEach(btn => btn.onclick = () => startGLab(btn.dataset.glab));
   $app.querySelectorAll("[data-glabhub]").forEach(btn => btn.onclick = () => { location.hash = "#glab"; });
+  $app.querySelectorAll("[data-gbhub]").forEach(btn => btn.onclick = () => { location.hash = "#build"; });
+  $app.querySelectorAll("[data-gbstart]").forEach(btn => btn.onclick = () => gbStart(btn.dataset.gbstart));
   $app.querySelectorAll("[data-rlabhub]").forEach(btn => btn.onclick = () => { location.hash = `#rlab-${btn.dataset.rlabhub}`; });
   $app.querySelectorAll("[data-cards]").forEach(btn => btn.onclick = () => startCards(+btn.dataset.cards));
   $app.querySelectorAll("[data-family]").forEach(btn => btn.onclick = () => { const u = +btn.dataset.family;
@@ -1686,7 +1693,7 @@ function showTerm(key) {
   if (!el) { el = document.createElement("div"); el.id = "sheet"; el.className = "sheet"; document.body.appendChild(el); }
   el.innerHTML = `<div class="sheet-in pop" role="dialog" aria-label="What is ${U.esc(t.t)}?">
     <div class="row" style="justify-content:space-between"><b class="sw">${U.esc(t.t)}</b><button class="xbtn" id="sclose" aria-label="Close">✕</button></div>
-    <p class="note" style="margin:0">Tiếng Việt: ${U.esc(t.vi)}</p><p style="margin:0">${U.esc(t.def)}</p>
+    <p style="margin:0">${U.esc(t.def)}</p>
     <div class="glbank-in">${t.ex.map(([a, b]) => `<span>${U.esc(a)} → <b>${U.esc(b)}</b></span>`).join("")}</div>
     <p style="margin:0"><b>Tip:</b> ${U.esc(t.tip)}</p></div>`;
   el.hidden = false; S.play("tap");
@@ -1785,10 +1792,11 @@ function glBlockView() {
       <p class="lede">${run.warm && run.bstack.length === 1 ? `Last time this was tricky, ${U.esc(firstName())}. Let's make it solid before the mission.`
         : f.back ? "Now you've fixed the step underneath, try this one again."
         : run.bstack.length > 1 ? "Those mistakes come from something underneath. Let's fix that first." : `Your mistakes show this building block needs work, ${U.esc(firstName())}. Two minutes, then back to the mission.`}</p>
-      <div class="strat"><b>${U.esc(b.name)}</b> <span class="note">(${U.esc(b.vi)})</span><p style="margin:6px 0 0">${glx(b.say)}</p>
+      <div class="strat"><b>${U.esc(b.name)}</b><p style="margin:6px 0 0">${glx(b.say)}</p>
       <div class="glbank-in" style="margin-top:8px">${b.ex.map(([a, c]) => `<span>${U.esc(a)} → <b>${U.esc(c)}</b></span>`).join("")}</div></div>
       <div class="row"><button class="btn" id="gbgo">${f.back ? "Try 2 more" : "Quick check: 3 questions"}</button></div></div>`;
     $app.innerHTML = h;
+    if (e.why === "again" || e.why === "back") document.getElementById("gbgo").textContent = "Try again";
     document.getElementById("gbgo").onclick = () => { f.lesson = false; S.play("tap"); redraw(); top(); };
     return;
   }
@@ -2018,6 +2026,207 @@ function glDoneView() {
                 xp: R.xp, seconds: R.seconds, answers: run.results.map(({ item, ...r }) => r) });
 }
 
+/* ---------------- Grammar Builder (grammar engine) ----------------
+   The grammar engine (gengine.js) as a tower each student builds, one brick per grammar block, across Stages 7 to 9.
+   First visit: a foundation scan (about 8 questions) finds which bricks the student already has. Then a daily 5-minute
+   build: up to 2 cracked bricks (reviews due), the next brick (a short lesson, then 4 questions) and one old brick mixed
+   in. Two misses on a new brick that point at a brick underneath drop to that brick ("crack in the foundations"), then
+   climb back up. Right first time builds a combo; a newly mastered brick drops onto the tower at the end.
+   Answers save as { skill: "Grammar", eng: 1, block, item, first_try, support, b? } (placement adds place: 1). */
+const GB_SEEN = () => "gb-seen-" + (session ? session.username : "");
+const GB_TAG = { review: ["🔧", "Cracked brick"], new: ["🧱", "New brick"], mix: ["🔁", "Old brick"], drop: ["🔩", "Foundation"], back: ["⬆️", "Back up"], place: ["📡", "Foundation scan"] };
+const gbMastered = st => Object.keys(GE.GBLOCKS).filter(id => GE.isMastered(st, id));
+const gbToday = () => history.some(h => h.text_id === "gbuild" && new Date(h.created_at).toDateString() === new Date().toDateString());
+const gbQs = r => r.queue.filter(e => e.t === "q").length;
+// Items for a block, the ones not answered in the last 3 days first.
+function gbPick(block, n, avoid = []) {
+  const since = Date.now() - 3 * 864e5, seen = new Set(history.filter(h => Date.parse(h.created_at) > since).flatMap(h => (h.answers || []).map(a => a.item)));
+  const items = GB.blockLesson(block).items.filter(it => !avoid.includes(it.id)), shuffle = a => a.map(x => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map(x => x[1]);
+  return [...shuffle(items.filter(it => !seen.has(it.id))), ...shuffle(items.filter(it => seen.has(it.id)))].slice(0, n).map(it => it.id);
+}
+const gbItem = e => GB.blockLesson(e.block).items.find(it => it.id === e.item);
+
+function gbHomeCard() {
+  const st = GE.mastery(history), prog = GE.strandProgress(st), placed = GE.placed(history), rank = T.rankOf(prog.done);
+  return `<div class="tcard gbcard"><span class="tag gold">${placed ? (gbToday() ? "Done today ✓" : "5 minutes") : "New"}</span>
+    <h3>Grammar Builder</h3>
+    <div class="gbmini" data-gbhub="1" role="button" tabindex="0" aria-label="Open your grammar tower">${T.towerSVG(st, { next: GE.planSession(st).learn, due: GE.dueReviews(st), small: true })}</div>
+    <p class="note" style="font-size:1rem">${placed ? `${rank[2]} ${rank[1]} · ${prog.done} of ${prog.total} bricks built. ${gbToday() ? "Come back tomorrow for your next build." : "Build your next brick today."}`
+      : "Build your own grammar tower, brick by brick. Start with a quick scan of your foundations."}</p>
+    <div class="row">${placed ? `<button class="btn" data-gbstart="daily">${gbToday() ? "Build more" : "Today's build"}</button><button class="btn alt" data-gbhub="1">My tower</button>`
+      : `<button class="btn" data-gbhub="1">Start building</button>`}</div></div>`;
+}
+
+function gbHubView() {
+  const st = GE.mastery(history), due = GE.dueReviews(st), plan = GE.planSession(st), prog = GE.strandProgress(st), placed = GE.placed(history);
+  const rank = T.rankOf(prog.done), nr = T.nextRank(prog.done), done = gbMastered(st);
+  let seen = null; try { seen = JSON.parse(localStorage.getItem(GB_SEEN())); } catch (e) {}
+  const fresh = done.filter(id => !(seen || []).includes(id));
+  try { localStorage.setItem(GB_SEEN(), JSON.stringify(done)); } catch (e) {}
+  const low = nr ? Math.round(100 * (prog.done - rank[0]) / (nr[0] - rank[0])) : 100;
+  const planList = [...plan.reviews.map(id => `<li>🔧 Fix a cracked brick: <b>${U.esc(GE.GBLOCKS[id].name)}</b></li>`),
+    plan.learn ? `<li>🧱 New brick: <b>${U.esc(GE.GBLOCKS[plan.learn].name)}</b></li>` : `<li>🏛️ Every brick is built. Keep them solid.</li>`,
+    ...plan.mix.map(id => `<li>🔁 Keep it solid: <b>${U.esc(GE.GBLOCKS[id].name)}</b></li>`)].join("");
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Grammar · Past forms and the passive</p><h1>Grammar Builder</h1>
+      <p class="lede">Every brick is one piece of grammar. Build your tower from the ground up, 5 minutes a day.</p></div>
+    ${placed ? `<div class="gbrank"><span class="gbbadge" aria-hidden="true">${rank[2]}</span><div style="flex:1"><b>${rank[1]}</b>
+      <span class="note"> · ${prog.done} of ${prog.total} bricks</span><div class="bar"><i style="width:${low}%"></i></div>
+      <span class="note">${nr ? `${nr[0] - prog.done} more brick${nr[0] - prog.done === 1 ? "" : "s"} to ${nr[2]} ${nr[1]}` : "Top rank. Keep every brick solid!"}</span></div></div>` : ""}
+    <div class="gbtower">${T.towerSVG(st, { next: plan.learn, due, fresh: placed ? fresh : [] })}</div>
+    <div class="gblegend"><span><i class="lg done"></i>Built</span><span><i class="lg build"></i>Building</span><span><i class="lg next"></i>Next</span><span><i class="lg due"></i>Cracked: needs a check</span><span><i class="lg todo"></i>Not yet</span></div>
+    <p class="note">Tap a brick to see what it is.</p>
+    ${placed ? `<div class="tcard"><span class="tag gold">${gbToday() ? "Done today ✓" : "Today's build"}</span><h3>${gbToday() ? "Want to build more?" : "Today's build: about 5 minutes"}</h3>
+        <ul class="gbplan">${planList}</ul>
+        <div class="row"><button class="btn go" data-gbstart="daily">${gbToday() ? "Build more" : "Start building"}</button></div></div>`
+      : `<div class="tcard"><span class="tag gold">Start here</span><h3>Scan your foundations</h3>
+        <p class="note" style="font-size:1rem">${GE.PLACE_MAX} quick questions. The scanner finds the bricks you already have, so you never rebuild what you know. No hints, just do your best.</p>
+        <div class="row"><button class="btn go" data-gbstart="place">Start the scan</button></div></div>`}</div>`;
+  $app.querySelectorAll("[data-gbk]").forEach(g => { const open = () => gbBrickSheet(g.dataset.gbk, st, due); g.onclick = open; g.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); } }; });
+  bindActivities();
+}
+function gbBrickSheet(id, st, due) {
+  const b = GE.GBLOCKS[id], s = T.brickState(st, id, { next: GE.planSession(st).learn, due });
+  let el = document.getElementById("sheet");
+  if (!el) { el = document.createElement("div"); el.id = "sheet"; el.className = "sheet"; document.body.appendChild(el); }
+  const what = { done: "✅ Built. Solid!", due: "🔧 Built, but it's time for a quick check so it stays solid.", next: "🏗️ Your next brick. The crane is waiting!",
+    build: "🧱 Being built. Keep going.", todo: "⬜ Not built yet. It needs the bricks underneath first." }[s];
+  el.innerHTML = `<div class="sheet-in pop" role="dialog" aria-label="${U.esc(b.name)}">
+    <div class="row" style="justify-content:space-between"><b class="sw">${U.esc(b.name)}</b><button class="xbtn" id="sclose" aria-label="Close">✕</button></div>
+    <p style="margin:0">${what}</p>
+    ${b.pre.length ? `<p class="note" style="margin:0">Built on: ${b.pre.map(q => `${GE.isMastered(st, q) ? "✅" : "⬜"} ${U.esc(GE.GBLOCKS[q].name)}`).join(" · ")}</p>` : `<p class="note" style="margin:0">A foundation brick.</p>`}</div>`;
+  el.hidden = false; S.play("tap");
+  document.getElementById("sclose").onclick = () => { el.hidden = true; };
+}
+
+function gbStart(mode) {
+  const st = GE.mastery(history);
+  run = { kind: "gbuild", mode, i: 0, n: 0, cs: {}, results: [], combo: 0, best: 0, t0: Date.now(), orders: {}, before: gbMastered(st), queue: [], known: {}, miss: {}, tags: {}, dropped: {} };
+  if (mode === "place") gbProbe();
+  else {
+    const plan = GE.planSession(st), q = (block, tag, n) => gbPick(block, n).map(item => ({ t: "q", block, item, tag }));
+    plan.reviews.forEach(id => run.queue.push(...q(id, "review", 2)));
+    if (plan.learn) { const learn = q(plan.learn, "new", 5), mix = plan.mix.flatMap(id => q(id, "mix", plan.reviews.length ? 1 : 2));
+      run.queue.push({ t: "lesson", block: plan.learn, why: "new" }, ...learn.slice(0, 2), ...mix, ...learn.slice(2)); }
+    else plan.mix.forEach(id => run.queue.push(...q(id, "mix", 2)));
+    if (!plan.learn && run.queue.length < 4) GE.dueReviews(st).concat(gbMastered(st)).slice(0, 3).forEach(id => { if (!run.queue.some(e => e.block === id)) run.queue.push(...q(id, "mix", 2)); });
+  }
+  saveRun(); route(); top();
+}
+// Placement: the next block to probe, until PLACE_MAX questions or everything is known.
+function gbProbe() {
+  const id = run.n < GE.PLACE_MAX ? GE.placeProbe(run.known) : null;
+  if (id) run.queue.push({ t: "q", block: id, item: gbPick(id, 1)[0], tag: "place" });
+}
+function gbHud() {
+  const qs = run.queue.filter(e => e.t === "q");
+  const slot = e => { const r = e.res; return `<i class="${!r ? "" : r === "none" ? "on" : r === "explained" ? "x" : "half"}${run.queue.indexOf(e) === run.lastIdx ? " drop" : ""}"></i>`; };
+  return `<div class="gbhud"><div class="gbstrip" aria-label="${qs.filter(e => e.res).length} of ${run.mode === "place" ? GE.PLACE_MAX : qs.length} answered">${qs.map(slot).join("")}${run.mode === "place" ? "<i></i>".repeat(Math.max(0, GE.PLACE_MAX - qs.length)) : ""}</div>
+    ${run.mode === "place" ? "" : `<span class="gbcombo${run.combo >= 3 ? " hot" : ""}" aria-label="Combo ${run.combo}">🔥 x${run.combo}</span>`}</div>`;
+}
+function gbRunView() {
+  const e = run.queue[run.i], redraw = () => { saveRun(); gbRunView(); backButton(); };
+  if (!e) return gbFinish();
+  const b = GE.GBLOCKS[e.block], head = `<p class="eyebrow">Grammar Builder · ${run.mode === "place" ? "Foundation scan" : "Today's build"}</p>${gbHud()}`;
+  if (e.t === "lesson") {
+    const L = GB.blockLesson(e.block), from = e.from && GE.GBLOCKS[e.from];
+    $app.innerHTML = `<div class="narrow pop">${head}
+      ${e.why === "drop" ? `<div class="gbcrack pop"><span aria-hidden="true">💥</span><div><b>Crack in the foundations!</b><p class="note" style="margin:0">Those mistakes come from a brick underneath "${U.esc(from.name)}". Fix it, then we'll climb back up.</p></div></div>` : ""}
+      <p class="eyebrow" style="margin-top:6px">${e.why === "back" ? "⬆️ Back up" : e.why === "again" ? "🔍 Look again" : e.why === "drop" ? "🔩 Foundation brick" : "🧱 New brick"}</p>
+      <h1><span class="gbbrickh">${U.esc(b.name)}</span></h1>
+      ${e.why === "back" ? `<p class="lede">The brick underneath is fixed. Let's try this one again.</p>` : e.why === "again" ? `<p class="lede">Tricky one! Read the rule again, then try two more.</p>` : ""}
+      <div class="strat gblesson"><p style="margin:0">${glx(L.say)}</p>
+      <div class="glbank-in" style="margin-top:8px">${L.ex.map(([a, c]) => `<span>${U.esc(a)} → <b>${U.esc(c)}</b></span>`).join("")}</div></div>
+      <div class="row"><button class="btn go" id="gbgo">${e.why === "back" ? "Try again" : "Let's build it"}</button></div></div>`;
+    document.getElementById("gbgo").onclick = () => { run.i++; S.play("tap"); redraw(); top(); };
+    return;
+  }
+  const it = gbItem(e), key = `gb:${run.i}`, cs = run.cs[key], place = run.mode === "place";
+  const [ic, tag] = GB_TAG[e.tag];
+  let h = `<div class="narrow pop">${head}<div class="qcard${cs && cs.wrong.length && !cs.done ? " gbshake" : ""}"><div class="qhead"><span class="tag">${ic} ${tag}</span><span class="qnum">${U.esc(b.name)}</span></div>
+    <p class="stem">${glGap(it.stem)}</p>`;
+  if (place) {
+    const pick = run.cs[key] && run.cs[key].pick;
+    h += `<div class="opts">${order(key, it.opts.length).map((oi, k) => `<button class="opt${pick == null ? "" : oi === 0 && pick === 0 ? " right" : oi === pick ? " wrong" : ""}" data-gp="${oi}" ${pick != null ? "disabled" : ""}><span class="k">${"ABCD"[k]}</span><span>${U.esc(it.opts[oi].t)}</span></button>`).join("")}</div>`;
+    if (pick != null) h += pick === 0 ? `<div class="fb ok"><p><strong>✅ Solid brick!</strong> <span class="xpgain">+${GE.XP_GB.place} XP</span></p></div>`
+      : `<div class="fb info"><p><strong>🔧 Not solid yet.</strong> ${glx(it.opts[pick].why)} We'll build this one together.</p></div>`;
+    h += `</div>${pick != null ? `<div class="row"><button class="btn" id="gbnext">${run.n >= GE.PLACE_MAX || !GE.placeProbe(run.known) ? "See my tower" : "Next"}</button></div>` : ""}</div>`;
+    $app.innerHTML = h;
+    $app.querySelectorAll("[data-gp]").forEach(btn => btn.onclick = () => {
+      const oi = +btn.dataset.gp; run.cs[key] = { pick: oi, wrong: [], done: true }; const right = oi === 0;
+      run.results.push({ skill: "Grammar", eng: 1, place: 1, block: e.block, item: it.id, first_try: right, support: "none" });
+      e.res = right ? "none" : "explained"; run.lastIdx = run.i; run.n++; GE.placeMark(run.known, e.block, right);
+      S.play(right ? "ok" : "info"); redraw();
+    });
+    const nx = document.getElementById("gbnext"); if (nx) nx.onclick = () => { run.lastIdx = null; run.i++; gbProbe(); S.play("tap"); redraw(); top(); };
+    return;
+  }
+  h += `${glChoiceHTML(key, it)}</div>${run.toast ? `<div class="gbtoast pop" aria-live="polite">${run.toast}</div>` : ""}
+    ${cs && cs.done ? `<div class="row"><button class="btn" id="gbnext">${run.i === run.queue.length - 1 ? "Finish the build" : "Next"}</button></div>` : ""}</div>`;
+  $app.innerHTML = h; run.toast = null;
+  $app.querySelectorAll("[data-ghint]").forEach(btn => btn.onclick = () => { run.cs[btn.dataset.ghint].hint = true; S.play("tap"); redraw(); });
+  $app.querySelectorAll("[data-go]").forEach(btn => btn.onclick = () => {
+    const oi = +btn.dataset.go, s = run.cs[key];
+    if (oi !== 0) { s.wrong.push(oi); S.play("bad"); if (s.wrong.length < 2) return redraw(); }
+    s.done = true; if (oi === 0) S.play("ok");
+    const support = s.wrong.length >= 2 ? "explained" : s.wrong.length || s.hint ? "hint" : "none", tagged = s.wrong.map(w => it.opts[w].b).filter(Boolean);
+    run.results.push({ skill: "Grammar", eng: 1, block: e.block, item: it.id, first_try: support === "none", support, ...(tagged[0] ? { b: tagged[0] } : {}) });
+    e.res = support; run.lastIdx = run.i; run.n++;
+    if (support === "none") { run.combo++; run.best = Math.max(run.best, run.combo);
+      if ([3, 5, 8].includes(run.combo)) { run.toast = `🔥 Combo x${run.combo}! +${run.combo} XP bonus`; S.play("level"); } }
+    else { run.combo = 0; run.miss[e.block] = (run.miss[e.block] || 0) + 1; run.tags[e.block] = [...(run.tags[e.block] || []), ...tagged]; gbMaybeDrop(e); }
+    redraw(); const f = $app.querySelectorAll(".fb"); if (f.length) f[f.length - 1].scrollIntoView({ block: "center", behavior: "smooth" });
+  });
+  const nx = document.getElementById("gbnext"); if (nx) nx.onclick = () => { run.lastIdx = null; run.i++; S.play("tap"); redraw(); top(); };
+}
+// Two misses on a new brick drop to the brick underneath they point at (at most 2 levels down), then climb back up.
+function gbMaybeDrop(e) {
+  if (!["new", "drop", "back"].includes(e.tag) || run.miss[e.block] < 2 || run.dropped[e.block] || (e.depth || 0) >= 2) return;
+  const st = GE.mastery([...history, { created_at: new Date().toISOString(), answers: run.results }]), below = GE.dropTo(st, e.block, run.tags[e.block] || []);
+  run.dropped[e.block] = true;
+  const used0 = run.queue.filter(x => x.block === e.block && x.item).map(x => x.item);
+  // Nothing underneath to fix: show the rule again and try two more.
+  if (!below) { run.queue.splice(run.i + 1, 0, { t: "lesson", block: e.block, why: "again", depth: e.depth || 0 },
+    ...gbPick(e.block, 2, used0).map(item => ({ t: "q", block: e.block, item, tag: "back", depth: e.depth || 0 }))); return; }
+  const depth = (e.depth || 0) + 1, rest = run.queue.slice(run.i + 1).filter(x => !(x.block === e.block && x.t === "q" && x.tag === e.tag));
+  const used = run.queue.filter(x => x.block === e.block && x.item).map(x => x.item);
+  run.queue = [...run.queue.slice(0, run.i + 1),
+    { t: "lesson", block: below, why: "drop", from: e.block, depth }, ...gbPick(below, 3).map(item => ({ t: "q", block: below, item, tag: "drop", depth })),
+    { t: "lesson", block: e.block, why: "back", depth: depth - 1 }, ...gbPick(e.block, 2, used).map(item => ({ t: "q", block: e.block, item, tag: "back", depth: depth - 1 })), ...rest];
+}
+function gbFinish() {
+  const after = GE.mastery([...history, { created_at: new Date().toISOString(), answers: run.results }]), now = gbMastered(after);
+  const fresh = now.filter(id => !run.before.includes(id)), bonus = E.streakBonus(history);
+  const right = run.results.filter(r => r.first_try).length, second = run.results.filter(r => r.support === "hint").length;
+  const combo = run.results.reduce((a, r) => { a.c = r.first_try ? a.c + 1 : 0; if ([3, 5, 8].includes(a.c)) a.x += a.c; return a; }, { c: 0, x: 0 }).x;
+  const xp = run.mode === "place" ? right * GE.XP_GB.place + GE.XP_GB.finish
+    : right * GE.XP_GB.right + second * GE.XP_GB.second + combo + fresh.length * GE.XP_GB.brick + GE.XP_GB.finish;
+  run.result = { score: right, max: run.results.length, xp: xp + bonus, bonus, fresh, rankBefore: T.rankOf(run.before.length)[1], rankAfter: T.rankOf(now.length), total: now.length, seconds: Math.round((Date.now() - run.t0) / 1000) };
+  run.phase = "done"; saveRun(); runView(); top();
+  if (fresh.length && run.mode !== "place") Cel.big({ icon: "🧱", title: fresh.length > 1 ? `${fresh.length} new bricks, ${firstName()}!` : `New brick, ${firstName()}!`, sub: fresh.map(id => GE.GBLOCKS[id].name).join(" · "), xp: run.result.xp });
+  else Cel.set(run.result.xp);
+}
+function gbDoneView() {
+  const R = run.result, st = GE.mastery(run.saved ? history : [...history, { created_at: new Date().toISOString(), answers: run.results }]), place = run.mode === "place";
+  const rankUp = R.rankAfter[1] !== R.rankBefore;
+  $app.innerHTML = `<div class="narrow pop"><p class="eyebrow">Grammar Builder · ${place ? "Scan complete" : "Build complete"}</p>
+    <h1>${place ? `Your tower: ${R.total} brick${R.total === 1 ? "" : "s"} already built` : R.fresh.length ? `${R.fresh.length} new brick${R.fresh.length > 1 ? "s" : ""} on your tower!` : `${R.score} of ${R.max} right first time`}</h1>
+    ${rankUp ? `<div class="lvup pop">${R.rankAfter[2]} <b>New rank: ${R.rankAfter[1]}!</b></div>` : ""}
+    <div class="gbtower">${T.towerSVG(st, { next: GE.planSession(st).learn, due: [], fresh: R.fresh })}</div>
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.score}/${R.max}</b><span>right first time</span></div>
+      ${place ? "" : `<div class="stat"><b>🔥 x${run.best}</b><span>best combo</span></div>`}<div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
+    ${place ? `<p>${R.total ? "The scanner found solid bricks. You won't need to rebuild them." : "No problem. Every tower starts at the ground."} Your first build starts at <b>${U.esc((GE.GBLOCKS[GE.planSession(st).learn] || { name: "the top" }).name)}</b>.</p>` : ""}
+    ${place ? "" : (() => { const ids = [...new Set(run.results.map(r => r.block))].filter(id => !R.fresh.includes(id));
+      return ids.length ? `<div class="panel"><h3>Bricks you worked on</h3>${ids.map(id => { const k = Math.min(100, Math.round(100 * GE.pOf(st, id) / GE.MASTERED));
+        return `<div class="gbprog"><span>${GE.isMastered(st, id) ? "✅" : "🏗️"} ${U.esc(GE.GBLOCKS[id].name)}</span><div class="bar"><i style="width:${k}%"></i></div><span class="note">${GE.isMastered(st, id) ? "solid" : `${k}% built`}</span></div>`; }).join("")}</div>` : ""; })()}
+    ${R.fresh.length && !place ? `<div class="fb ok"><p>${R.fresh.map(id => `🧱 <b>${U.esc(GE.GBLOCKS[id].name)}</b>`).join("<br>")}</p></div>` : ""}
+    ${R.bonus ? `<div class="fb ok"><p><strong>Streak week kept, ${U.esc(firstName())}!</strong> <span class="xpgain">+${R.bonus} XP</span> bonus.</p></div>` : ""}
+    <p class="note" id="savemsg" aria-live="polite">Saving…</p>
+    <div class="row"><button class="btn" id="gbtower">See my tower</button>${place ? `<button class="btn alt" id="gbfirst">Start my first build</button>` : ""}</div></div>`;
+  document.getElementById("gbtower").onclick = () => { run = null; saveRun(); location.hash = "#build"; route(); top(); };
+  const f = document.getElementById("gbfirst"); if (f) f.onclick = () => { run = null; saveRun(); gbStart("daily"); };
+  saveAttempt({ mode: "vocab", text_id: place ? "gplace" : "gbuild", level_start: 0, level_end: null, score: R.score, max_score: R.max, xp: R.xp, seconds: R.seconds, answers: run.results });
+}
+
 /* ---------------- skill drills ---------------- */
 // Four questions on one reading skill, from different texts at the student's level. A wrong answer shows the hint and
 // lights up the words that prove the answer; a second wrong answer shows the answer and moves on.
@@ -2200,12 +2409,13 @@ function startPractice(id) {
 function runView() {
   header(); nav(null);
   if (run.phase === "done") return run.kind === "baseline" ? baselineDone() : run.kind === "mini" ? miniDone() : run.kind === "small" ? smallDone() : run.kind === "cards" ? cardsDone()
-    : run.kind === "listen" ? listenDone() : run.kind === "lab" ? labDoneView() : run.kind === "rlab" ? rlDoneView() : run.kind === "glab" ? glDoneView() : run.kind === "drill" ? drillDoneView() : run.kind === "game" ? gameDone() : run.kind === "escape" ? escapeDone() : practiceDone();
+    : run.kind === "listen" ? listenDone() : run.kind === "lab" ? labDoneView() : run.kind === "gbuild" ? gbDoneView() : run.kind === "rlab" ? rlDoneView() : run.kind === "glab" ? glDoneView() : run.kind === "drill" ? drillDoneView() : run.kind === "game" ? gameDone() : run.kind === "escape" ? escapeDone() : practiceDone();
   if (run.kind === "game") return gameView();
   if (run.kind === "escape") return escapeView();
   if (run.kind === "lab") { labRunView(); return backButton(); }
   if (run.kind === "rlab") { rlRunView(); return backButton(); }
   if (run.kind === "glab") { glRunView(); return backButton(); }
+  if (run.kind === "gbuild") { gbRunView(); return backButton(); }
   if (run.kind === "drill") { drillView(); return backButton(); }
   if (run.kind === "baseline") baselineView();
   else if (run.kind === "mini") miniView();
@@ -2233,6 +2443,7 @@ function runName(r) {
   if (r.kind === "lab") return `Listening Lab: ${Lab.labMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
   if (r.kind === "rlab") return `Reading Lab, Unit ${r.unit || RL.rItemUnit(r.seq[0]) || 2}: ${RL.rlabMission(r.id).title}${r.phase === "q" ? ` (question ${r.i + 1} of ${Lab.MISSION_LEN})` : ""}`;
   if (r.kind === "glab") return `Grammar Lab: ${GL.glabMission(r.id).title}${r.phase === "prove" ? ` (question ${r.i + 1} of ${GL.GLAB_LEN})` : ""}`;
+  if (r.kind === "gbuild") return `Grammar Builder: ${r.mode === "place" ? "foundation scan" : "today's build"}`;
   if (r.kind === "drill") return `Skill drill: ${r.skill}${r.phase === "q" ? ` (question ${r.i + 1} of ${r.items.length})` : ""}`;
   if (r.kind === "cards") return `Unit ${r.unit} word cards (card ${r.i + 1} of ${r.words.length})`;
   if (r.kind === "escape") return `Unit ${r.unit} escape room${r.play ? ` (room ${r.play.room + 1} of ${r.game.rooms.length})` : ""}`;

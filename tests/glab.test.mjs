@@ -81,7 +81,7 @@ test("building blocks: every wrong option points at a block in its mission's tre
     qs.forEach(it => it.type === "type" ? assert.ok(tree.has(it.b), `${it.id} typed block`) : it.opts.slice(1).forEach(o => assert.ok(tree.has(o.b), `${m.id}: ${o.t} → ${o.b}`)));
   }
   for (const [id, b] of Object.entries(GL.BLOCKS)) {
-    assert.ok(b.name && b.vi && b.say && b.ex.length, id); assert.equal(b.checks.length, 5, id);
+    assert.ok(b.name && b.say && b.ex.length, id); assert.equal(b.checks.length, 5, id);
     b.kids.forEach(k => assert.ok(GL.BLOCKS[k], `${id} kid ${k}`));
     b.checks.forEach(c => { assert.ok(c.opts.length === 3, c.stem); c.opts.slice(1).forEach(o => { assert.ok(o.why, `${id}: ${o.t}`); if (o.b) assert.ok(b.kids.includes(o.b), `${id}: ${o.t} → ${o.b}`); }); });
     if (b.kids.length) assert.ok(b.checks.slice(0, 3).some(c => c.opts.some(o => o.b)), `${id} first checks can point below`);

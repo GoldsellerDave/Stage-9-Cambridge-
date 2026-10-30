@@ -27,6 +27,8 @@ export function textTitle(id) {
   const t = PRACTICE_TEXTS.find(x => x.id === id); if (t) return t.topic;
   const l = LISTENING.find(x => x.id === id); if (l) return `Listening: ${l.topic}`;
   if (id === "baseline") return "Baseline";
+  if (id === "gbuild") return "Grammar Builder: daily build";
+  if (id === "gplace") return "Grammar Builder: foundation scan";
   const lab = labMission(id); if (lab) return `Listening Lab: ${lab.title}`;
   const rlab = rlabMission(id); if (rlab) return `Reading Lab: ${rlab.title}`;
   const glab = glabMission(id); if (glab) return `Grammar Lab: ${glab.title}`;
