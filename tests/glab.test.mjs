@@ -72,3 +72,30 @@ test("grammar words in Lab text open an explanation, and every mission has a ver
     for (const w of text.match(GL.TERM_RE) || []) assert.ok(GL.TERMS[GL.termKey(w)], w);
   }
 });
+
+test("building blocks: every wrong option points at a block in its mission's tree, and each block can teach and check", () => {
+  const under = id => [id, ...GL.BLOCKS[id].kids.flatMap(under)];
+  for (const m of GL.GLAB) {
+    const tree = new Set(GL.MISSION_BLOCKS[m.id].flatMap(under));
+    const qs = [...m.get, ...m.use.items, ...m.prove, ...[...m.get, ...m.use.items].map(it => it.twin)];
+    qs.forEach(it => it.type === "type" ? assert.ok(tree.has(it.b), `${it.id} typed block`) : it.opts.slice(1).forEach(o => assert.ok(tree.has(o.b), `${m.id}: ${o.t} → ${o.b}`)));
+  }
+  for (const [id, b] of Object.entries(GL.BLOCKS)) {
+    assert.ok(b.name && b.vi && b.say && b.ex.length, id); assert.equal(b.checks.length, 5, id);
+    b.kids.forEach(k => assert.ok(GL.BLOCKS[k], `${id} kid ${k}`));
+    b.checks.forEach(c => { assert.ok(c.opts.length === 3, c.stem); c.opts.slice(1).forEach(o => { assert.ok(o.why, `${id}: ${o.t}`); if (o.b) assert.ok(b.kids.includes(o.b), `${id}: ${o.t} → ${o.b}`); }); });
+    if (b.kids.length) assert.ok(b.checks.slice(0, 3).some(c => c.opts.some(o => o.b)), `${id} first checks can point below`);
+  }
+  const qs = Object.values(GL.BLOCKS).flatMap(b => b.checks), longest = qs.filter(q => q.opts.every((o, k) => !k || o.t.length < q.opts[0].t.length)).length;
+  assert.ok(longest / qs.length <= 0.5, `block checks: right option longest in ${longest} of ${qs.length}`);
+});
+
+test("weak blocks come back as a warm-up, and fixed ones don't", () => {
+  const att = (t, block, passed) => ({ text_id: "glab-3.3", created_at: t, answers: [{ skill: "Grammar Block", block, passed }] });
+  assert.equal(GL.warmUpBlock([], "glab-3.3"), null);
+  assert.equal(GL.warmUpBlock([att("2026-10-30T01", "v123", false)], "glab-3.3"), "v123");
+  assert.equal(GL.warmUpBlock([att("2026-10-30T01", "v123", false)], "glab-2.4"), "v123", "v123 is under modal-have too");
+  assert.equal(GL.warmUpBlock([att("2026-10-30T01", "v123", false), att("2026-10-30T02", "v123", true)], "glab-3.3"), null);
+  assert.equal(GL.warmUpBlock([att("2026-10-30T01", "doer", false)], "glab-2.4"), null);
+  assert.equal(GL.glabXP([{ skill: "Grammar Block", block: "pp", passed: true }]), GL.XP_GLAB.block + GL.XP_GLAB.finish);
+});

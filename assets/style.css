@@ -877,3 +877,9 @@ button.schip{cursor:pointer;font-family:inherit} .sumcard .btn{align-self:flex-s
 .glbank-in{display:flex;flex-wrap:wrap;gap:6px}
 .glbank-in span{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:.92rem}
 .glbank .note{margin:8px 0 0}
+/* Grammar Lab building blocks */
+.glpath{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:.85rem;color:var(--muted)}
+.glpath span{border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+.glpath span.now{border-color:var(--teal);color:var(--ink);font-weight:600}
+.glpath i{font-style:normal}
+.glblocks{display:flex;flex-wrap:wrap;gap:6px}

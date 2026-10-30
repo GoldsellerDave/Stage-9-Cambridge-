@@ -12,7 +12,7 @@
 // { skill: "Grammar Lab", step } and give XP but don't count in the area score. Don't rename mission or item ids.
 
 export const GLAB_LEN = 6;
-export const XP_GLAB = { step: 3, twin: 2, write: 10, frame: 5, first: [10, 15, 20], hint: 4, finish: 10 };
+export const XP_GLAB = { step: 3, twin: 2, write: 10, frame: 5, block: 5, first: [10, 15, 20], hint: 4, finish: 10 };
 
 export const GLAB = [
 { id: "glab-2.4", point: "2.4", unit: 2, n: 1, title: "The Case of the Missing Phone", short: "must have, might have, can't have",
@@ -328,6 +328,152 @@ export const VERBS = {
   "glab-3.3": [["clean", "cleaned"], ["move", "moved"], ["repair", "repaired"], ["fix", "fixed"], ["paint", "painted"], ["steal", "stolen"], ["watch", "watched"], ["check", "checked"]]
 };
 
+// Building blocks: what each grammar point is built from. When a student keeps making the same kind of mistake, the
+// Lab stops and teaches that block (a short lesson and quick checks). If the checks show a problem with a block
+// underneath (kids), it drops down to that one, and so on (at most 3 deep), then climbs back up and retries.
+// Every wrong option in the missions is tagged with the block it shows (tagBlock below, or b: on the option).
+// In a block's own checks, a wrong option's b names the block underneath that the mistake points to.
+// checks[0..2] are the first try, checks[3..4] the retry after a lower block.
+const C = (stem, right, ...wrong) => ({ stem, opts: [{ t: right }, ...wrong.map(([t, why, b]) => ({ t, why, ...(b ? { b } : {}) }))] });
+export const BLOCKS = {
+  "modal-have": { name: "Modal + have + past participle", vi: "động từ khiếm khuyết + have + V3", kids: ["pp"],
+    say: "A guess about the past has three parts: modal + have + past participle (V3). must have taken, might have gone, can't have seen. It's always have (never has or had), and always V3.",
+    ex: [["must + have + taken", "must have taken"], ["might + have + gone", "might have gone"], ["can't + have + seen", "can't have seen"]],
+    checks: [
+      C("Which sentence is correct?", "She must have left.", ["She must has left.", "After a modal, it's always have, never has."], ["She must have leave.", "After have, use V3: left.", "pp"]),
+      C("He ___ the bus.", "might have missed", ["might had missed", "After a modal, it's always have, never had."], ["might have miss", "After have, use V3: missed.", "pp"]),
+      C("They can't have ___ it.", "seen", ["saw", "saw is V2 (past simple). After have, use V3.", "pp"], ["see", "see is V1. After have, use V3.", "pp"]),
+      C("Which sentence is a guess about the past?", "It must have rained.", ["It must rain a lot here.", "must + V1 is about now or a rule."], ["It must raining.", "This isn't a correct form. Use must have + V3."]),
+      C("You ___ the email. You replied to it!", "must have read", ["must read it now", "must read is about now or a rule."], ["must have readed", "read is irregular: read, read, read.", "pp"])] },
+  certainty: { name: "How sure? must, might, can't", vi: "mức độ chắc chắn", kids: ["clues"],
+    say: "Modals show how sure the speaker is. must = I'm sure it's true. might / may / could = maybe. can't = I'm sure it's NOT true. The clues tell you which one to use.",
+    ex: [["The lights are on.", "Someone must be home."], ["I don't know.", "He might be at school."], ["He's in Hanoi today.", "He can't be here."]],
+    checks: [
+      C("Her coat is wet. It ___ raining.", "must be", ["might be", "A wet coat is a strong clue, so you can be sure.", "clues"], ["can't be", "The wet coat says it IS raining.", "clues"]),
+      C("I'm not sure where Lan is. She ___ in the library.", "might be", ["must be", "\"I'm not sure\" means maybe.", "clues"], ["can't be", "can't means sure it's NOT true. The speaker isn't sure.", "clues"]),
+      C("He has just eaten a huge lunch. He ___ hungry now.", "can't be", ["must be", "After a huge lunch? The clue says he isn't.", "clues"], ["might be very", "The clue makes the speaker sure he isn't hungry.", "clues"]),
+      C("Which word means \"I'm sure it's NOT true\"?", "can't", ["might", "might means maybe."], ["must", "must means sure it IS true."]),
+      C("Which word means \"maybe\"?", "could", ["must", "must means sure it's true."], ["can't", "can't means sure it's not true."])] },
+  clues: { name: "Read the clue", vi: "đọc manh mối", kids: [],
+    say: "A clue tells you how sure to be. A strong clue (you can see it, hear it or prove it) → sure. No clear clue → maybe. A clue that makes it impossible → sure it's not true.",
+    ex: [["I can hear music in her room.", "sure: she's home"], ["I don't know.", "maybe"], ["She was in Da Nang all day.", "sure: she wasn't here"]],
+    checks: [
+      C("Clue: \"I can hear music in his room.\" Is he home?", "Almost sure: yes", ["Maybe, maybe not", "Hearing music is a strong clue."], ["Sure that he isn't", "The music says he IS there."]),
+      C("Clue: \"She was in Da Nang all day.\" Did she see you in Hanoi?", "Sure: no", ["Maybe, it's possible", "She was in another city, so it's impossible."], ["Sure: yes, she did", "Another city makes it impossible."]),
+      C("Clue: \"I don't know.\" How sure is the speaker?", "Not sure", ["Very sure it's true", "\"I don't know\" means not sure."], ["Sure it's not true", "\"I don't know\" means not sure either way."]),
+      C("Clue: \"He got 100% in the test.\" Did he study?", "Almost sure: yes", ["Sure: no, he didn't", "100% is a strong clue that he studied."], ["We have no idea", "100% is a clue."]),
+      C("Which clue makes you SURE?", "Her bag is open and empty.", ["Maybe someone saw it.", "maybe is not a strong clue."], ["I'm not sure about it.", "\"Not sure\" can't make you sure."])] },
+  pp: { name: "Past participles (V3)", vi: "quá khứ phân từ (V3)", kids: ["v123"],
+    say: "After have and after being, English uses the past participle (V3). Regular verbs add -ed: clean → cleaned. Irregular verbs have their own V3: take → taken, go → gone.",
+    ex: [["have + V3", "must have taken"], ["being + V3", "was being cleaned"], ["regular", "move → moved"], ["irregular", "steal → stolen"]],
+    checks: [
+      C("The window was being ___ (clean).", "cleaned", ["cleaning", "-ing is not V3. After being, use V3.", "v123"], ["clean", "clean is V1. After being, use V3.", "v123"]),
+      C("Someone might have ___ (take) it.", "taken", ["took", "took is V2 (past simple). After have, use V3.", "v123"], ["take", "take is V1. After have, use V3.", "v123"]),
+      C("The statues were being ___ (move).", "moved", ["moving", "-ing is not V3. After being, use V3.", "v123"], ["move", "move is V1. After being, use V3.", "v123"]),
+      C("He can't have ___ (go) home.", "gone", ["went", "went is V2 (past simple). After have, use V3.", "v123"], ["goes", "goes is the present. After have, use V3.", "v123"]),
+      C("The bridge was being ___ (build).", "built", ["builded", "build is irregular: build, built, built.", "v123"], ["building", "-ing is not V3. After being, use V3.", "v123"])] },
+  v123: { name: "Verb forms: V1, V2, V3", vi: "ba dạng của động từ", kids: [],
+    say: "Every verb has three forms. V1 is the base (take). V2 is the past simple (took). V3 is the past participle (taken). Regular verbs: V2 and V3 are the same (cleaned, cleaned). Irregular verbs: learn them.",
+    ex: [["go", "went · gone"], ["see", "saw · seen"], ["take", "took · taken"], ["clean", "cleaned · cleaned"]],
+    checks: [
+      C("What is the V3 of see?", "seen", ["saw", "saw is V2: I saw it yesterday."], ["seed", "see is irregular: see, saw, seen."]),
+      C("What is the V3 of go?", "gone", ["went", "went is V2: I went home."], ["goed", "go is irregular: go, went, gone."]),
+      C("What is the V3 of repair?", "repaired", ["repairing", "-ing is not V3."], ["repair", "repair is V1. Regular verbs add -ed."]),
+      C("What is the V3 of fall?", "fallen", ["fell", "fell is V2: it fell yesterday."], ["falled", "fall is irregular: fall, fell, fallen."]),
+      C("Which list is V1, V2, V3?", "write, wrote, written", ["write, written, wrote", "V2 comes before V3. wrote is V2."], ["write, writed, writed", "write is irregular."])] },
+  "was-were": { name: "was or were?", vi: "was hay were", kids: ["sing-plural"],
+    say: "Use was with one thing (and with I, he, she, it). Use were with more than one thing (and with you, we, they).",
+    ex: [["the hall", "was being cleaned"], ["two statues", "were being moved"], ["I / he / she / it", "was"], ["you / we / they", "were"]],
+    checks: [
+      C("The door ___ being painted.", "was", ["were", "The door is one thing.", "sing-plural"], ["be", "Use the past: was or were."]),
+      C("The cameras ___ being repaired.", "were", ["was", "cameras is plural: more than one.", "sing-plural"], ["is", "The story is in the past: was or were."]),
+      C("The children ___ being taken home.", "were", ["was", "children means more than one child.", "sing-plural"], ["are", "The story is in the past: was or were."]),
+      C("My bag ___ being checked.", "was", ["were", "My bag is one thing.", "sing-plural"], ["been", "You need was or were."]),
+      C("The bus and the car ___ being washed.", "were", ["was", "Two things: the bus AND the car.", "sing-plural"], ["is", "The story is in the past: was or were."])] },
+  "sing-plural": { name: "One or more than one?", vi: "số ít · số nhiều", kids: [],
+    say: "Singular means one (a statue, the hall). Plural means more than one (statues, the halls). Most plurals end in -s. Some are different: children, people, men, women.",
+    ex: [["statue", "statues"], ["camera", "cameras"], ["child", "children"], ["person", "people"]],
+    checks: [
+      C("Which word is plural (more than one)?", "statues", ["statue", "No -s: just one."], ["the hall", "No -s: just one."]),
+      C("Which word is plural?", "people", ["person", "person is one. people is more than one."], ["museum", "No -s: just one."]),
+      C("Which is singular (one)?", "the painting", ["the paintings", "-s means more than one."], ["the guards", "-s means more than one."]),
+      C("\"The children\" is…", "plural", ["singular, only one", "one child, two children."], ["a verb", "children is a noun."]),
+      C("Which noun is singular?", "the bridge", ["the roads", "-s means more than one."], ["the tourists", "-s means more than one."])] },
+  "active-passive": { name: "Doing it or receiving it? (passive)", vi: "chủ động · bị động", kids: ["doer"],
+    say: "Active: the subject does the action (The cleaners cleaned the hall). Passive: the subject receives the action (The hall was cleaned). Halls, cameras and paintings can't do these actions, so we use the passive.",
+    ex: [["The cleaners cleaned the hall.", "active"], ["The hall was cleaned.", "passive"], ["The hall was being cleaned.", "passive, in progress"]],
+    checks: [
+      C("At 9:30, the hall ___.", "was being cleaned", ["was cleaning", "The hall can't clean anything. Someone cleaned it.", "doer"], ["cleaned itself", "Halls don't clean themselves.", "doer"]),
+      C("Which sentence is passive?", "The painting was stolen.", ["The thief stole the painting.", "The thief does the action: active.", "doer"], ["The thief was stealing.", "The thief does the action: active.", "doer"]),
+      C("The guards ___ the paintings.", "were watching", ["were being watched", "The guards do the watching, so it's active.", "doer"], ["was being watched", "The guards do the watching: active.", "doer"]),
+      C("Dinner ___ when we arrived.", "was being served", ["was serving", "Dinner doesn't serve anything. People serve it.", "doer"], ["was serving us", "Dinner can't serve. People served it.", "doer"]),
+      C("\"The cameras were being repaired.\" Who did the repairing?", "We don't know", ["The cameras did", "The cameras received the action.", "doer"], ["The museum's cameras", "The sentence doesn't say who.", "doer"])] },
+  doer: { name: "Find the doer", vi: "người thực hiện hành động", kids: [],
+    say: "Ask: who or what DOES the action? In \"The cleaner washed the floor\", the cleaner does it. The floor receives it.",
+    ex: [["The cleaner washed the floor.", "doer: the cleaner"], ["The dog chased the cat.", "doer: the dog"]],
+    checks: [
+      C("\"The cleaner washed the floor.\" Who did the washing?", "the cleaner", ["the floor", "The floor received the washing."], ["nobody", "The cleaner did it."]),
+      C("\"The dog chased the cat.\" Who did the chasing?", "the dog", ["the cat", "The cat was chased."], ["both of them", "Only the dog chased."]),
+      C("Can a camera repair something?", "No. People repair it.", ["Yes, cameras repair things.", "A camera is a thing. Someone repairs it."], ["Only at night", "Cameras can't repair anything."]),
+      C("\"Mai painted the sign.\" What received the action?", "the sign", ["Mai", "Mai did the painting."], ["the paintbrush", "The sign is what was painted."]),
+      C("Which one can do the action \"clean\"?", "a cleaner", ["a hall", "A hall can't clean anything."], ["a statue", "A statue can't clean anything."])] },
+  progress: { name: "Still happening or finished?", vi: "đang diễn ra · đã xong", kids: ["past-cont"],
+    say: "was / were + being + V3 = it was still happening at that moment, not finished. was / were + V3 = it was finished.",
+    ex: [["The hall was being cleaned at 9:30.", "still happening"], ["The hall was cleaned on Monday.", "finished"]],
+    checks: [
+      C("\"The walls were being painted.\" Was the painting finished?", "No, still happening", ["Yes, it was finished", "being shows it was still going on.", "past-cont"], ["It never started", "being shows it was happening.", "past-cont"]),
+      C("Which sentence means the job was finished?", "The road was repaired.", ["The road was being repaired.", "being means still happening.", "past-cont"], ["The road was being fixed up.", "being means still happening.", "past-cont"]),
+      C("At 9:30 the statues ___. The workers were still carrying them.", "were being moved", ["were moved", "were moved sounds finished. They were still carrying them.", "past-cont"], ["had been moved", "had been moved means already finished.", "past-cont"]),
+      C("When I arrived, lunch ___, so I waited ten minutes.", "was being cooked", ["was cooked", "You waited, so it wasn't finished.", "past-cont"], ["had been cooked already", "Then it would be ready.", "past-cont"]),
+      C("\"My bag was checked.\" Is the check finished?", "Yes, finished", ["No, still happening", "No being: it's finished.", "past-cont"], ["It didn't happen", "was checked says it happened."])] },
+  "past-cont": { name: "Past continuous: was / were + -ing", vi: "quá khứ tiếp diễn", kids: [],
+    say: "was / were + -ing = an action in progress at a moment in the past. \"At 9:30 I was reading\" means I started before 9:30 and finished after it.",
+    ex: [["At 9:30 I was reading.", "in progress"], ["I read a book.", "finished"]],
+    checks: [
+      C("At 9:30 Thao ___ a report.", "was writing", ["wrote", "wrote is finished. At 9:30 it was in progress."], ["writes", "writes is the present."]),
+      C("\"At 8:00 we were eating dinner.\" At 8:00, dinner was…", "still happening", ["finished", "were eating means in progress."], ["not started yet", "were eating means it had started."]),
+      C("They ___ TV when the lights went out.", "were watching", ["was watching", "They goes with were."], ["watched", "In progress at that moment: were watching."]),
+      C("Which sentence shows an action in progress?", "She was sleeping.", ["She slept.", "slept is finished."], ["She sleeps every day.", "That's about every day, not one moment."]),
+      C("While the electrician ___ the lights, the thief escaped.", "was fixing", ["fixed", "In progress at that moment: was fixing."], ["was fix", "was + -ing: was fixing."])] }
+};
+// The blocks each mission is built from (top level). Their kids sit underneath.
+export const MISSION_BLOCKS = { "glab-2.4": ["certainty", "modal-have"], "glab-3.3": ["was-were", "pp", "active-passive", "progress"] };
+export const BLOCK_DEPTH = 3;
+// Which block a wrong option shows, from its "why". An option can name it with b: instead.
+function tagBlock(m, why) {
+  const w = why || "";
+  if (m.point === "2.4") {
+    if (/need have|have, not|never ha[sd]|about now|or a rule|or the future|isn't a correct form|passive form/i.test(w)) return "modal-have";
+    if (/past participle|past simple|irregular/i.test(w)) return "pp";
+    return "certainty";
+  }
+  if (/plural|: were\.|: was\.|one thing|goes with was|use the past\./i.test(w)) return "was-were";
+  if (/past participle|irregular|spelling|hanged/i.test(w)) return "pp";
+  if (/anything|someone|people|received|themselves|doesn't say who|who did it|can't (repair|clean|paint|fix)/i.test(w)) return "active-passive";
+  return "progress";
+}
+// Typed (one-word) questions: the block a wrong word shows.
+const TYPED_BLOCK = { "p24-c4": "modal-have", "p24-s1": "certainty", "p24-s4": "certainty", "p24-x3": "certainty",
+  "p33-c3": "progress", "p33-s1": "was-were", "p33-s4": "pp", "p33-x3": "pp" };
+for (const m of GLAB) {
+  const tag = it => { if (it.type === "type") it.b = it.b || TYPED_BLOCK[it.id]; else (it.opts || []).slice(1).forEach(o => { o.b = o.b || tagBlock(m, o.why); }); };
+  [...m.get, ...m.use.items, ...m.prove, { opts: m.spot.rules }].forEach(tag);
+  [...m.get, ...m.use.items].forEach(it => it.twin && tag(it.twin));
+}
+for (const [id, b] of Object.entries(BLOCKS)) { b.id = id; b.checks.forEach((c, k) => { c.id = `${id}#${k}`; }); }
+const blockAnswers = h => (h.answers || []).filter(a => a.skill === "Grammar Block");
+// Each block's latest result: "ok" (passed) or "weak" (still a problem). Oldest attempts first, so the latest wins.
+export function blockStatus(history) {
+  const out = {};
+  [...history].filter(isGLabAttempt).sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")))
+    .forEach(h => blockAnswers(h).forEach(a => { out[a.block] = a.passed ? "ok" : "weak"; }));
+  return out;
+}
+const under = id => [id, ...BLOCKS[id].kids.flatMap(under)];
+// A weak block in this mission's tree, for a warm-up before the mission starts.
+export const warmUpBlock = (history, missionId) => { const st = blockStatus(history);
+  return (MISSION_BLOCKS[missionId] || []).flatMap(under).find(id => st[id] === "weak") || null; };
+
 export const glabMission = id => GLAB.find(m => m.id === id);
 export const glabForPoint = point => GLAB.find(m => m.point === point) || null;
 export const isGLab = id => /^glab-/.test(id || "") && !!glabMission(id);
@@ -348,7 +494,7 @@ export function glabStartLevel(history, tier = 0) {
 export const seenGItems = history => new Set(history.filter(isGLabAttempt).flatMap(h => proveAnswers(h).map(a => a.glab)));
 export const glabPeak = answers => answers.filter(a => a.skill === "Grammar" && a.glab).reduce((p, a) => Math.max(p, a.level || 0), 0);
 export function glabXP(results) {
-  return results.reduce((t, r) => t + (r.skill === "Grammar Lab" ? (r.step === "write" ? (r.first_try || r.support === "hint" ? XP_GLAB.write : r.support === "frame" ? XP_GLAB.frame : 0)
+  return results.reduce((t, r) => t + (r.skill === "Grammar Block" ? (r.passed ? XP_GLAB.block : 0) : r.skill === "Grammar Lab" ? (r.step === "write" ? (r.first_try || r.support === "hint" ? XP_GLAB.write : r.support === "frame" ? XP_GLAB.frame : 0)
     : r.first_try ? XP_GLAB.step : r.support === "twin" ? XP_GLAB.twin : 0)
     : r.support === "none" ? XP_GLAB.first[r.level || 0] : r.support === "hint" ? XP_GLAB.hint : 0), 0) + XP_GLAB.finish;
 }
