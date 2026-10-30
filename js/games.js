@@ -9,6 +9,7 @@ import { play } from "./sound.js";
 import { PRACTICE_TEXTS } from "./content.js";
 import { LAB, TRAPS, LAB_LEVELS, LAB_PLAYS, markLine } from "./lab.js";
 import { TIMES, AUDIO_V } from "./listening-times.js";
+import { applySpeed, speedHTML, bindSpeed, speedTag, noteAnswer } from "./speed.js";
 
 export const GAMES = {
   rain: { name: "Word Rain", blurb: "Meanings fall from the sky. Tap the word that matches before it lands." },
@@ -71,7 +72,7 @@ export function gameAnswers(game, R, unit) {
   if (game === "rain") R.words.forEach(x => ans.push({ skill: "Word game", word: x.w, unit, first_try: x.hit }));
   else if (game === "train") R.words.forEach(x => ans.push({ skill: "Word class", word: x.w, unit, pos: x.pos, first_try: x.hit }));
   // Trap Dodger answers count in the trap tracker (see trapStats in lab.js). picked is the trap bubble popped, if any.
-  else if (game === "dodge") R.words.forEach(x => ans.push({ skill: "Trap game", clip: x.clip, trap: x.trap, level: x.tier, first_try: x.hit, ...(x.picked ? { picked: x.picked } : {}) }));
+  else if (game === "dodge") R.words.forEach(x => ans.push({ skill: "Trap game", clip: x.clip, trap: x.trap, level: x.tier, first_try: x.hit, ...(x.picked ? { picked: x.picked } : {}), ...(x.speed ? { speed: x.speed } : {}) }));
   else { ans[0].wpm = R.top; R.words.forEach(x => ans.push({ skill: "Speed reading", sub: x.skill, text: x.text, para: x.para, wpm: x.wpm, first_try: x.hit })); }
   return ans;
 }
@@ -518,7 +519,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), missed = new Set(), 
   el.innerHTML = `<div class="game dodge">${hud(DODGE_LIVES)}
     <div class="dq" id="dq"><p class="eyebrow" id="dqn"></p><p class="dstem" id="dstem"></p><i class="dread"></i></div>
     <div class="arena darena" id="arena">${SEA}<div class="dwave" id="dwave" aria-hidden="true">${"<i></i>".repeat(7)}</div><div class="gbanner"></div></div>
-    <div class="row dctl"><button class="btn small alt" id="dreplay" disabled>🔁 Replay</button><span class="note" id="dplays"></span></div>
+    <div class="row dctl"><button class="btn small alt" id="dreplay" disabled>🔁 Replay</button><span class="note" id="dplays"></span></div><div id="dspd"></div>
     <div id="dfb" aria-live="polite"></div>
     <p class="note" id="gtell" aria-live="polite"></p></div>`;
   const arena = el.querySelector("#arena"), wave = el.querySelector("#dwave"), fb = el.querySelector("#dfb"), rep = el.querySelector("#dreplay");
@@ -532,8 +533,11 @@ export function playDodge(el, { tier = 0, seen = new Map(), missed = new Set(), 
     const left = Math.max(0, maxPlays() - plays);
     el.querySelector("#dplays").textContent = phase === "end" ? "" : left ? `${left} replay${left > 1 ? "s" : ""} left. The bubbles wait while it plays.` : "No replays left.";
   }
+  // Speed dial: Challenge clips stay at normal speed, like the exam.
+  const locked = () => !!cur && cur.tier >= 2;
+  function dial() { const box = el.querySelector("#dspd"); box.innerHTML = speedHTML(locked()); bindSpeed(box, () => [], () => { applySpeed(audio, locked()); play("tap"); dial(); }); }
   function listen() {
-    plays++; audio.currentTime = 0;
+    plays++; audio.currentTime = 0; applySpeed(audio, locked());
     audio.play().then(() => wave.classList.add("on")).catch(failed);
     rep.disabled = true; setPlays();
   }
@@ -559,7 +563,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), missed = new Set(), 
     el.querySelector("#dstem").textContent = cur.stem;
     el.querySelector("#glv").textContent = level;
     el.querySelector("#gleft") && (el.querySelector("#gleft").textContent = "");
-    audio.src = `audio/listening/${cur.clip}.mp3?v=${AUDIO_V}`; audio.load();
+    audio.src = `audio/listening/${cur.clip}.mp3?v=${AUDIO_V}`; audio.load(); applySpeed(audio, locked()); dial();
     makeBubbles();
     rep.disabled = true; rep.textContent = "🔁 Replay"; setPlays();
     tell("Read the question and the bubbles. What kind of answer do you need?");
@@ -626,7 +630,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), missed = new Set(), 
     if (o.k === 0) {
       hits++; streak++; const gain = dodgeGain(cur.tier, p, streak); points += gain;
       o.el.classList.add("popped"); burst(arena, cx, cy, ["#BFE9FF", "#7FD3FF", "#FFFFFF", "#F6C94A"], 16); floatText(arena, cx, cy - 10, `+${gain}`); play("ok");
-      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: true });
+      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: true, ...speedTag(locked()) }); noteAnswer(true, locked());
       const nl = dodgeLevel(start, hits);
       if (nl > level) {
         const up = dodgeTier(nl) > dodgeTier(level); level = nl; play("level");
@@ -638,7 +642,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), missed = new Set(), 
       misses++; streak = 0; play("bad");
       o.el.classList.add("trapped"); ans.el.classList.add("answer");
       burst(arena, cx, cy, ["#FF8A3D", "#FFC07A", "#9AA4AE"], 12); floatText(arena, cx, cy - 10, "🪤", "bad"); hurt();
-      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: false, picked: cur.opts[o.k].t });
+      words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: false, picked: cur.opts[o.k].t, ...speedTag(locked()) }); noteAnswer(false);
       reveal("trap", o.k);
     }
     setPoints(el, points); setCombo(el, streak);
@@ -648,7 +652,7 @@ export function playDodge(el, { tier = 0, seen = new Map(), missed = new Set(), 
     endRound(); misses++; streak = 0; play("bad"); hurt(); setCombo(el, 0);
     const ans = bubs.find(b => b.k === 0); ans.el.classList.add("answer", "back");
     ans.el.style.transform = `translate(${ans.x.toFixed(1)}px,${Math.max(8, ans.y0 * 0.35).toFixed(1)}px)`;
-    words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: false });
+    words.push({ clip: cur.clip, stem: cur.stem, answer: cur.opts[0].t, trap: cur.trap, tier: cur.tier, again: cur.again, hit: false, ...speedTag(locked()) }); noteAnswer(false);
     reveal("escape");
   }
   function transcript(it) {

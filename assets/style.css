@@ -1082,3 +1082,12 @@ button.qpwb:not(:disabled){cursor:pointer;animation:qpulse 1.4s ease-in-out infi
   .hr-flame{animation:qzz .2s infinite alternate} .hr-aura{animation:qzz 1.2s ease-in-out infinite alternate}
   .qwin.cheer .qhero{animation:qjump .6s ease-in-out 3} @keyframes qjump{50%{transform:translateY(-14px)}}
 }
+
+/* Listening speed dial (speed.js) */
+.spd{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:8px 0 12px}
+.spdl{font-weight:700;font-size:.9rem;color:var(--muted);margin-right:2px}
+.spdb{padding:4px 8px;border-radius:999px;border:2px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:.85rem;font-weight:700;cursor:pointer;min-height:36px}
+.spdb.on{border-color:var(--teal);background:var(--teal);color:#fff}
+.spdn{flex-basis:100%;margin:4px 0 0;padding:8px 12px;border-radius:12px;background:var(--gold-bg);border:2px solid var(--gold);font-weight:600}
+.spdn .spdb{margin:0 2px}
+.dodge .spd{justify-content:center;margin:6px 0}
