@@ -284,13 +284,13 @@ function readTestCard() {
   const rows = READ_TEST.units.map(u => {
     const texts = PRACTICE_TEXTS.filter(t => t.unitNo === u), td = texts.filter(t => done.has(t.id)).length;
     const lab = RL.RLAB.filter(m => history.some(h => h.text_id === m.id && (h.answers || []).some(a => RL.rItemUnit(a.rlab) === u))).length;
-    const mini = M.MINI[u] && history.filter(h => h.text_id === `mini-u${u}`), passed = mini && mini.some(h => h.max_score && h.score / h.max_score >= 0.7);
+    const vm = P.vocabMastery(u, history);
     return `<div class="rtrow"><b>Unit ${u}: ${U.esc(UNITS[u].title)}</b><div class="row">
       <button class="btn small" data-rlabhub="${u}">🔎 Reading Lab ${lab}/${RL.RLAB.length}</button>
       <a class="btn small alt" href="#unit-${u}/read">📖 Texts ${td}/${texts.length}</a>
-      ${M.MINI[u] ? `<button class="btn small alt" data-mini="${u}">📝 Practice test${passed ? " ✓" : ""}</button>` : ""}</div></div>`; }).join("");
+      <a class="btn small alt" href="#unit-${u}/words">🔤 Words ${vm.mastered}/${vm.total}</a></div></div>`; }).join("");
   return `<div class="tcard rtest"><span class="tag gold">📖 Reading test ${when}</span><h3>Get ready for ${wd}'s reading test</h3>
-    <p class="note" style="font-size:1rem">It covers Units ${READ_TEST.units.join(" and ")}. Practise the Reading Lab missions and the unit texts first.</p>${rows}</div>`;
+    <p class="note" style="font-size:1rem">It covers Units ${READ_TEST.units.join(" and ")}. Practise the Reading Lab missions, the unit texts and the unit words.</p>${rows}</div>`;
 }
 
 /* ---------------- units ---------------- */
