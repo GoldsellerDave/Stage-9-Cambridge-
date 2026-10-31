@@ -46,7 +46,7 @@ test("Stage 8 listening: four tasks per unit, cues, answers, trap tags, timings 
 
 test("Stage 8 mini tests: 16 questions, real unit words and grammar points, a recording for each", () => {
   for (const u of [2, 3, 4]) {
-    const m = MINI[u], Q = [...m.reading.qs.map(q => ({ ...q, part: "reading" })), ...m.listening.qs.map(q => ({ ...q, part: "listening" })),
+    const m = MINI[u]; assert.equal(m.id, `mini8-u${u}`); const Q = [...m.reading.qs.map(q => ({ ...q, part: "reading" })), ...m.listening.qs.map(q => ({ ...q, part: "listening" })),
       ...m.vocab.map(q => ({ ...q, part: "vocab" })), ...m.grammar.map(q => ({ ...q, part: "grammar" }))];
     assert.equal(Q.length, 16);
     assert.deepEqual([...new Set(Q.map(q => q.part))], ["reading", "listening", "vocab", "grammar"]);
@@ -57,8 +57,8 @@ test("Stage 8 mini tests: 16 questions, real unit words and grammar points, a re
     const L = MINI_LISTENING.find(l => l.id === MINI[u].listening.id);
     assert.ok(L && L.id.startsWith("m8-"), `recording for unit ${u}`);
     L.lines.forEach(([who]) => assert.ok(L.voices[who]));
-    if (recorded(L.id)) { assert.equal(TIMES[L.id].length, L.lines.length, "timings for " + L.id); assert.equal(MT.miniQuestions(u).length, 16); assert.equal(gateFor(u).id, `mini-u${u}`); }
-    else assert.ok(!MT.MINI[u] && gateFor(u).id !== `mini-u${u}`, `no mini test until unit ${u} is recorded`);
+    if (recorded(L.id)) { assert.equal(TIMES[L.id].length, L.lines.length, "timings for " + L.id); assert.equal(MT.miniQuestions(u).length, 16); assert.equal(gateFor(u).id, `mini8-u${u}`); }
+    else assert.ok(!MT.MINI[u] && gateFor(u).id !== `mini8-u${u}`, `no mini test until unit ${u} is recorded`);
   }
 });
 

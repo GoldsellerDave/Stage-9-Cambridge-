@@ -1,5 +1,5 @@
 // Stage 8 unit mini tests, in the same format as js/minitests.js: a new short text, a new recording, and the unit's words
-// and grammar. The first option is correct (shuffled on screen). Recordings: tools/make_listening_audio.py --google m8-...
+// and grammar. Ids are mini8-u<unit>, so a Stage 9 score never counts for a Stage 8 gate. The first option is correct (shuffled on screen). Recordings: tools/make_listening_audio.py --google m8-...
 const NARRATOR = "bm_george";
 
 export const MINI_LISTENING = [
@@ -39,7 +39,7 @@ export const MINI_LISTENING = [
 ];
 
 export const MINI = {
- 2: { id: "mini-u2", unit: 2, title: "Unit 2 checkpoint",
+ 2: { id: "mini8-u2", unit: 2, title: "Unit 2 checkpoint",
   reading: { title: "The school that keeps itself cool", paras: [
    ["A", "In many hot countries, schools rely on air conditioning to keep classrooms cool. But a new school in the south of the country has almost none, and its classrooms are some of the coolest in the city."],
    ["B", "The secret is the design. The building faces north, so the sun never shines straight into the classrooms. The walls are thick and made of local clay bricks, which stay cool during the day. Above each room, a curved roof lets hot air rise and escape."],
@@ -66,7 +66,7 @@ export const MINI = {
     { point: "2.2", stem: "If I ___ a garden, I would grow my own vegetables.", opts: ["had", "have", "will have", "would have"] },
     { point: "2.4", stem: "That's the architect with ___ my father works.", opts: ["whom", "who", "that", "which"] },
     { point: "2.6", stem: "In ___ city was the tower built?", opts: ["which", "who", "whom", "where"] }] },
- 3: { id: "mini-u3", unit: 3, title: "Unit 3 checkpoint",
+ 3: { id: "mini8-u3", unit: 3, title: "Unit 3 checkpoint",
   reading: { title: "The walking bus", paras: [
    ["A", "Every morning at seven, a line of children in bright yellow jackets sets off from the corner of Lotus Street. This is the \"walking bus\": a group of children who walk to school together, with two parent volunteers at the front and back."],
    ["B", "The idea started two years ago, when traffic congestion outside the school gate became so bad that parents were afraid to let their children walk. Instead of driving them, a few families decided to walk together. Now more than forty children join the walking bus on four different routes."],
@@ -93,7 +93,7 @@ export const MINI = {
     { point: "3.3", stem: "You won't get a seat ___ you arrive early.", opts: ["unless", "if", "when", "because"] },
     { point: "3.4", stem: "Thank you for ___ us plant the trees.", opts: ["helping", "help", "to help", "helped"] },
     { point: "3.6", stem: "A new bridge ___ across the river at the moment.", opts: ["is being built", "is building", "is been built", "being built"] }] },
- 4: { id: "mini-u4", unit: 4, title: "Unit 4 checkpoint",
+ 4: { id: "mini8-u4", unit: 4, title: "Unit 4 checkpoint",
   reading: { title: "The juice that nobody wanted", paras: [
    ["A", "In 2019, a small company in Da Lat made a new strawberry juice. It tasted wonderful, and it was cheaper than other brands. But in its first year, almost nobody bought it."],
    ["B", "The problem was the bottle. It was plain and grey, and the name was printed in tiny letters. On a supermarket shelf next to bright, colourful brands, shoppers simply didn't see it."],
