@@ -9,6 +9,7 @@
 
 import { STAGE } from "./stage.js";
 import { LISTENING as LISTENING8 } from "./s8/listening.js";
+import { TIMES } from "./listening-times.js";
 
 const NARRATOR = "bm_george";
 // Teenagers and their families use the most natural (American) voices, with no blending or pitch change (David, 2026-10-28);
@@ -266,5 +267,6 @@ const LISTENING9 = [
    { skill: "Gist", stem: "Speaker 5 (Mia)", answer: 5, cue: "Some people go running", hint: "She mentions running, but is she sporty?", explain: "\"I just put on my favourite playlist... and let the songs take over.\"" }] }
 ];
 
-export const LISTENING = STAGE === 8 ? LISTENING8 : LISTENING9;
+// A Stage 8 task shows once it has been recorded (tools/make_listening_audio.py writes its timings).
+export const LISTENING = STAGE === 8 ? LISTENING8.filter(t => TIMES[t.id]) : LISTENING9;
 export const listeningFor = unit => LISTENING.filter(t => t.unitNo === unit);

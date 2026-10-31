@@ -5,6 +5,7 @@
 // The listening scripts are recorded by tools/make_listening_audio.py, like the unit listening tasks.
 import { STAGE } from "./stage.js";
 import * as S8 from "./s8/minitests.js";
+import { TIMES } from "./listening-times.js";
 export const MINI_PASS = 0.7;
 export const MINI_XP = { right: 5, firstPass: 40 };
 
@@ -92,7 +93,8 @@ const MINI9 = {
 };
 
 export const MINI_LISTENING = STAGE === 8 ? S8.MINI_LISTENING : MINI_LISTENING9;
-export const MINI = STAGE === 8 ? S8.MINI : MINI9;
+// A Stage 8 mini test is the unit gate once its recording has been made; until then the final challenge stays the gate.
+export const MINI = STAGE === 8 ? Object.fromEntries(Object.entries(S8.MINI).filter(([, m]) => TIMES[m.listening.id])) : MINI9;
 
 export const PARTS = [["reading", "Reading"], ["listening", "Listening"], ["vocab", "Vocabulary"], ["grammar", "Grammar"]];
 // All the questions of a mini test in order, each with its part and what to save in the answer.

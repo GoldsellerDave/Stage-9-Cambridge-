@@ -6,6 +6,9 @@
 // "Prime your brain" items also have keys (words to underline), the answer type and a prediction step.
 // Don't rename mission or clip ids: saved results are keyed by them.
 
+import { STAGE } from "./stage.js";
+import { UNIT_TRAPS as UNIT_TRAPS8 } from "./s8/listening.js";
+
 const T1 = "af_heart", T2 = "af_bella", T3 = "af_nicole", B1 = "am_puck", B2 = "am_liam";   // teenagers
 const MUM = "af_sarah", DAD = "am_michael", MAN = "bm_daniel", WOMAN = "bf_emma", WOMAN2 = "bf_isabella";
 
@@ -391,7 +394,7 @@ export const labMission = id => LAB.find(m => m.id === id);
 export const isLab = id => /^lab-/.test(id || "") && !!labMission(id);
 
 // Trap tags for the unit listening questions, by task id and question number (null: no particular trap).
-export const UNIT_TRAPS = {
+const UNIT_TRAPS9 = {
   "l3-short": ["distractor", "distractor", "distractor", "distractor", "opinion"],
   "l3-ranger": ["numbers", null, null, "herring", "numbers", null, "synonym"],
   "l3-guide": ["synonym", "herring", "opinion", "distractor", "opinion", "synonym"],
@@ -401,6 +404,7 @@ export const UNIT_TRAPS = {
   "l2-food": ["synonym", "synonym", "distractor", "synonym", "opinion", "opinion"],
   "l2-match": ["synonym", "synonym", "synonym", "synonym", "synonym"]
 };
+export const UNIT_TRAPS = STAGE === 8 ? UNIT_TRAPS8 : UNIT_TRAPS9;
 export const unitTrap = (taskId, k) => (UNIT_TRAPS[taskId] || [])[k] || null;
 
 // The trap tracker: listening answers with a trap tag, counted per trap. caught = not right first time.

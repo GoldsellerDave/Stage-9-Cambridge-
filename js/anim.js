@@ -93,7 +93,21 @@ export const ANIMS = {
     F("it=It#s | m=can't#new | b=be | r=raining", "The clue makes it impossible → can't.")],
   clues: [F("c=I can hear music.#o", "You can hear it: a strong clue."),
     F("h=He#s | m=must#new | b=be | ho=home", "Strong clue → sure: must."),
-    F("c2=I don't know.#o", "No clue at all…"), F("h=He#s | m=might#new | b=be | ho=home", "…so just maybe: might.")]
+    F("c2=I don't know.#o", "No clue at all…"), F("h=He#s | m=might#new | b=be | ho=home", "…so just maybe: might.")],
+  // Stage 8 Grammar Lab blocks (js/s8/glab.js)
+  "real-unreal": [F("i=If#v | s=it#s | v=rains | c=, | w=we'll#v | r=stay in", "Real: it may rain. If + present, will."),
+    F("i=If#v | s=I#s | v=had#new | o=wings | c=, | w=I'd#new | r=fly", "Imaginary: I have no wings. If + past, would.")],
+  "cond2-form": [F("i=If#v | s=I#s | v=have | o=time", "Start with if…"),
+    F("i=If#v | s=I#s | v=had#new | o=time", "…and change the verb to the past simple: had."),
+    F("i=If#v | s=I#s | v=had | o=time | c=, | s2=I#s | w=would#new | r=read#v | m=more", "Then would + base form: I would read more.")],
+  "would-base": [F("s=I#s | w=would#v | v=built#bad | o=a house", "After would, not the past…"),
+    F("s=I#s | w=would#v | v=build#new | o=a house", "…but the base form: would build.")],
+  "is-are": [F("o=The wall#o | b=is#v | bg=being | v=fixed#v", "One thing → is being."),
+    F("o=The trees#new | b=are#new | bg=being | v=planted#v", "More than one → are being.")],
+  "now-progress": [F("o=The road#o | b=is | v=repaired#v | t=every year#time", "is repaired every year: a habit.", { dots: [[0.2, ""], [0.45, ""], [0.7, ""]], now: 0.75 }),
+    F("o=The road#o | b=is | bg=being#new | v=repaired#v | t=now#new", "is being repaired now: in progress, not finished.", { bars: [[0.6, 0.95, "repairing"]], now: 0.75 })],
+  "tense-be": [F("o=Adverts#o | b=are#v | v=shown#v | t=every day#time", "Now or usually → is / are."),
+    F("o=This advert#new | b=was#new | v=shown#v | t=in 1995#new", "In the past → was / were.")]
 };
 
 const parse = w => w.split("|").map(x => x.trim()).filter(Boolean).map(x => {

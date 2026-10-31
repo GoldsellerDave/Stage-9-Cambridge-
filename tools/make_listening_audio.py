@@ -1,4 +1,4 @@
-"""Make the listening MP3s and line timings from js/listening.js, js/minitests.js and js/lab.js (Listening Lab clips) with Kokoro TTS (kokoro-onnx).
+"""Make the listening MP3s and line timings from js/listening.js, js/minitests.js, js/lab.js (Listening Lab clips) and js/s8/ (Stage 8) with Kokoro TTS (kokoro-onnx).
 
 Usage: python3 tools/make_listening_audio.py MODEL_DIR [task_id ...]
 MODEL_DIR holds kokoro-v1.0.onnx and voices-v1.0.bin
@@ -19,7 +19,9 @@ GAP, SECTION_GAP, SR = 0.55, 1.2, 24000
 
 def tasks():
     # The unit listening tasks, the listening parts of the unit mini tests and the Listening Lab clips.
-    js = 'Promise.all([import("./js/listening.js"), import("./js/minitests.js"), import("./js/lab.js")]).then(([a, b, c]) => console.log(JSON.stringify([...a.LISTENING, ...b.MINI_LISTENING, ...c.LAB_CLIPS])))'
+    # Stage 8 has its own unit tasks and mini tests in js/s8/ (node runs as Stage 9, so they are imported directly).
+    js = ('Promise.all([import("./js/listening.js"), import("./js/minitests.js"), import("./js/lab.js"), import("./js/s8/listening.js"), import("./js/s8/minitests.js")])'
+          '.then(([a, b, c, d, e]) => console.log(JSON.stringify([...a.LISTENING, ...b.MINI_LISTENING, ...c.LAB_CLIPS, ...d.LISTENING, ...e.MINI_LISTENING])))')
     return json.loads(subprocess.check_output(["node", "-e", js], cwd=ROOT))
 
 def shift(audio, semitones):

@@ -1737,9 +1737,9 @@ const glGap = t => U.esc(t).split("___").join(`<span class="rgap" role="img" ari
 // Lab text with the grammar words (past participle, plural…) as buttons that open a short explanation.
 const glx = t => U.esc(t).replace(GL.TERM_RE, w => `<button type="button" class="gw" data-gt="${GL.termKey(w)}">${w}</button>`);
 // Base form → past participle for this mission's verbs. Open by default while support is on.
-const glBank = m => { const v = GL.VERBS[m.id]; return v ? `<details class="glbank"${run.helpOn ? " open" : ""}><summary>🧰 Verb helper: past participles</summary>
+const glBank = m => { const v = GL.VERBS[m.id]; return v ? `<details class="glbank"${run.helpOn ? " open" : ""}><summary>🧰 Verb helper: ${U.esc(m.bank ? m.bank.title : "past participles")}</summary>
   <div class="glbank-in">${v.map(([a, b]) => `<span>${U.esc(a)} → <b>${U.esc(b)}</b></span>`).join("")}</div>
-  ${m.point === "3.3" ? `<p class="note">One thing → <b>was</b> being. More than one (plural) → <b>were</b> being.</p>` : `<p class="note">must / might / can't + <b>have</b> + past participle</p>`}</details>` : ""; };
+  ${m.bank ? `<p class="note">${m.bank.note}</p>` : m.point === "3.3" ? `<p class="note">One thing → <b>was</b> being. More than one (plural) → <b>were</b> being.</p>` : `<p class="note">must / might / can't + <b>have</b> + past participle</p>`}</details>` : ""; };
 function showTerm(key) {
   const t = GL.TERMS[key]; if (!t) return;
   let el = document.getElementById("sheet");
@@ -1944,7 +1944,7 @@ function glRunView() {
     const n = document.getElementById("gnext"); if (n) n.onclick = () => go(() => { if (last) { run.phase = "use"; run.ui = 0; } else run.gi++; });
     return;
   }
-  const clues = `<div class="panel glclues"><p class="eyebrow">${m.point === "2.4" ? "The clues" : "Security log"}</p><ul>${m.use.clues.map(c => `<li>${U.esc(c)}</li>`).join("")}</ul></div>`;
+  const clues = `<div class="panel glclues"><p class="eyebrow">${U.esc(m.use.cluesTitle || (m.point === "2.4" ? "The clues" : "Security log"))}</p><ul>${m.use.clues.map(c => `<li>${U.esc(c)}</li>`).join("")}</ul></div>`;
   if (run.phase === "use") {
     const it = m.use.items[run.ui], last = run.ui === m.use.items.length - 1;
     $app.innerHTML = `<div class="narrow pop">${glHead(2, `<div class="labdots">${m.use.items.map((_, k) => `<i class="${k < run.ui ? "done" : k === run.ui ? "now" : ""}"></i>`).join("")}</div>`)}
