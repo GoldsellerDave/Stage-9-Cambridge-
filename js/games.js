@@ -15,7 +15,9 @@ export const GAMES = {
   rain: { name: "Word Rain", blurb: "Meanings fall from the sky. Tap the word that matches before it lands." },
   train: { name: "Word Train", blurb: "Send each word to the right station: noun, verb, adjective or adverb." },
   speed: { name: "Speed Read", blurb: "A paragraph flashes past a few words at a time. Answer one question, then go faster." },
-  dodge: { name: "Trap Dodger", blurb: "Listen and pop the bubble with the answer. The other bubbles are traps!" }
+  dodge: { name: "Trap Dodger", blurb: "Listen and pop the bubble with the answer. The other bubbles are traps!" },
+  cross: { name: "Quick Crossword", blurb: "About 8 unit words. Read the meaning, type the word and watch it light up." },
+  crossl: { name: "Big Crossword", blurb: "About 14 words that cross and connect. Can you finish it without help?" }
 };
 export const GAME_XP_DAY = 30;           // the most XP games can give in one school day
 export const RAIN_LIVES = 3, RAIN_SECONDS = 120, TRAIN_COUNT = 20;
@@ -54,7 +56,7 @@ export const trainStations = pool => STATIONS.filter(s => pool.some(x => x.pos =
 
 /* ---------------- scores and XP ---------------- */
 const dayNo = t => Math.floor((t + 7 * 3600e3) / 86400e3);        // school time zone (UTC+7)
-export const isGame = id => /^(rain|train|speed|dodge)-u\d$/.test(id || "");
+export const isGame = id => /^(rain|train|speed|dodge|cross|crossl)-u\d$/.test(id || "");
 export const gameId = (game, unit) => `${game}-u${unit}`;
 export function gamePoints(h) { const a = (h.answers || []).find(x => x.skill === "Game score"); return a ? a.points : 0; }
 export function bestScore(history, id) { return history.filter(h => h.text_id === id).reduce((b, h) => Math.max(b, gamePoints(h)), 0); }
@@ -69,7 +71,8 @@ export function gameXP(hits, history, now = new Date()) {
 // What is saved. Words missed in Word Rain come back in the word review (see wordSchedule in practice.js).
 export function gameAnswers(game, R, unit) {
   const ans = [{ skill: "Game score", game, points: R.points, level: R.level }];
-  if (game === "rain") R.words.forEach(x => ans.push({ skill: "Word game", word: x.w, unit, first_try: x.hit }));
+  // Crossword words solved without a letter shown count as known; the rest come back in the word review too.
+  if (game === "rain" || game === "cross" || game === "crossl") R.words.forEach(x => ans.push({ skill: "Word game", word: x.w, unit, first_try: x.hit }));
   else if (game === "train") R.words.forEach(x => ans.push({ skill: "Word class", word: x.w, unit, pos: x.pos, first_try: x.hit }));
   // Trap Dodger answers count in the trap tracker (see trapStats in lab.js). picked is the trap bubble popped, if any.
   else if (game === "dodge") R.words.forEach(x => ans.push({ skill: "Trap game", clip: x.clip, trap: x.trap, level: x.tier, first_try: x.hit, ...(x.picked ? { picked: x.picked } : {}), ...(x.speed ? { speed: x.speed } : {}) }));
