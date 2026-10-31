@@ -7,6 +7,9 @@
 // Saved as mode "vocab" (no schema change), text_id = mission id, answers { skill: "Reading Lab", trap, rlab: item id, level }.
 // Don't rename mission or item ids: saved results are keyed by them.
 
+import { STAGE } from "./stage.js";
+import * as S8 from "./s8/rlab.js";
+
 export const RTRAPS = {
   scan: { name: "Finding it fast", tip: "Read the question first, pick a key word, then scan for it. Don't read every word." },
   paraphrase: { name: "Same words", tip: "The right answer says it in other words. An option that copies words from the text is often a trap." },
@@ -70,7 +73,7 @@ const APPS = { names: { A: "SleepWell", B: "FoodFact", C: "CalmMind", D: "StepUp
   ["C", "CalmMind: Short breathing exercises to help with stress and anger. Daily reminders. $2 a month after a 7-day free trial."],
   ["D", "StepUp: Counts your steps and sets weekly goals. Compete with friends on a leaderboard. Free."]] };
 
-export const RLAB = [
+const RLAB9 = [
 { id: "rlab-scan", n: 1, trap: "scan", part: "Parts 5 and 6", title: "Find it fast", blurb: "Skim and scan: find the right part of the text quickly, without reading every word.",
   teach: [
     { h: "Question first, then the text", p: "Read the question before the text. Choose one key word, a name, a number or a topic, and look only for that. Your eyes can jump over everything else.",
@@ -763,10 +766,12 @@ const U2_IDS = new Set(["scan-4", "scan-5", "scan-s3", "scan-s4", "scan-c3", "sc
   "trick-1", "trick-4", "trick-s2", "trick-s4", "trick-c2", "trick-c4", "note-1", "note-2", "note-4", "note-s1", "note-s3", "note-c2", "note-c3",
   "match-4", "match-5", "match-c1", "match-c2", "match-c3", "match-c4", "conv-2", "conv-4", "conv-s2", "conv-s4", "conv-c2", "conv-c4",
   "gap-1", "gap-3", "gap-4", "gap-s2", "gap-s4", "gap-c2", "infer-1", "infer-3", "infer-4", "infer-s2", "infer-s4", "infer-c2", "infer-c3"].map(x => `rlab-${x}`));
-RLAB.forEach(m => { m.items.forEach(it => { if (!it.u) it.u = U2_IDS.has(it.id) ? 2 : 3; }); m.items.push(...(MORE[m.id] || [])); });
+RLAB9.forEach(m => { m.items.forEach(it => { if (!it.u) it.u = U2_IDS.has(it.id) ? 2 : 3; }); m.items.push(...(MORE[m.id] || [])); });
 
 // The units whose Reading tab shows the Reading Lab (its texts are on their topics).
-export const RLAB_UNITS = [2, 3];
+export const RLAB_UNITS = STAGE === 8 ? S8.RLAB_UNITS : [2, 3];
+// Stage 8 has the same missions with its own questions, on its own unit topics.
+export const RLAB = STAGE === 8 ? RLAB9.map(m => ({ ...m, items: S8.ITEMS[m.id] || [] })) : RLAB9;
 export const rlabMission = id => RLAB.find(m => m.id === id);
 // A mission with only one unit's questions (the Lab engine picks from m.items).
 export const unitMission = (m, u) => ({ ...m, items: m.items.filter(it => it.u === u) });

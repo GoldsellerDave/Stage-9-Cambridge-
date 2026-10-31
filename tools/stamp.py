@@ -9,8 +9,9 @@ import hashlib, json, pathlib, re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 h = lambda p: hashlib.sha1(p.read_bytes()).hexdigest()[:8]
-mods = sorted((ROOT / "js").glob("*.js"))
-imap = {f"./js/{p.name}": f"./js/{p.name}?v={h(p)}" for p in mods}
+mods = sorted((ROOT / "js").rglob("*.js"))            # js/ and its stage folders (js/s8/)
+rel = lambda p: p.relative_to(ROOT).as_posix()
+imap = {f"./{rel(p)}": f"./{rel(p)}?v={h(p)}" for p in mods}
 css = f"assets/style.css?v={h(ROOT / 'assets/style.css')}"
 block = ('<script type="importmap" id="stamp">' + json.dumps({"imports": imap}, separators=(",", ":")) + "</script>")
 

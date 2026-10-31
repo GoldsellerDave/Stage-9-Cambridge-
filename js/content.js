@@ -7,6 +7,8 @@ import { UNIT2_TEXTS } from "./texts-u2.js";
 import { UNIT3_TEXTS } from "./texts-u3.js";
 import { UNIT4_TEXTS } from "./texts-u4.js";
 import { CHALLENGE } from "./texts-challenge.js";
+import { STAGE } from "./stage.js";
+import * as S8 from "./s8/content.js";      // Stage 8 (Grade 7) texts and baseline
 
 export const STRATEGY = {
  "Main idea":{name:"Finding the main idea",steps:["Read the first paragraph and the last paragraph again.","Ask: what does almost every paragraph talk about?","Cross out answers that only match one paragraph or one detail.","Choose the answer that covers the whole text."]},
@@ -123,7 +125,7 @@ const SLEEP_SLOTS = [
    hint:"Paragraph F has two parts: what the writer admits first, and then the word \"Yet\". Watch out for answers with \"entirely\" or \"impossible\".", focus:"Teenagers cannot rewrite their biology; what the adults around them can do is stop mistaking it for a flaw."}]}
 ];
 
-export const PRACTICE_TEXTS = [
+const TEXTS9 = [
   { id: "sleep", unitNo: 2, unit: "Unit 2 · Well-being", topic: "Teenagers and sleep",
     blurb: "Why do teenagers find it so hard to get up in the morning?",
     levels: SLEEP_LEVELS, slots: SLEEP_SLOTS },
@@ -131,9 +133,10 @@ export const PRACTICE_TEXTS = [
   ...UNIT3_TEXTS,
   ...UNIT4_TEXTS
 ];
+export const PRACTICE_TEXTS = STAGE === 8 ? S8.PRACTICE_TEXTS : TEXTS9;
 // Texts with a Challenge version get it as a fourth level, and each slot gets its Challenge question.
 for (const t of PRACTICE_TEXTS) {
-  const c = CHALLENGE[t.id];
+  const c = (STAGE === 8 ? S8.CHALLENGE : CHALLENGE)[t.id];
   if (!c) continue;
   t.levels = [...t.levels, c.level];
   t.slots = t.slots.map((s, i) => {
@@ -144,7 +147,7 @@ for (const t of PRACTICE_TEXTS) {
 }
 
 /* ---------- Baseline: three short passages, Easier to Harder, 4 MCQs each, no hints ---------- */
-export const BASELINE = [
+const BASELINE9 = [
  { level: 0, title: "The walk to school", paras: [
   ["A","Last year, Tom's mum drove him to school every day. The journey took ten minutes, and Tom usually looked at his phone in the car. Then his mum started a new job, and she could not drive him any more. Tom was not happy. Now he had to walk for twenty-five minutes."],
   ["B","After a few weeks, Tom noticed something strange. He felt better in the morning. He walked with two friends from his street, and they talked and laughed all the way. He also slept better at night."],
@@ -178,5 +181,6 @@ export const BASELINE = [
    {skill:"Detail", stem:"According to paragraph B, what did the bored participants do better?", opts:["They thought of more creative uses for an object.","They copied numbers more accurately.","They remembered more phone numbers.","They finished the copying task more quickly than the others."]},
    {skill:"Writer's view", stem:"What is the writer's attitude in paragraph D?", opts:["Gently encouraging readers to allow themselves some boredom","Strongly criticising teachers for boring lessons","Worried that boredom harms creativity","Uncertain whether the research is reliable"]}]}
 ];
+export const BASELINE = STAGE === 8 ? S8.BASELINE : BASELINE9;
 // Placement from the baseline score (out of 12): 0–5 Easier, 6–9 Core, 10–12 Harder.
 export const PLACEMENT = [[0, 5, 0], [6, 9, 1], [10, 12, 2]];

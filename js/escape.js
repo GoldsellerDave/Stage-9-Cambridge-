@@ -4,6 +4,8 @@
 // helpers below mark answers, keep the time and work out the result. js/student.js draws it (solo play).
 import { unitWords, unitGrammar, TIERS } from "./practice.js";
 import { extraWords } from "./vocab-extra.js";
+import { STAGE } from "./stage.js";
+import { ESCAPES as ESCAPES8 } from "./s8/escape.js";
 
 export const ESCAPE_PENALTY = { wrong: 15, hint: 30, code: 30, event: 30, torch: 20, final: 60 };   // seconds added to the escape time
 export const ESCAPE_XP = { first: 3, escape: 10, firstEscape: 20, key: 5 };
@@ -16,7 +18,7 @@ export const isEscape = id => /^escape-u\d$/.test(id || "");
 
 // Unit content. Each room: where it is, the three things to search, and the puzzle kind.
 // Reading questions all have a one-digit answer, so the answers themselves are the safe code.
-export const ESCAPES = {
+const ESCAPES9 = {
   3: {
     title: "Locked in the museum",
     story: "Your class visited the Riverside Heritage Museum. You stayed behind to finish your worksheet… and the guard locked up and went home! Find the codes to get out.",
@@ -55,6 +57,9 @@ export const ESCAPES = {
     escaped: "The back door clicks open and you step out into the warm evening. Across the river, your class is waiting at the bus. You made it!"
   }
 };
+// Each stage has its own rooms; the teacher page looks them up by the class's stage.
+export const ESCAPES_BY_STAGE = { 9: ESCAPES9, 8: ESCAPES8 };
+export const ESCAPES = STAGE === 8 ? ESCAPES8 : ESCAPES9;
 export const escapeUnits = () => Object.keys(ESCAPES).map(Number);
 
 // The same numbers from the same seed, so every team in a live game gets the same puzzles.

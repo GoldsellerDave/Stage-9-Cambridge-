@@ -70,7 +70,7 @@ function evidence(a) {
   if (a.skill === "Grammar Block" && GBLOCKS[a.block]) return [[a.block, !!a.passed, false, null]];
   if (a.skill === "Grammar Lab" && a.step === "block" && GBLOCKS[a.block]) return [[a.block, !!a.first_try, a.support === "hint", null]];
   if (a.skill === "Grammar" && a.eng && GBLOCKS[a.block]) return [[a.block, !!a.first_try, a.support === "hint", a.b || null]];
-  if (a.skill === "Grammar" && pointBlock(a.point)) return [[pointBlock(a.point), !!a.first_try, a.support === "hint", null]];
+  if (a.skill === "Grammar" && !a.stage && pointBlock(a.point)) return [[pointBlock(a.point), !!a.first_try, a.support === "hint", null]];
   return [];
 }
 // Each block's state: { p, n (answers), seen (ms), at (ms when mastered), reviews (reviews passed since) }.

@@ -7,6 +7,9 @@
 // cue (and cueEnd): words from the script that mark the part replayed as support after a wrong answer.
 // Don't rename ids once students have used them: saved results are keyed by id.
 
+import { STAGE } from "./stage.js";
+import { LISTENING as LISTENING8 } from "./s8/listening.js";
+
 const NARRATOR = "bm_george";
 // Teenagers and their families use the most natural (American) voices, with no blending or pitch change (David, 2026-10-28);
 // other adults (narrator, guides, presenters) keep British voices.
@@ -18,7 +21,7 @@ const GIRL_UK3 = "af_nicole";
 const GIRL_US = "af_jessica";
 const MUM = "af_sarah", DAD = "am_michael";
 
-export const LISTENING = [
+const LISTENING9 = [
 /* ================= Unit 3: Tourism ================= */
 { id: "l3-short", unitNo: 3, part: "Part 1: Short conversations", topic: "Holiday conversations",
   blurb: "Five short conversations about holidays. Choose the right answer.",
@@ -263,4 +266,5 @@ export const LISTENING = [
    { skill: "Gist", stem: "Speaker 5 (Mia)", answer: 5, cue: "Some people go running", hint: "She mentions running, but is she sporty?", explain: "\"I just put on my favourite playlist... and let the songs take over.\"" }] }
 ];
 
+export const LISTENING = STAGE === 8 ? LISTENING8 : LISTENING9;
 export const listeningFor = unit => LISTENING.filter(t => t.unitNo === unit);

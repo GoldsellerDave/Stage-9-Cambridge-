@@ -46,6 +46,7 @@ const live = {
   addStudents: (t, c, names) => rpc("ck_teacher_add_students", { p_token: t, p_class: c, p_names: names }),
   newPins: (t, c) => rpc("ck_teacher_new_pins", { p_token: t, p_class: c }),
   englishNames: (t, c, list) => rpc("ck_teacher_english_names", { p_token: t, p_class: c, p_names: list }),
+  setStage: (t, c, stage) => rpc("ck_teacher_set_stage", { p_token: t, p_class: c, p_stage: stage }),
   removeStudent: (t, id) => rpc("ck_teacher_remove_student", { p_token: t, p_student: id }),
   deleteClass: (t, c) => rpc("ck_teacher_delete_class", { p_token: t, p_class: c }),
   setPassword: (t, o, n) => rpc("ck_set_password", { p_token: t, p_old: o, p_new: n }),
@@ -93,7 +94,8 @@ function seed() {
   const add = (username, name, role, pin, cls) => { const s = { id: "s" + (++n), username, display_name: name, role, pin, class_code: cls, level: null, xp_total: 0 }; db.students.push(s); return s; };
   add("demo", "Demo Sam", "student", "1234", "DEMO");
   add("teacher", "Teacher", "teacher", "demo", "TEACHER").is_admin = true;
-  db.classes = [{ code: "DEMO", teacher_id: "s2" }];
+  db.classes = [{ code: "DEMO", teacher_id: "s2", stage: 9 }];
+  addStage8(db);
   let r = 7;
   const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
   DEMO_NAMES.forEach((nm, i) => {
@@ -112,9 +114,17 @@ function seed() {
   });
   return db;
 }
+// A Stage 8 (Grade 7) sample: student demo8, PIN 1234, in class DEMO8.
+function addStage8(db) {
+  if (db.classes.some(c => c.code === "DEMO8")) return;
+  const t = db.students.find(x => x.username === "teacher");
+  db.classes.push({ code: "DEMO8", teacher_id: t && t.id, stage: 8 });
+  db.students.push({ id: "s8demo", username: "demo8", display_name: "Demo Linh", role: "student", pin: "1234", class_code: "DEMO8", level: null, xp_total: 0 });
+}
+const stageOf = (db, code) => (db.classes.find(c => c.code === code) || {}).stage || 9;
 function load() {
   try { const d = JSON.parse(localStorage.getItem(KEY));
-    if (d && d.students) { if (!d.classes) { const t = d.students.find(x => x.username === "teacher"); if (t) t.is_admin = true; d.classes = [{ code: "DEMO", teacher_id: t && t.id }]; } return d; } } catch (e) {}
+    if (d && d.students) { if (!d.classes) { const t = d.students.find(x => x.username === "teacher"); if (t) t.is_admin = true; d.classes = [{ code: "DEMO", teacher_id: t && t.id }]; } addStage8(d); return d; } } catch (e) {}
   return seed();
 }
 function store(db) { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch (e) {} }
@@ -139,13 +149,13 @@ const demo = {
     const db = load(), s = db.students.find(x => x.username === String(u).trim().toLowerCase());
     if (!s || s.pin !== String(p).trim()) throw new Error("Wrong username or PIN.");
     const t = "demo-" + Math.random().toString(36).slice(2); db.tokens[t] = s.id; store(db);
-    return later({ token: t, role: s.role, name: s.english_name || s.display_name, class_code: s.class_code, level: s.level, must_change: !!s.must_change });
+    return later({ token: t, role: s.role, name: s.english_name || s.display_name, class_code: s.class_code, level: s.level, must_change: !!s.must_change, stage: stageOf(db, s.class_code) });
   },
   async logout(t) { const db = load(); delete db.tokens[t]; store(db); return null; },
   async me(t) {
     const db = load(), s = auth(db, t);
     return later({ id: s.id, name: s.english_name || s.display_name, english_name: s.english_name || null, username: s.username, class_code: s.class_code, role: s.role, level: s.level,
-      is_admin: !!s.is_admin, must_change: !!s.must_change,
+      is_admin: !!s.is_admin, must_change: !!s.must_change, stage: stageOf(db, s.class_code),
       xp_total: s.xp_total, xp_week: xpSince(db, s.id, weekStart()), baseline_done: db.attempts.some(a => a.student_id === s.id && a.mode === "baseline") });
   },
   async history(t) { const db = load(), s = auth(db, t); return later(hist(db, s.id)); },
@@ -176,7 +186,7 @@ const demo = {
     const db = load(), s = teacher(db, t);
     return later(db.classes.filter(c => s.is_admin || c.teacher_id === s.id).sort((a, b) => a.code.localeCompare(b.code)).map(c => {
       const o = db.students.find(x => x.id === c.teacher_id);
-      return { code: c.code, mine: c.teacher_id === s.id, teacher: o ? o.display_name : null,
+      return { code: c.code, stage: c.stage || 9, mine: c.teacher_id === s.id, teacher: o ? o.display_name : null,
                students: db.students.filter(x => x.class_code === c.code && x.role === "student").length }; }));
   },
   async teacherClass(t, c) {
@@ -237,6 +247,11 @@ const demo = {
     (list || []).forEach(x => { const s = db.students.find(k => k.id === x.id && k.class_code === c && k.role === "student");
       if (s) { s.english_name = String(x.english || "").trim().slice(0, 40) || null; n++; } });
     store(db); return later(n);
+  },
+  async setStage(t, c, stage) {
+    const db = load(); ofClass(db, t, c);
+    if (![8, 9].includes(+stage)) throw new Error("Choose Stage 8 or Stage 9.");
+    db.classes.find(x => x.code === c).stage = +stage; store(db); return later(+stage);
   },
   async removeStudent(t, id) { const db = load(); ofStudent(db, t, id);
     db.students = db.students.filter(x => x.id !== id); db.attempts = db.attempts.filter(a => a.student_id !== id); store(db); return null; },

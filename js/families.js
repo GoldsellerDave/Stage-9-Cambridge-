@@ -1,6 +1,9 @@
 // Word families built on each unit's vocabulary. Each item: [sentence with ___, correct, wrong, wrong, wrong, the family].
 // The wrong options come from the same family, so the task is choosing the right form (noun, verb, adjective, adverb, person).
-export const FAMILIES = {
+import { STAGE } from "./stage.js";
+import { FAMILIES as FAMILIES8 } from "./s8/families.js";
+
+const FAMILIES9 = {
  1: [
   ["She is very ___ and wants to run her own company one day.", "ambitious", "ambition", "ambitiously", "ambitions", "ambition (n) · ambitious (adj) · ambitiously (adv)"],
   ["Our teacher ___ the new plan to everyone by email.", "communicated", "communication", "communicative", "communicator", "communicate (v) · communication (n) · communicative (adj)"],
@@ -65,3 +68,4 @@ export const FAMILIES = {
   ["The school held a ___ to buy new library books.", "fundraiser", "fundraise", "fundraised", "fundraisers", "fundraise (v) · fundraiser (event or person) · fundraising (n)"],
   ["The tickets were very ___, so everyone could go.", "affordable", "afford", "affordability", "affording", "afford (v) · affordable (adj)"]]
 };
+export const FAMILIES = STAGE === 8 ? FAMILIES8 : FAMILIES9;

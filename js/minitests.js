@@ -3,11 +3,13 @@
 // vocabulary and grammar from the unit. No hints; the first option is correct and options are shuffled on screen.
 // Pass mark 70%. A unit without a mini test keeps its final challenge as the gate (see js/trail.js).
 // The listening scripts are recorded by tools/make_listening_audio.py, like the unit listening tasks.
+import { STAGE } from "./stage.js";
+import * as S8 from "./s8/minitests.js";
 export const MINI_PASS = 0.7;
 export const MINI_XP = { right: 5, firstPass: 40 };
 
 const NARRATOR = "bm_george";
-export const MINI_LISTENING = [
+const MINI_LISTENING9 = [
  { id: "m2-water", unitNo: 2, topic: "Teenagers and water",
    voices: { NARRATOR, PRESENTER: "bf_isabella", DOCTOR: "bf_emma" },
    lines: [
@@ -32,7 +34,7 @@ export const MINI_LISTENING = [
    ["GUIDE", "Oh, and one more thing. There are monkeys in the trees above the river. They're used to people, but they will try to take your food. So keep your bags closed, and never feed them."]] }
 ];
 
-export const MINI = {
+const MINI9 = {
  2: { id: "mini-u2", unit: 2, title: "Unit 2 checkpoint",
   reading: { title: "Lunch at Riverside School", paras: [
    ["A", "Two years ago, most students at Riverside School bought their lunch from a small shop by the school gate. The shop sold crisps, fizzy drinks and fried chicken, and it was always busy. But teachers noticed a problem: after lunch, many students were tired and found it hard to concentrate."],
@@ -88,6 +90,9 @@ export const MINI = {
     { point: "3.4", stem: "It was a ___ walk to the waterfall, so we took plenty of water.", opts: ["three-hour", "three-hours", "three hour's", "hours-three"] },
     { point: "3.6", stem: "Everyone was ___ when the monkey stole the guide's hat.", opts: ["amused", "amusing", "amuse", "amusement"] }] }
 };
+
+export const MINI_LISTENING = STAGE === 8 ? S8.MINI_LISTENING : MINI_LISTENING9;
+export const MINI = STAGE === 8 ? S8.MINI : MINI9;
 
 export const PARTS = [["reading", "Reading"], ["listening", "Listening"], ["vocab", "Vocabulary"], ["grammar", "Grammar"]];
 // All the questions of a mini test in order, each with its part and what to save in the answer.

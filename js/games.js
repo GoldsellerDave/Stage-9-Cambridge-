@@ -5,6 +5,7 @@
 import { unitWords } from "./practice.js";
 import { extraWords } from "./vocab-extra.js";
 import { FAMILIES } from "./families.js";
+import { STAGE } from "./stage.js";
 import { play } from "./sound.js";
 import { PRACTICE_TEXTS } from "./content.js";
 import { LAB, TRAPS, LAB_LEVELS, LAB_PLAYS, markLine } from "./lab.js";
@@ -36,7 +37,7 @@ export function rainPool(unit, tier = 0) {
 const TAG = { n: "noun", v: "verb", adj: "adjective", adv: "adverb", person: "noun", "the subject": "noun", "the person": "noun",
               "the science": "noun", machine: "noun", "event or person": "noun" };
 const SKIP = new Set(["monitor", "permit", "produce", "breed", "anger"]);
-const EXTRA = { 3: [["ecologically", "adverb"]], 4: [["genetically", "adverb"]], 5: [["analytically", "adverb"], ["innovatively", "adverb"]],
+const EXTRA = STAGE === 8 ? {} : { 3: [["ecologically", "adverb"]], 4: [["genetically", "adverb"]], 5: [["analytically", "adverb"], ["innovatively", "adverb"]],
                 7: [["sociable", "adjective"]], 8: [["emissions", "noun"]], 9: [["illegal", "adjective"]] };
 export const STATIONS = ["noun", "verb", "adjective", "adverb"];
 export function trainPool(unit) {

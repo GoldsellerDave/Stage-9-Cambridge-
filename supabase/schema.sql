@@ -63,6 +63,8 @@ create table if not exists ck_classes (
   teacher_id uuid references ck_students(id) on delete set null,
   created_at timestamptz not null default now()
 );
+-- Each class follows one stage's content: 9 (Grade 8) or 8 (Grade 7). Set by its teacher.
+alter table ck_classes add column if not exists stage int not null default 9 check (stage between 7 and 9);
 alter table ck_classes enable row level security;
 revoke all on ck_classes from anon, authenticated;
 -- First run of this version: the first teacher becomes the admin and owns the classes that already exist.
@@ -112,7 +114,8 @@ begin
   delete from ck_tokens where student_id = s.id and expires_at < now();
   insert into ck_tokens(student_id) values (s.id) returning token into tok;
   return json_build_object('token', tok, 'role', s.role, 'name', coalesce(s.english_name, s.display_name),
-                           'class_code', s.class_code, 'level', s.level, 'must_change', s.must_change);
+                           'class_code', s.class_code, 'level', s.level, 'must_change', s.must_change,
+                           'stage', coalesce((select stage from ck_classes where code = s.class_code), 9));
 end $$;
 
 create or replace function ck_logout(p_token uuid) returns void
@@ -127,6 +130,7 @@ begin
   return json_build_object(
     'id', s.id, 'name', coalesce(s.english_name, s.display_name), 'english_name', s.english_name, 'username', s.username, 'class_code', s.class_code,
     'role', s.role, 'level', s.level, 'xp_total', s.xp_total, 'is_admin', s.is_admin, 'must_change', s.must_change,
+    'stage', coalesce((select stage from ck_classes where code = s.class_code), 9),
     'xp_week', (select coalesce(sum(xp), 0) from ck_attempts where student_id = s.id and created_at >= ck_week_start()),
     'baseline_done', exists(select 1 from ck_attempts where student_id = s.id and mode = 'baseline'));
 end $$;
@@ -226,7 +230,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare s ck_students := ck_require_teacher(p_token);
 begin
   return coalesce((select json_agg(r order by r.code) from (
-    select c.code, c.teacher_id = s.id as mine, t.display_name as teacher,
+    select c.code, c.stage, c.teacher_id = s.id as mine, t.display_name as teacher,
            (select count(*) from ck_students st where st.class_code = c.code and st.role = 'student')::int as students
       from ck_classes c left join ck_students t on t.id = c.teacher_id
      where s.is_admin or c.teacher_id = s.id) r), '[]'::json);
@@ -360,6 +364,16 @@ begin
     out := out || jsonb_build_object('no', v_n, 'name', v_name, 'username', v_user, 'pin', v_pin);
   end loop;
   return json_build_object('class_code', v_code, 'students', out);
+end $$;
+
+-- The stage a class follows (8 or 9). Students get that stage's content the next time they open the site.
+create or replace function ck_teacher_set_stage(p_token uuid, p_class text, p_stage int) returns int
+language plpgsql security definer set search_path = public, extensions as $$
+declare s ck_students := ck_require_class(p_token, p_class);
+begin
+  if p_stage not in (8, 9) then raise exception 'Choose Stage 8 or Stage 9.'; end if;
+  update ck_classes set stage = p_stage where code = p_class;
+  return p_stage;
 end $$;
 
 -- New PINs for a whole class, for a fresh login sheet. Everyone in the class is signed out.
@@ -625,5 +639,5 @@ grant execute on function ck_login(text, text), ck_logout(uuid), ck_me(uuid), ck
   ck_admin_add_teacher(uuid, text, text), ck_admin_reset_teacher(uuid, uuid), ck_admin_remove_teacher(uuid, uuid),
   ck_admin_move_class(uuid, text, uuid), ck_live_start(uuid, text, int), ck_live_control(uuid, text, text),
   ck_live_board(uuid, text), ck_live_join(uuid, text, text), ck_live_progress(uuid, text, text, int, int, int, boolean),
-  ck_live_feed(uuid, text), ck_teacher_grammar(uuid, text)
+  ck_live_feed(uuid, text), ck_teacher_grammar(uuid, text), ck_teacher_set_stage(uuid, text, int)
   to anon;

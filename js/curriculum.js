@@ -3,10 +3,13 @@
 // Grade 8 column of the "ESL LS Curriculum – Use of English" overview (lesson numbers as in the overview).
 // Objective codes are from the Cambridge Lower Secondary ESL curriculum framework (0876).
 
-export const STAGE = 9;
+import { STAGE } from "./stage.js";
+import * as S8 from "./s8/curriculum.js";
+export { STAGE };
+// Stage 8 (Grade 7) has its own map in js/s8/curriculum.js; the exports at the end pick the device's stage.
 
 // The school year in order. kind: "unit" has practice; "writing", "exam", "revision" are shown as markers.
-export const SEQUENCE = [
+const SEQUENCE9 = [
   { kind: "unit", unit: 1, start: "2026-08-13", weeks: "Weeks 1–3" },
   { kind: "writing", title: "Descriptive writing", start: "2026-09-03", weeks: "Weeks 4–6" },
   { kind: "unit", unit: 2, start: "2026-09-21", weeks: "Weeks 7–9" },
@@ -23,7 +26,7 @@ export const SEQUENCE = [
   { kind: "revision", title: "Revision and exams", start: "2027-04-05", weeks: "Weeks 33–37" }
 ];
 
-export const UNITS = {
+const UNITS9 = {
   1: { title: "Views and voices", reading: ["9Rm.01", "9Rd.01", "9Rd.04", "9Ro.01", "9Ro.02"] },
   2: { title: "Well-being", reading: ["9Rm.01", "9Rd.01", "9Rd.02", "9Rd.04", "9Ro.01"] },
   3: { title: "Tourism", reading: ["9Rm.01", "9Rd.01", "9Rd.04", "9Ro.01"] },
@@ -35,7 +38,7 @@ export const UNITS = {
   9: { title: "Achievements and ambitions", reading: ["9Rm.01", "9Rm.02", "9Rd.01", "9Ro.01"] }
 };
 
-export const OBJECTIVES = {
+const OBJECTIVES9 = {
   "9Rm.01": "Understand the main points of short and extended texts.",
   "9Rm.02": "Read a range of extended fiction and non-fiction texts with confidence and enjoyment.",
   "9Rd.01": "Understand specific information and detail in short and extended texts.",
@@ -67,7 +70,7 @@ export const OBJECTIVES = {
 };
 
 /* Grammar points. Each item: [sentence with ___ (or "" for "Which sentence is correct?"), correct, wrong, wrong, wrong]. */
-export const GRAMMAR = [
+const GRAMMAR9 = [
  /* ---------------- Unit 1: Views and voices ---------------- */
  { id: "1.1", unit: 1, title: "-ing forms", code: "9Us.03",
    rule: "Use the -ing form as the subject of a sentence (Reading helps me relax), after prepositions (good at listening) and after verbs such as enjoy, avoid, mind, finish and suggest.",
@@ -428,3 +431,9 @@ export const GRAMMAR = [
     ["I'm really excited ___ starting high school.", "about", "for", "on", "with"],
     ["Hoi An is famous ___ its lanterns.", "for", "of", "with", "by"]] }
 ];
+
+const S8_ON = STAGE === 8;
+export const SEQUENCE = S8_ON ? S8.SEQUENCE : SEQUENCE9;
+export const UNITS = S8_ON ? S8.UNITS : UNITS9;
+export const OBJECTIVES = S8_ON ? S8.OBJECTIVES : OBJECTIVES9;
+export const GRAMMAR = S8_ON ? S8.GRAMMAR : GRAMMAR9;

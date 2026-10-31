@@ -2,7 +2,10 @@
 // Each entry: [word, learner definition, example sentence with ___ where the word goes].
 // Spelling fixes against the source list: "Ampitheatre" → amphitheatre, "Chain supply" → supply chain.
 
-export const VOCAB = {
+import { STAGE } from "./stage.js";
+import { VOCAB as VOCAB8 } from "./s8/vocab.js";
+
+const VOCAB9 = {
  1: [[
   ["ambition", "something you really want to achieve in the future", "Her ___ is to become a doctor."],
   ["communication", "sharing information or ideas with other people", "Good ___ between friends prevents arguments."],
@@ -228,3 +231,4 @@ export const VOCAB = {
   ["scowled", "looked at someone in an angry way", "He ___ at me when I took his seat."]
  ]]
 };
+export const VOCAB = STAGE === 8 ? VOCAB8 : VOCAB9;
