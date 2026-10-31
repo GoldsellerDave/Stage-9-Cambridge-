@@ -1095,3 +1095,58 @@ button.qpwb:not(:disabled){cursor:pointer;animation:qpulse 1.4s ease-in-out infi
 /* Class reading test card on Home (student.js readTestCard) */
 .rtest{border-color:var(--teal)} .rtrow{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface)}
 .rtrow .row{margin-top:6px;gap:6px;flex-wrap:wrap}
+/* Word Crossword: letter tiles on a night-sky stage with drifting letters; the active word glows, solved words flash gold
+   and lock in, and the finished grid ripples through the rainbow. Fixed colours: the stage is night in both themes. */
+.xstage{position:relative;overflow:hidden;border-radius:18px;padding:12px;background:radial-gradient(120% 90% at 20% 0%,#3B2F8F,#1A1446 55%,#0D0B26);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.18);touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.xsky{position:absolute;inset:0;pointer-events:none}
+.xsky i{position:absolute;left:calc(var(--i) * 10% + 2%);top:105%;font:800 1.6rem var(--f-head);font-style:normal;color:rgba(255,255,255,.07);
+  animation:xdrift calc(14s + var(--i) * 1.3s) linear infinite;animation-delay:calc(var(--i) * -2.1s)}
+@keyframes xdrift{to{transform:translateY(-130vh) rotate(25deg)}}
+.xgrid{position:relative;display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:3px;margin:0 auto;
+  width:min(100%,calc(var(--cols) * 46px));aspect-ratio:var(--cols)/var(--rows)}
+.xe{display:block}
+.xc{position:relative;display:grid;place-items:center;padding:0;border:0;border-radius:5px;background:#F7F4EA;color:#16324F;
+  box-shadow:0 2px 0 #B9B2A0;font:800 clamp(.8rem,4.2vw,1.35rem)/1 var(--f-body);transition:background .15s,box-shadow .15s}
+.xc .xn{position:absolute;left:2px;top:1px;font:700 clamp(.42rem,2vw,.62rem)/1 var(--f-body);color:#5B6B7A}
+.xc .xl{text-transform:uppercase}
+.xc.on{background:#CFEFFF;box-shadow:0 2px 0 #7FB7D6}
+.xc.cur{background:#FFC857;box-shadow:0 2px 0 #C98A0B,0 0 0 2px #FFF4CC,0 0 14px rgba(255,200,87,.9);z-index:1}
+.xc.ok{background:linear-gradient(160deg,#8EF0B4,#2EAD5B);color:#0E3B22;box-shadow:0 2px 0 #1E7A4C}
+.xc.ok.on{background:linear-gradient(160deg,#B6F7CF,#43C273)}
+.xc.given .xl{color:#7B4FC4}
+.xc.pop .xl{animation:xpop .22s ease-out}
+@keyframes xpop{0%{scale:.4;opacity:0}70%{scale:1.25}100%{scale:1}}
+.xc.win{animation:xwin .7s ease-out both;animation-delay:var(--d)}
+@keyframes xwin{0%{scale:1}30%{scale:1.28;background:#FFE36E;box-shadow:0 0 0 3px #fff,0 0 24px 6px rgba(255,214,74,.95)}100%{scale:1}}
+.xc.shake{animation:xshake .5s}
+@keyframes xshake{0%,70%{background:#FFB3A7;box-shadow:0 2px 0 #B3402A}20%{translate:-4px}40%{translate:4px}60%{translate:-3px}80%{translate:2px}}
+.xc.reveal{animation:xreveal .6s ease-out}
+@keyframes xreveal{0%{transform:rotateY(90deg);background:#D9C8FF}100%{transform:rotateY(0)}}
+.xc.wave{animation:xwave 1.4s ease-in-out both;animation-delay:var(--d)}
+@keyframes xwave{0%,100%{translate:0}20%{translate:0 -8px;background:#FF8A65}40%{background:#FFD54A}60%{translate:0 0;background:#81C784}80%{background:#4FC3F7}}
+.xspark{width:9px;height:9px;box-shadow:0 0 8px currentColor}
+.xclue{display:flex;align-items:center;gap:8px;padding:8px;border-radius:14px;background:var(--navy);color:var(--on-dark);min-height:60px}
+.game.cross{gap:10px}
+.xclue.swap .xct{animation:xswap .3s ease-out}
+@keyframes xswap{from{opacity:0;transform:translateX(14px)}}
+.xct{flex:1;font-size:1.02rem;line-height:1.35}
+.xct b{color:#FFD54A;white-space:nowrap}
+.xex{display:block;margin-top:4px;font-family:var(--f-text);font-style:italic;color:#CFE6FF}
+.xnav{flex:none;width:38px;height:44px;border:0;border-radius:10px;background:rgba(255,255,255,.14);color:#fff;font-size:1.6rem;line-height:1}
+.xhelp{gap:8px;flex-wrap:nowrap} .xhelp .btn{flex:1;padding:8px 10px;white-space:nowrap} .xhelp .note{color:inherit;opacity:.75}
+.xkeys{display:flex;flex-direction:column;gap:6px;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.xkr{display:flex;justify-content:center;gap:5px}
+.xk{flex:1;max-width:44px;height:42px;padding:0;border:0;border-radius:8px;background:var(--card);color:var(--ink);font-weight:800;font-size:1.05rem;
+  box-shadow:0 3px 0 var(--line);transition:transform .06s,box-shadow .06s}
+.xk.wide{max-width:66px;flex:1.5;background:var(--peach)}
+.xk:active{transform:translateY(2px);box-shadow:0 1px 0 var(--line);background:#FFC857;color:#16324F}
+.xlist summary{cursor:pointer;font-weight:700;color:var(--teal)}
+.xcols{display:grid;grid-template-columns:1fr;gap:10px;margin-top:8px}
+@media (min-width:640px){ .xcols{grid-template-columns:1fr 1fr} }
+.xcols ol{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.xcols li{padding:6px 8px;border-radius:8px;cursor:pointer;font-size:.93rem}
+.xcols li.now{background:var(--mint)} .xcols li.done{opacity:.55;text-decoration:line-through}
+.xln{display:inline-block;min-width:1.6em;font-weight:800;color:var(--orange)}
+@media (prefers-reduced-motion: reduce){ .xsky i,.xc.win,.xc.wave,.xc.pop .xl,.xc.shake,.xc.reveal,.xclue.swap .xct{animation:none} }
+.game.cross .ghud{scroll-margin-top:72px}

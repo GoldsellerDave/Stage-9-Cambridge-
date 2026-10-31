@@ -15,6 +15,8 @@ const P = {
   workout: '<path d="M13 2L5 13h6l-1 9 8-11h-6z"/>',
   badge: '<circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/>',
   rain: '<path d="M7 15a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 18 7.5a3.8 3.8 0 0 1-.5 7.5z"/><path d="M8 18l-1 3M12.5 18l-1 3M17 18l-1 3"/>',
+  cross: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/><path d="M4 4h4v4H4zM16 16h4v4h-4z" fill="currentColor"/>',
+  crossl: '<rect x="2.5" y="2.5" width="19" height="19" rx="2"/><path d="M7.25 2.5v19M12 2.5v19M16.75 2.5v19M2.5 7.25h19M2.5 12h19M2.5 16.75h19"/><path d="M3 3h4v4H3zM12.5 12.5h4v4h-4zM17 3h4v4h-4z" fill="currentColor"/>',
   train: '<rect x="5" y="3" width="14" height="14" rx="4"/><path d="M5 10h14M9 13.5h.01M15 13.5h.01M8 17l-2 4M16 17l2 4"/>',
   speed: '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M10 2h4M12 5V2"/>',
   dodge: '<circle cx="9" cy="14.5" r="6.5"/><circle cx="18" cy="6" r="3.5"/><path d="M6 12.5a3.2 3.2 0 0 1 2.6-2.2M16.6 4.9a1.4 1.4 0 0 1 1.1-.6"/>',
@@ -35,7 +37,7 @@ const P = {
 // The colour of each kind of tile (light-mode values; the theme colour is mixed in by CSS).
 const HUE = { mission: "#D29A0F", read: "#1E8C87", listen: "#7B4FC4", words: "#2F6FB5", grammar: "#D9622B", games: "#C2417A",
   cards: "#2F6FB5", family: "#2F6FB5", boss: "#D29A0F", review: "#D9622B", stats: "#C98A0B", workout: "#D9622B", badge: "#C98A0B",
-  escape: "#7B4FC4", lab: "#E07B1F", rain: "#2F7FC1", train: "#2A7A4B", speed: "#C2417A", dodge: "#1F8FB3", u: "#1E8C87" };
+  escape: "#7B4FC4", lab: "#E07B1F", rain: "#2F7FC1", cross: "#D9622B", crossl: "#B8432F", train: "#2A7A4B", speed: "#C2417A", dodge: "#1F8FB3", u: "#1E8C87" };
 
 export function icon(name, size = 22) {
   return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${P[name] || ""}</svg>`;

@@ -37,7 +37,7 @@ export function areaScores(history, level = 1) {
 
 /* ---------------- today's workout ---------------- */
 const dayNo = t => Math.floor((t + 7 * 3600e3) / 86400e3);        // school time zone (UTC+7)
-const GAMES = ["rain", "train", "speed"];
+const GAMES = ["rain", "train", "speed", "cross"];
 // The plan is made from the history before today, so it does not change as activities are finished.
 // 1) the baseline, or the word review if words are due; 2–3) the weakest areas with something to do in this unit; then a game.
 export function workoutPlan(history, unit, { level = 1, baselineDone = true, now = new Date() } = {}) {
@@ -72,7 +72,7 @@ export function workoutPlan(history, unit, { level = 1, baselineDone = true, now
   }
   const gs = GAMES.filter(g => g !== "speed" || (baselineDone && speedTexts(unit).some(t => doneIds.has(t.id))));
   const g = gs[today % gs.length];
-  items.push({ kind: "game", game: g, id: `${g}-u${unit}`, area: "Games", label: { rain: "Play Word Rain", train: "Play Word Train", speed: "Play Speed Read" }[g] });
+  items.push({ kind: "game", game: g, id: `${g}-u${unit}`, area: "Games", label: { rain: "Play Word Rain", train: "Play Word Train", speed: "Play Speed Read", cross: "Play Quick Crossword" }[g] });
   const doneToday = new Set(history.filter(h => dayNo(new Date(h.created_at).getTime()) === today).map(h => h.text_id));
   return items.slice(0, 3).map(i => ({ ...i, done: doneToday.has(i.id) }));
 }
