@@ -1,8 +1,10 @@
 // Half-term "Checkpoint checks": like the baseline (no hints, first option correct, shuffled on screen),
 // but with four passages, Easier to Challenge, and 16 questions, so a fresh test can place students from A2 to C1+.
 // A check opens six weeks after the student's last baseline or check. Add a new set at the end to offer one more.
+import { STAGE } from "./stage.js";
+import { CHECKS as CHECKS8 } from "./s8/checks.js";
 export const CHECK_GAP_DAYS = 42;
-export const CHECKS = [
+const CHECKS9 = [
  { id: "check-1", title: "Checkpoint check 1", passages: [
   { level: 0, title: "The class garden", paras: [
    ["A", "Last spring, Class 7B started a garden behind their school. At first, there was only grass and a few old bottles. The students cleaned the area and planted tomatoes, beans and flowers."],
@@ -94,6 +96,8 @@ export const CHECKS = [
     { skill: "Vocabulary in context", stem: "In paragraph B, \"verbatim\" means…", opts: ["word for word", "in summary", "very slowly", "in their own words"] },
     { skill: "Writer's purpose", stem: "What is the function of paragraph D?", opts: ["It accepts the value of typing while restating the case for handwriting.", "It argues that technology is harmful to students.", "It introduces new research on brain imaging.", "It suggests that handwriting is no longer necessary."] }] }] }
 ];
+
+export const CHECKS = STAGE === 8 ? CHECKS8 : CHECKS9;
 
 const DAY = 86400e3;
 // The next check a student can take now, or null: after the baseline, six weeks after their last baseline or check.

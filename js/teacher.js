@@ -2,7 +2,7 @@
 // Teachers add their own classes and print login sheets; the admin also adds colleagues (Teachers page).
 import { api, LIVE, getSession, setSession } from "./api.js";
 import * as U from "./ui.js";
-import { ESCAPES, GUARD_SECONDS } from "./escape.js";
+import { ESCAPES_BY_STAGE, GUARD_SECONDS } from "./escape.js";
 import { TRAPS, LAB_LEVELS } from "./lab.js";
 import { dodgeLog } from "./games.js";
 import * as GE from "./gengine.js";
@@ -13,6 +13,11 @@ const $meta = document.getElementById("meta");
 let session = getSession("teacher");
 let me = null, classes = [], cls = null, rows = [], tab = "overview";
 const codes = () => classes.map(c => c.code);
+const STAGE_NAMES = { 9: "Stage 9 (Grade 8)", 8: "Stage 8 (Grade 7)" };
+const stageOf = code => (classes.find(c => c.code === code) || {}).stage || 9;
+const stageSelect = (id, v = 9) => `<select id="${id}" style="max-width:14em">${[9, 8].map(n => `<option value="${n}"${n === v ? " selected" : ""}>${STAGE_NAMES[n]}</option>`).join("")}</select>`;
+// The escape rooms of the selected class's stage (the live team game uses them).
+const classEscapes = () => ESCAPES_BY_STAGE[stageOf(cls)] || {};
 const clsInfo = () => classes.find(c => c.code === cls) || {};
 
 function header() {
@@ -83,7 +88,7 @@ function draw() {
   const needHelp = rows.filter(r => r.last_active == null || Date.now() - new Date(r.last_active) > 14 * 86400e3);
   let h = `<div class="narrow" style="max-width:1100px">
     <div class="row" style="justify-content:space-between"><div class="hero"><p class="eyebrow">Teacher dashboard${clsInfo().mine === false ? ` · ${U.esc(clsInfo().teacher || "No teacher")}'s class` : ""}</p><h1>Class ${U.esc(cls)}</h1></div>
-      <div class="tabs" role="tablist" aria-label="Class">${classes.map(c => `<button role="tab" aria-selected="${c.code === cls}" data-c="${U.esc(c.code)}">${U.esc(c.code)}</button>`).join("")}
+      <div class="tabs" role="tablist" aria-label="Class">${classes.map(c => `<button role="tab" aria-selected="${c.code === cls}" data-c="${U.esc(c.code)}">${U.esc(c.code)}${(c.stage || 9) !== 9 ? ` <small>S${c.stage}</small>` : ""}</button>`).join("")}
         <button id="addcls" title="Add a class">+ Add class</button>${me && me.is_admin ? `<button id="tch">Teachers</button>` : ""}</div></div>
     <div class="stats">
       <div class="stat"><b>${placed.length}/${rows.length}</b><span>took the baseline</span></div>
@@ -267,7 +272,8 @@ async function liveView() {
   const el = document.getElementById("live"); if (!el) return;
   const code = liveCode();
   if (!code) {
-    const units = Object.keys(ESCAPES).map(Number);
+    const ESCAPES = classEscapes(), units = Object.keys(ESCAPES).map(Number);
+    if (!units.length) { el.innerHTML = `<div class="panel"><h3>Run a team escape room</h3><p>${STAGE_NAMES[stageOf(cls)]} has no escape room yet.</p></div>`; return; }
     el.innerHTML = `<div class="panel"><h3>Run a team escape room</h3>
       <p>Teams of 3 or 4 share one tablet, signed in as one of them. Every team gets the same puzzles at Core level. You press Start, and this board shows each team's room and time. Put it on the projector!</p>
       <div class="row"><select id="lu" style="max-width:22em">${units.map(u => `<option value="${u}">Unit ${u}: ${U.esc(ESCAPES[u].title)}</option>`).join("")}</select>
@@ -287,7 +293,7 @@ async function liveView() {
     const caught = t => (t.finished ? t.seconds : b.status === "playing" ? b.elapsed + t.penalty : 0) > GUARD_SECONDS;
     const guard = GUARD_SECONDS - b.elapsed;
     el.innerHTML = `<div class="liveboard">
-      <div class="lvhead"><div><p class="eyebrow">Unit ${b.unit}: ${U.esc((ESCAPES[b.unit] || {}).title || "")}</p>
+      <div class="lvhead"><div><p class="eyebrow">Unit ${b.unit}: ${U.esc((classEscapes()[b.unit] || {}).title || "")}</p>
         <p class="lvjoin">Join: <b>Games › Escape room › Join a team game</b></p></div>
         <div class="lvcode"><span>Game code</span><b>${U.esc(b.code)}</b></div></div>
       ${b.status === "playing" ? `<div class="lvguard${guard < 60 ? " near" : ""}">${guard > 0 ? `The guard is back in <b>${U.fmtClock(guard)}</b>` : "<b>The guard is back!</b> Teams still inside are caught."}</div>` : ""}
@@ -328,6 +334,8 @@ function addClassView(first) {
     <form class="panel" id="f" novalidate>
       <label class="fld" for="code">Class code<input type="text" id="code" maxlength="10" placeholder="for example 7A2" style="max-width:12em;text-transform:uppercase"></label>
       <p class="note">Usernames start with the class code, for example 7a2-01. Use a code no other teacher uses.</p>
+      <label class="fld" for="stg">Stage${stageSelect("stg")}</label>
+      <p class="note">The stage sets the units, texts, words and grammar the students see. You can change it later on the Manage class tab.</p>
       ${namesField("names")}
       <p class="err" id="e" role="alert"></p>
       <div class="row"><button class="btn" type="submit" id="go">Make logins</button></div></form>`, !first);
@@ -335,6 +343,8 @@ function addClassView(first) {
   document.getElementById("f").addEventListener("submit", async ev => {
     ev.preventDefault(); const b = document.getElementById("go"); b.disabled = true;
     try { const r = await api.addStudents(session.token, document.getElementById("code").value, parseNames(document.getElementById("names").value));
+      const stage = +document.getElementById("stg").value;
+      if (stage !== 9) await api.setStage(session.token, r.class_code, stage).catch(e => alert(`The class was made, but its stage wasn't saved (${e.message}). Set it on the Manage class tab. If this keeps happening, run supabase/schema.sql again.`));
       await refreshClasses(); cls = r.class_code; sheetView(r, "New class"); }
     catch (e) { document.getElementById("e").textContent = e.message; b.disabled = false; }
   });
@@ -358,7 +368,9 @@ function manageHTML() {
       <p class="note">They will see it on their dashboard. Students keep their logins and progress.</p>
       <div class="row"><select id="mvt" style="max-width:20em"><option value="">Loading teachers…</option></select><button class="btn small" type="submit">Move class</button></div>
       <p class="note" id="mvm" aria-live="polite"></p></form>` : "";
-  return `<form class="panel" id="ad"><h3>Add students to ${U.esc(cls)}</h3>${namesField("more")}
+  return `<form class="panel" id="stf"><h3>Stage</h3><p class="note">The units, texts, words and grammar ${U.esc(cls)} sees. Students get the new stage the next time they open the site. Their XP and progress are kept.</p>
+      <div class="row">${stageSelect("stv", stageOf(cls))}<button class="btn small" type="submit">Save stage</button></div><p class="note" id="stm" aria-live="polite"></p></form>
+    <form class="panel" id="ad"><h3>Add students to ${U.esc(cls)}</h3>${namesField("more")}
       <div class="row"><button class="btn small" type="submit">Add and print their logins</button></div><p class="note" id="adm" aria-live="polite"></p></form>
     <form class="panel" id="enf"><h3>English names</h3><p class="note">One student per line: their name as it is on the site, then a tab (or a | sign), then their English name. You can paste two columns from a spreadsheet. Leave the English name empty (or write -) to remove it.</p>
       <label class="fld" for="enl" style="font-weight:400"><textarea id="enl" rows="10">${U.esc(rows.map(r => `${r.name}\t${r.english_name || ""}`).join("\n"))}</textarea></label>
@@ -373,6 +385,10 @@ function manageHTML() {
 function manageWire() {
   const say = (id, e) => { document.getElementById(id).innerHTML = `<span class="err">${U.esc(e.message)}</span>`; };
   countNames("more");
+  document.getElementById("stf").addEventListener("submit", async ev => { ev.preventDefault();
+    try { const n = await api.setStage(session.token, cls, +document.getElementById("stv").value); await refreshClasses();
+      document.getElementById("stm").textContent = `Saved: ${cls} now follows ${STAGE_NAMES[n]}.`; }
+    catch (e) { say("stm", e); } });
   document.getElementById("ad").addEventListener("submit", async ev => { ev.preventDefault();
     try { const r = await api.addStudents(session.token, cls, parseNames(document.getElementById("more").value)); await refreshClasses(); sheetView(r, "New students"); }
     catch (e) { say("adm", e); } });

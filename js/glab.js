@@ -11,10 +11,12 @@
 // level }, so they count in the Grammar area, grammar mastery and the teacher's skills; the other steps save as
 // { skill: "Grammar Lab", step } and give XP but don't count in the area score. Don't rename mission or item ids.
 
+import { STAGE } from "./stage.js";
+import { GLAB as GLAB8 } from "./s8/glab.js";
 export const GLAB_LEN = 6;
 export const XP_GLAB = { step: 3, twin: 2, write: 10, frame: 5, block: 5, first: [10, 15, 20], hint: 4, finish: 10 };
 
-export const GLAB = [
+const GLAB9 = [
 { id: "glab-2.4", point: "2.4", unit: 2, n: 1, title: "The Case of the Missing Phone", short: "must have, might have, can't have",
   blurb: "Minh's phone has vanished after a class trip. Use the clues to work out what happened.",
   rule: "Use modal + have + past participle to guess about the past from clues. must have = I'm sure it happened. might have / could have = maybe it happened. can't have = I'm sure it didn't happen.",
@@ -294,7 +296,7 @@ const HELP = {
   w33: { frame: "At 9:30, the ___ was being ___, so ___.",
     explain: "was / were being + past participle (cleaned, repaired) says what was happening at 9:30, and so says why nobody saw the thief." }
 };
-for (const m of GLAB) {
+for (const m of [...GLAB9, ...GLAB8]) {
   const u = m.point.replace(".", "");
   Object.assign(m.spot, HELP[`r${u}`]); Object.assign(m.use.write, HELP[`w${u}`]);
   [...m.get, ...m.use.items, ...m.prove].forEach(it => Object.assign(it, HELP[it.id]));
@@ -437,6 +439,8 @@ export const BLOCKS = {
       C("While the electrician ___ the lights, the thief escaped.", "was fixing", ["fixed", "In progress at that moment: was fixing."], ["was fix", "was + -ing: was fixing."])] }
 };
 // The blocks each mission is built from (top level). Their kids sit underneath.
+// Stage 8 has its own missions for its own grammar points (none yet: its points differ from Stage 9's).
+export const GLAB = STAGE === 8 ? GLAB8 : GLAB9;
 export const MISSION_BLOCKS = { "glab-2.4": ["certainty", "modal-have"], "glab-3.3": ["was-were", "pp", "active-passive", "progress"] };
 export const BLOCK_DEPTH = 3;
 // Which block a wrong option shows, from its "why". An option can name it with b: instead.
@@ -455,7 +459,7 @@ function tagBlock(m, why) {
 // Typed (one-word) questions: the block a wrong word shows.
 const TYPED_BLOCK = { "p24-c4": "modal-have", "p24-s1": "certainty", "p24-s4": "certainty", "p24-x3": "certainty",
   "p33-c3": "progress", "p33-s1": "was-were", "p33-s4": "pp", "p33-x3": "pp" };
-for (const m of GLAB) {
+for (const m of [...GLAB9, ...GLAB8]) {
   const tag = it => { if (it.type === "type") it.b = it.b || TYPED_BLOCK[it.id]; else (it.opts || []).slice(1).forEach(o => { o.b = o.b || tagBlock(m, o.why); }); };
   [...m.get, ...m.use.items, ...m.prove, { opts: m.spot.rules }].forEach(tag);
   [...m.get, ...m.use.items].forEach(it => it.twin && tag(it.twin));

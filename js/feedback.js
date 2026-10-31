@@ -1,9 +1,10 @@
 // Feedback for each wrong option of each grammar item in curriculum.js, in the same order:
 // FEEDBACK[point][item] = [note for wrong option 1, 2, 3]. "prep" builds the note from the word before the gap.
 // If an item in curriculum.js changes, change its notes here too (tests/practice.test.mjs checks that every wrong option has one).
-import { GRAMMAR } from "./curriculum.js";
+import { GRAMMAR, STAGE } from "./curriculum.js";
+import { FEEDBACK as FEEDBACK8 } from "./s8/feedback.js";
 
-const FEEDBACK = {
+const FEEDBACK9 = {
  "1.1": [
   ["Listen is the base form. As the subject of a sentence, use the -ing form: Listening.", "Don't add to. The -ing form on its own is the subject: Listening helps me…", "Listened is a past form. The subject of the sentence needs the -ing form: Listening."],
   ["After a preposition (good at), use the -ing form, not the base form.", "After a preposition (good at), use -ing, not to + verb.", "Understood is a past form. After at, use the -ing form: understanding."],
@@ -267,6 +268,8 @@ const FEEDBACK = {
   ["Say has no person after it. Use said that or told me that.", "Tell needs a person: told me that.", "Move the tense back (am → was)."]],
  "9.6": "prep"
 };
+
+const FEEDBACK = STAGE === 8 ? FEEDBACK8 : FEEDBACK9;
 
 // The note for wrong option `opt` (1–3, as in the curriculum item) of item `item` of a grammar point.
 export function wrongNote(pointId, item, opt) {

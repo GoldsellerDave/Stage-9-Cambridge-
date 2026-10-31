@@ -1,7 +1,7 @@
 // Vocabulary and grammar practice: building question sets and tracking mastery. Pure functions, no DOM.
 import { VOCAB } from "./vocab.js";
 import { extraWords, allExtraWords } from "./vocab-extra.js";
-import { GRAMMAR, SEQUENCE, UNITS } from "./curriculum.js";
+import { GRAMMAR, SEQUENCE, UNITS, STAGE } from "./curriculum.js";
 import { FAMILIES } from "./families.js";
 import { wrongNote } from "./feedback.js";
 import { PRACTICE_TEXTS } from "./content.js";
@@ -282,8 +282,11 @@ export function grammarMastery(id, history) {
 /* ---------------- unit missions ---------------- */
 export const BOSS_PASS = 0.7;
 export const BOSS_BONUS = 50;
-export const MISSION_BADGES = { 1: "Voice of reason", 2: "Well-being hero", 3: "Responsible traveller", 4: "Science explorer",
+const MISSION_BADGES9 = { 1: "Voice of reason", 2: "Well-being hero", 3: "Responsible traveller", 4: "Science explorer",
   5: "Tech innovator", 6: "Rule master", 7: "True competitor", 8: "Planet protector", 9: "High achiever" };
+const MISSION_BADGES8 = { 1: "World speaker", 2: "Master builder", 3: "Community champion", 4: "Ad detective",
+  5: "Resource guardian", 6: "Wonder seeker", 7: "History maker", 8: "Story weaver", 9: "Music maker" };
+export const MISSION_BADGES = STAGE === 8 ? MISSION_BADGES8 : MISSION_BADGES9;
 // The final challenge: 5 words (3 typed), 2 word families and 5 grammar questions from the unit.
 export function bossSet(unit, rnd = Math.random) {
   const ws = unitWords(unit), pick = shuffle(ws.length, rnd).slice(0, 5).map(i => ws[i]);

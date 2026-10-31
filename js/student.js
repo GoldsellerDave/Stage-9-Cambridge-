@@ -29,9 +29,11 @@ import * as SC from "./scenes.js";
 import * as Q from "./quests.js";
 import * as SP from "./speed.js";
 import * as X2 from "./crossword.js";
+import { STAGE, useStage } from "./stage.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
+{ const b = document.querySelector(".brand small"); if (b) b.textContent = `Stage ${STAGE} · Checkpoint`; }
 const $meta = document.getElementById("meta");
 let session = getSession();
 let me = null, history = [];
@@ -108,7 +110,7 @@ function nav(view) {
 function loginView(msg) {
   header(); nav(null);
   $app.innerHTML = `<div class="narrow pop">
-    <div class="hero"><p class="eyebrow">Stage 9 · Checkpoint English</p><h1>Read, learn words, practise grammar and level up</h1>
+    <div class="hero"><p class="eyebrow">Checkpoint English</p><h1>Read, learn words, practise grammar and level up</h1>
     <p class="lede">Sign in with the username and PIN your teacher gave you.</p></div>
     ${LIVE ? "" : `<div class="demo"><b>Demo mode.</b> Try username <b>demo</b> with PIN <b>1234</b>. The sample class and your progress are saved only in this browser.</div>`}
     <form class="panel" id="f" novalidate>
@@ -158,6 +160,8 @@ async function draw() {
   if (!me) {
     $app.innerHTML = `<div class="narrow"><p class="note">Loading…</p></div>`;
     try { await refresh(); } catch (e) { setSession(null); session = null; return loginView(e.message); }
+    // Each class follows one stage. A different stage from this device's last one reloads the page with that stage's content.
+    if (useStage(me.stage)) { $app.innerHTML = `<div class="narrow"><p class="note">Loading Stage ${me.stage}…</p></div>`; location.reload(); return; }
   }
   L.applyLook(L.getLook(), lookStats());
   if (!run) { const r = loadRun(); if (r && !r.pausedAt) run = r; }
@@ -172,7 +176,7 @@ async function draw() {
   if (view === "review") return reviewView();
   if (view === "games") return gamesView();
   if (view === "lab") return labHubView();
-  if (view === "glab") return glabHubView();
+  if (view === "glab" && GL.GLAB.length) return glabHubView();
   if (view === "build") return gbHubView();
   if (view === "grammar") return grammarHubView();
   if (view === "quests") return qHubView();
@@ -180,7 +184,7 @@ async function draw() {
   if (view.startsWith("quest-") && Q.questOf(view.slice(6))) return qQuestView(view.slice(6));
   if (view.startsWith("lesson-") && GE.GBLOCKS[view.slice(7)]) return gbLessonView(view.slice(7));
   const rv = /^rlab(?:-(\d))?$/.exec(view);
-  if (rv) return rlabHubView(rv[1] ? +rv[1] : rlUnitNow());
+  if (rv && RL.RLAB_UNITS.length) return rlabHubView(rv[1] ? +rv[1] : rlUnitNow());
   const m = /^unit-(\d)(?:\/(\w+))?$/.exec(view);
   if (m) return unitView(+m[1], m[2]);
   return homeView();
@@ -270,14 +274,15 @@ function quickTiles(due) {
   const t = (href, ic, title, note) => `<a class="qtile" href="${href}">${I.tile(ic, "m")}<b>${title}</b><span class="note">${note}</span></a>`;
   return `<div class="qtiles">${t(`#unit-${fu}`, I.unitIcon(fu), `Unit ${fu}`, `Mission ${m.steps.filter(x => x.done).length} of ${m.steps.length}`)}
     ${t("#review", "review", "Review", due ? `${due} word${due > 1 ? "s" : ""} due` : "Nothing due")}
-    ${t(`#rlab-${RL.RLAB_UNITS.includes(fu) ? fu : rlUnitNow()}`, "lab", "Reading Lab", "Beat the reading tricks")}
+    ${RL.RLAB_UNITS.length ? t(`#rlab-${RL.RLAB_UNITS.includes(fu) ? fu : rlUnitNow()}`, "lab", "Reading Lab", "Beat the reading tricks") : ""}
     ${t("#grammar", "grammar", "Grammar", "Builder, Quests and Lab")}
     ${t("#games", "games", "Games", best ? `Best ${best} points` : "Play and practise")}
     ${t("#me", "stats", "My stats", sc == null ? "Score: not yet" : `Score ${sc}`)}</div>`;
 }
 // The class reading test: until the end of test day, Home starts with what to practise for it.
-const READ_TEST = { date: "2026-11-06", units: [2, 3] };
+const READ_TEST = STAGE === 9 ? { date: "2026-11-06", units: [2, 3] } : null;     // for the Stage 9 classes only
 function readTestCard() {
+  if (!READ_TEST) return "";
   const day = new Date(`${READ_TEST.date}T23:59:59`), left = Math.ceil((day - Date.now()) / 864e5) - 1;
   if (day < Date.now()) return "";
   const when = left <= 0 ? "today" : left === 1 ? "tomorrow" : `in ${left} days`, wd = day.toLocaleDateString("en-GB", { weekday: "long" });
@@ -1543,7 +1548,7 @@ function labDoneView() {
 // 2 missed in a row brings a strategy rescue, then a level down. After each answer the text lights up the evidence (green)
 // and the trap (orange), and a gap is filled with the right answer. Saved as mode "vocab" (see rlab.js).
 // Each unit has its own questions (it.u): Unit 2 Well-being, Unit 3 Tourism. The trap tracker and the start level are shared.
-const RL_TOPIC = { 2: "Well-being", 3: "Tourism" };
+const RL_TOPIC = u => UNITS[u].title;
 let rlLastUnit = null;
 const rlUnitNow = () => rlLastUnit || (RL.RLAB_UNITS.includes(P.focusUnit()) ? P.focusUnit() : RL.RLAB_UNITS[0]);
 const rlRunUnit = () => run.unit || RL.rItemUnit(run.seq[0]) || RL.RLAB_UNITS[0];
@@ -1554,10 +1559,10 @@ function rlabHubView(u) {
   const best = id => { const s = att(id).map(h => h.score); return s.length ? Math.max(...s) : null; };
   const peak = id => Math.max(0, ...att(id).map(h => RL.rlabPeak(h.answers || [])));
   const start = RL.rlabStartLevel(history, P.tierFor(history));
-  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Reading · Unit ${u}: ${RL_TOPIC[u]}</p><h1>Reading Lab</h1>
-      <p class="lede">Learn the tricks in Checkpoint reading questions, and how to beat them. Eight short missions, one for each kind of question, with texts on ${RL_TOPIC[u]}.</p>
+  $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Reading · Unit ${u}: ${RL_TOPIC(u)}</p><h1>Reading Lab</h1>
+      <p class="lede">Learn the tricks in Checkpoint reading questions, and how to beat them. Eight short missions, one for each kind of question, with texts on ${RL_TOPIC(u).toLowerCase()}.</p>
       <p class="note">The questions change with you. Get 2 right first time in a row and you move up: Core, Stretch, then Challenge. You start your next mission on ${lvChip(start)}.</p></div>
-    <div class="tabs" role="tablist" aria-label="Unit">${RL.RLAB_UNITS.map(x => `<button role="tab" aria-selected="${x === u}" data-rlu="${x}">Unit ${x}: ${RL_TOPIC[x]}</button>`).join("")}</div>
+    <div class="tabs" role="tablist" aria-label="Unit">${RL.RLAB_UNITS.map(x => `<button role="tab" aria-selected="${x === u}" data-rlu="${x}">Unit ${x}: ${RL_TOPIC(x)}</button>`).join("")}</div>
     <div class="tiles">${RL.RLAB.map(m => { const b = best(m.id);
       return aTile("lab", `data-rlab="${m.id}" data-ru="${u}"`, `${m.n}. ${m.title}`, b != null ? `Best: ${b} of ${Lab.MISSION_LEN} · reached ${labLevel(peak(m.id))}` : `${m.part} · ${m.blurb}`, b != null); }).join("")}</div>
     <div class="panel"><h3>Your reading trap tracker</h3><p class="note">For both units.</p>${U.rTrapsHTML(history)}</div></div>`;
@@ -2102,11 +2107,11 @@ const gbItem = e => GB.blockLesson(e.block).items.find(it => it.id === e.item);
 function grammarHubView() {
   const glNew = GL.GLAB.some(x => !history.some(a => a.text_id === x.id));
   $app.innerHTML = `<div class="narrow pop"><div class="hero"><p class="eyebrow">Grammar</p><h1>Grammar</h1>
-      <p class="lede">Build your grammar tower, go on quests with your hero, or solve a Grammar Lab mission.</p></div>
+      <p class="lede">Build your grammar tower${GL.GLAB.length ? ", go on quests with your hero, or solve a Grammar Lab mission" : " or go on quests with your hero"}.</p></div>
     ${me.baseline_done ? gbHomeCard() + qHomeCard() : `<p class="note">Take the baseline reading on the Home page first.</p>`}
-    <div class="tcard">${glNew ? `<span class="tag gold">New</span>` : ""}<h3>Grammar Lab</h3>
+    ${!GL.GLAB.length ? "</div>" : `<div class="tcard">${glNew ? `<span class="tag gold">New</span>` : ""}<h3>Grammar Lab</h3>
       <p class="note" style="font-size:1rem">Grammar missions: solve a mystery and write a news story while you work out the rules yourself.</p>
-      <div class="row"><button class="btn" data-glabhub="1">Open the Grammar Lab</button></div></div></div>`;
+      <div class="row"><button class="btn" data-glabhub="1">Open the Grammar Lab</button></div></div></div>`}`;
   bindActivities();
 }
 function gbHomeCard() {

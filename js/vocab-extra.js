@@ -2,7 +2,10 @@
 // Stretch (B2) words join the vocabulary sets of students reading at B2 or above, Challenge (C1) words at C1.
 // Each entry: [word, learner definition, example sentence with ___ where the word goes].
 // They do not count towards the unit mission, so a student's mission progress is the same at every level.
-export const EXTRA = {
+import { STAGE } from "./stage.js";
+import { EXTRA as EXTRA8 } from "./s8/vocab-extra.js";
+
+const EXTRA9 = {
  1: {
   stretch: [
    ["perspective", "a particular way of thinking about something", "Reading her diary gave me a new ___ on the war."],
@@ -247,6 +250,8 @@ export const EXTRA = {
    ["prospects", "chances of success in the future", "Learning English improves your job ___."],
    ["excel", "to be extremely good at something", "Students who ___ in maths can join the Olympiad team."]]}
 };
+
+export const EXTRA = STAGE === 8 ? EXTRA8 : EXTRA9;
 
 // Extra words as word objects, like unitWords(): tier 1 = Stretch, 2 = Challenge.
 export function extraWords(unit, maxTier = 2) {
