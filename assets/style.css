@@ -1177,3 +1177,9 @@ button.qpwb:not(:disabled){cursor:pointer;animation:qpulse 1.4s ease-in-out infi
 .xln{display:inline-block;min-width:1.6em;font-weight:800;color:var(--orange)}
 @media (prefers-reduced-motion: reduce){ .xsky i,.xc.win,.xc.wave,.xc.pop .xl,.xc.shake,.xc.reveal,.xclue.swap .xct{animation:none} }
 .game.cross .ghud{scroll-margin-top:72px}
+/* Escape Arcade (js/arcade.js): the Phaser game fills the screen above the app */
+.arcade{position:fixed;inset:0;z-index:1000;background:#140a0e;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+.arcade-stage{width:100%;height:100%;display:flex;align-items:center;justify-content:center;touch-action:none}
+.arcade-load{color:#d9c7a6;font-weight:700}
+.arcade-quit{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);left:10px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:1.2rem;cursor:pointer}
+body.arcade-on{overflow:hidden}

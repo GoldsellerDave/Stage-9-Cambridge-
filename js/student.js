@@ -29,6 +29,7 @@ import * as SC from "./scenes.js";
 import * as Q from "./quests.js";
 import * as SP from "./speed.js";
 import * as X2 from "./crossword.js";
+import * as AR from "./arcade.js";
 import { STAGE, STAGES, useStage } from "./stage.js";
 
 const $app = document.getElementById("app");
@@ -362,8 +363,9 @@ function escapeTile(u) {
 }
 function gamesHTML(u, grouped = false) {
   const groups = GAME_GROUPS.map(([name, gs]) => [name, gs.filter(g => g !== "speed" || G.speedTexts(u).length)]).filter(([, gs]) => gs.length);
-  if (!grouped) return `<div class="usec"><div class="tiles">${escapeTile(u)}${groups.flatMap(([, gs]) => gs).map(g => gameTile(g, u)).join("")}</div></div>`;
-  return (X.ESCAPES[u] ? `<h3 class="ghead">Escape room</h3><div class="tiles">${escapeTile(u)}</div>` : "")
+  const arcade = AR.hasArcade(u) ? gameTile("arcade", u) : "";
+  if (!grouped) return `<div class="usec"><div class="tiles">${escapeTile(u)}${arcade}${groups.flatMap(([, gs]) => gs).map(g => gameTile(g, u)).join("")}</div></div>`;
+  return (X.ESCAPES[u] ? `<h3 class="ghead">Escape room</h3><div class="tiles">${escapeTile(u)}${arcade}</div>` : "")
     + groups.map(([name, gs]) => `<h3 class="ghead">${name}</h3><div class="tiles">${gs.map(g => gameTile(g, u)).join("")}</div>`).join("");
 }
 const lastTab = {};
@@ -780,6 +782,12 @@ function gameView() {
        <li>Finish a word and it checks itself: right words light up and lock in. Solve words in a row with no help for a 🔥 streak bonus.</li>
        <li>Stuck? 💡 shows an example sentence (-${X2.CROSS_PTS.hint} points) and 🔍 shows a letter (-${X2.CROSS_PTS.letter} points). Words you needed a letter for come back in your word review.</li>
        <li>${run.game === "cross" ? "About 8 words: a quick game." : `About 14 words${P.tierFor(history) ? ", including some harder Stretch words" : ""}. Finish with no letters shown for 3 stars.`} You get a new crossword every time.</li>`
+    : run.game === "arcade"
+    ? `<li>The escape room as an arcade game: three short rooms against the clock.</li>
+       <li>Ticket hall: words fall from the ceiling. Tap the one that matches the meaning on the sign.</li>
+       <li>Gallery: the power is off. Drag the magnifying torch over the leaflet to find the numbers for the safe.</li>
+       <li>Storeroom: grammar notes ride a conveyor belt to the shredder. Tap the right words first.</li>
+       <li>Be fast and right to build a combo (up to ×5). The game speeds up as you get better.</li>`
     : run.game === "rain"
     ? `<li>A meaning falls from the sky. Tap the word that matches it before it reaches the water.</li>
        <li>Catch it high up for more points. A wrong tap loses 5 points.</li>
@@ -804,8 +812,9 @@ function gameView() {
   if (b) b.onclick = () => { S.play("tap"); run.phase = "play"; gameView(); };
   $app.querySelectorAll("[data-wpm]").forEach(w => w.onclick = () => { run.wpm = +w.dataset.wpm; S.play("tap"); gameView(); });
   if (run.phase === "play") {
-    const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed, dodge: G.playDodge, cross: X2.playCross, crossl: X2.playCross }[run.game];
-    stopGame = play(document.getElementById("gbox"), { unit: run.unit, size: run.game, wordTier: P.tierFor(history), tier: Lab.labStartLevel(history, P.tierFor(history)), seen: G.dodgeSeen(history), missed: G.dodgeMissed(history), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, onEnd: R => {
+    const play = { rain: G.playRain, train: G.playTrain, speed: G.playSpeed, dodge: G.playDodge, cross: X2.playCross, crossl: X2.playCross, arcade: AR.playArcade }[run.game];
+    stopGame = play(document.getElementById("gbox"), { unit: run.unit, size: run.game, wordTier: P.tierFor(history), tier: Lab.labStartLevel(history, P.tierFor(history)), seen: G.dodgeSeen(history), missed: G.dodgeMissed(history), texts: readTexts(run.unit), level: Math.min(2, E.steadyLevel(history, me.level ?? 1)), wpm: run.wpm, sound: S.soundOn(), name: firstName(),
+      onQuit: () => { stopGame = null; const u = run.unit; run = null; saveRun(); location.hash = "#unit-" + u; route(); top(); }, onEnd: R => {
       stopGame = null; if (!run || run.kind !== "game") return;
       run.result = { ...R, xp: G.gameXP(R.hits, history), best };
       run.phase = "done"; saveRun(); runView(); top(); Cel.set(run.result.xp);
@@ -819,7 +828,7 @@ function gameDone() {
     ? R.words.filter(w => !w.hit).map(w => `<li>${U.esc(w.stem)} <b>${U.esc(w.answer)}</b>${w.picked ? ` <span class="note">(you popped “${U.esc(w.picked)}”)</span>` : ""}</li>`)
     : run.game === "speed"
     ? R.words.filter(w => !w.hit).map(w => `<li>${U.esc(w.w)} <b>${U.esc(w.answer)}</b></li>`)
-    : run.game === "cross" || run.game === "crossl"
+    : run.game === "cross" || run.game === "crossl" || run.game === "arcade"
     ? R.words.filter(w => !w.hit).map(w => `<li><b>${U.esc(w.w)}</b>: ${U.esc(w.def)}</li>`)
     : run.game === "rain"
     ? [...new Set(R.words.filter(w => !w.hit).map(w => w.w))].map(w => P.unitWords(u).find(v => v.w === w)).filter(Boolean)
@@ -829,12 +838,12 @@ function gameDone() {
     ${run.game === "cross" || run.game === "crossl" ? `<div class="escstars" aria-label="${R.level} of 3 stars">${[0, 1, 2].map(k => `<span class="${k < R.level ? "on" : ""}" style="animation-delay:${k * 0.25}s">★</span>`).join("")}</div>
       <p class="note">${R.level === 3 ? "Perfect: no letters shown, and fast!" : R.level === 2 ? "For 3 stars: no letters shown, in under " + Math.ceil(R.words.length / 2) + " minutes." : "For 2 stars: show two letters or fewer."}${R.combo > 1 ? ` Best streak: 🔥 ×${R.combo}.` : ""}</p>` : ""}
     ${record ? `<div class="fb ok winbox"><p class="big">New personal best!</p>${R.best ? `<p>Your old best was ${R.best} points.</p>` : ""}</div>` : R.best ? `<p class="note">Your best is ${R.best} points.</p>` : ""}
-    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.hits}</b><span>${{ rain: "words caught", train: "trains on time", cross: `of ${R.words.length} words with no letters shown`, crossl: `of ${R.words.length} words with no letters shown`, speed: `of ${R.words.length} right`, dodge: `of ${R.words.length} clips right` }[run.game]}</span></div>
+    <div class="stats"><div class="stat gold"><b>+${R.xp}</b><span>XP earned</span></div><div class="stat"><b>${R.hits}</b><span>${{ rain: "words caught", train: "trains on time", cross: `of ${R.words.length} words with no letters shown`, crossl: `of ${R.words.length} words with no letters shown`, speed: `of ${R.words.length} right`, dodge: `of ${R.words.length} clips right`, arcade: `of ${R.total} puzzles right first time` }[run.game]}</span></div>
       <div class="stat"><b>${R.level}</b><span>${run.game === "speed" ? "top speed (wpm)" : run.game === "cross" || run.game === "crossl" ? "stars" : "level reached"}</span></div><div class="stat"><b>${U.fmtTime(R.seconds)}</b><span>time</span></div></div>
     ${R.xp === 0 ? `<p class="note">You have reached today's ${G.GAME_XP_DAY} XP from games. Your points still count for your best score.</p>` : ""}
     ${caught.length ? `<div class="panel"><b>Traps that caught you</b><ul>${caught.map(([t, n]) => `<li>🪤 ${U.esc(t === "prime" ? "Not reading the question carefully" : Lab.TRAPS[t].name)} × ${n}</li>`).join("")}</ul>
       ${caught[0][0] !== "prime" ? `<p class="note">The Listening Lab mission “${U.esc(Lab.missionForTrap(caught[0][0]).title)}” shows how to beat this trap.</p>` : ""}</div>` : ""}
-    ${missed.length ? `<div class="panel"><b>${{ cross: "Words you needed help with (they come back in your word review)", crossl: "Words you needed help with (they come back in your word review)", rain: "Words to learn (they come back in your word review)", train: "Words to look at again", speed: "Questions you missed, with the answers", dodge: "Clips you missed, with the answers (they come back in your next games)" }[run.game]}</b><ul>${missed.join("")}</ul></div>` : ""}
+    ${missed.length ? `<div class="panel"><b>${{ cross: "Words you needed help with (they come back in your word review)", crossl: "Words you needed help with (they come back in your word review)", rain: "Words to learn (they come back in your word review)", train: "Words to look at again", arcade: "Words to learn (they come back in your word review)", speed: "Questions you missed, with the answers", dodge: "Clips you missed, with the answers (they come back in your next games)" }[run.game]}</b><ul>${missed.join("")}</ul></div>` : ""}
     <p class="note" id="savemsg" aria-live="polite">Saving…</p>
     <div class="row"><button class="btn" id="again">Play again</button><button class="btn alt" id="unit">Back to Unit ${u}</button></div></div>`;
   document.getElementById("again").onclick = () => { const g = run.game; run = null; saveRun(); startGame(g, u); };
