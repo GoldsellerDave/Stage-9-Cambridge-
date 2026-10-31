@@ -292,16 +292,26 @@ function readTestCard() {
   if (day < Date.now()) return "";
   const when = left <= 0 ? "today" : left === 1 ? "tomorrow" : `in ${left} days`, wd = day.toLocaleDateString("en-GB", { weekday: "long" });
   const done = new Set(history.map(h => h.text_id));
-  const rows = READ_TEST.units.map(u => {
-    const texts = PRACTICE_TEXTS.filter(t => t.unitNo === u), td = texts.filter(t => done.has(t.id)).length;
+  // Each unit shows three tappable rings (Reading Lab, Texts, Words); a full ring earns a star.
+  const parts = READ_TEST.units.flatMap(u => {
+    const texts = PRACTICE_TEXTS.filter(t => t.unitNo === u), vm = P.vocabMastery(u, history);
     const lab = RL.RLAB.filter(m => history.some(h => h.text_id === m.id && (h.answers || []).some(a => RL.rItemUnit(a.rlab) === u))).length;
-    const vm = P.vocabMastery(u, history);
-    return `<div class="rtrow"><b>Unit ${u}: ${U.esc(UNITS[u].title)}</b><div class="row">
-      <button class="btn small" data-rlabhub="${u}">🔎 Reading Lab ${lab}/${RL.RLAB.length}</button>
-      <a class="btn small alt" href="#unit-${u}/read">📖 Texts ${td}/${texts.length}</a>
-      <a class="btn small alt" href="#unit-${u}/words">🔤 Words ${vm.mastered}/${vm.total}</a></div></div>`; }).join("");
-  return `<div class="tcard rtest"><span class="tag gold">📖 Reading test ${when}</span><h3>Get ready for ${wd}'s reading test</h3>
-    <p class="note" style="font-size:1rem">It covers Units ${READ_TEST.units.join(" and ")}. Practise the Reading Lab missions, the unit texts and the unit words.</p>${rows}</div>`;
+    return [{ u, key: "lab", ic: "🔎", name: "Lab", long: "Reading Lab", href: `#rlab-${u}`, n: lab, of: RL.RLAB.length },
+      { u, key: "read", ic: "📖", name: "Texts", long: "Reading texts", href: `#unit-${u}/read`, n: texts.filter(t => done.has(t.id)).length, of: texts.length },
+      { u, key: "words", ic: "🔤", name: "Words", long: "Unit words", href: `#unit-${u}/words`, n: vm.mastered, of: vm.total }]; }).filter(x => x.of > 0);
+  const frac = x => Math.min(1, x.n / x.of);
+  const ring = x => `<a class="rtring${frac(x) >= 1 ? " full" : ""}" href="${x.href}" style="--p:${Math.round(100 * frac(x))}%" aria-label="Unit ${x.u} ${x.long}: ${x.n} of ${x.of}">
+      <span class="rtdial"><span>${x.ic}</span></span><span class="rtlbl">${x.name}<br>${x.n}/${x.of}</span></a>`;
+  const units = READ_TEST.units.map(u => { const ps = parts.filter(x => x.u === u), stars = ps.filter(x => frac(x) >= 1).length;
+    return `<div class="rtunit"><b>Unit ${u}</b><span class="rtname">${U.esc(UNITS[u].title)}</span><div class="rtrings">${ps.map(ring).join("")}</div>
+      <div class="rtstars" aria-label="${stars} of ${ps.length} stars">${ps.map((_, i) => `<span${i < stars ? "" : ' class="off"'}>★</span>`).join("")}</div></div>`; }).join("");
+  const next = parts.filter(x => frac(x) < 1).sort((a, b) => frac(a) - frac(b))[0];
+  const go = next ? `<a class="rtgo" href="${next.href}">▶ Practise now<small>Unit ${next.u} · ${next.long} ${next.n}/${next.of}</small></a>`
+    : `<div class="rtgo done">★ All rings full. Well done!<small>Keep practising in the Reading Lab before ${wd}.</small></div>`;
+  return `<div class="rtcard"><div class="rttop"><div><span class="rteb">📖 Reading test</span><h3>${wd}'s reading test</h3>
+      <p>Units ${READ_TEST.units.join(" and ")}. Tap a ring to practise. Fill every ring to get all the stars.</p></div>
+      <div class="rtdays"><b>${left <= 0 ? "!" : left}</b><small>${left <= 0 ? "TODAY" : left === 1 ? "DAY" : "DAYS"}</small></div></div>
+    <div class="rtunits">${units}</div>${go}</div>`;
 }
 
 /* ---------------- units ---------------- */
