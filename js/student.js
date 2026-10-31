@@ -127,6 +127,8 @@ function loginView(msg) {
       const r = await api.login(u, p);
       if (r.role === "teacher") { setSession({ token: r.token, name: r.name }, "teacher"); location.href = "teacher.html"; return; }
       session = { token: r.token, username: u.trim().toLowerCase(), name: r.name }; setSession(session);
+      // Every sign-in opens Home, whatever page the address bar was left on.
+      window.history.replaceState(null, "", location.pathname + location.search + "#home");
       await route();
     } catch (e) { document.getElementById("e").textContent = e.message; b.disabled = false; }
   });
@@ -208,6 +210,8 @@ function homeView() {
     h += `<div class="tcard"><span class="tag gold">Start here</span><h3>Baseline reading</h3>
       <p class="note" style="font-size:1rem">Three short texts, from easier to harder, with 12 questions and no hints. Your score sets your starting reading level. It takes about 15 minutes.</p>
       <div class="row"><button class="btn" id="base">Start the baseline</button></div></div>`;
+    // Before the baseline, the workout starts with it, then word practice and a game.
+    h += workoutCard();
   } else if (me.baseline_done) {
     if (check && !(paused && paused.kind === "baseline")) h += `<div class="tcard"><span class="tag gold">New</span><h3>${U.esc(check.title)}</h3>
       <p class="note" style="font-size:1rem">Your half-term reading check: four short texts, from easier to Challenge, with 16 questions and no hints. It shows how far your reading has come. About 20 minutes.</p>
