@@ -1920,9 +1920,10 @@ function glRunView() {
     return;
   }
   if (run.phase === "spot") {
+    // The sentences are written in groups (often alternating), so show them in a shuffled order that stays put for this run.
     const sp = m.spot, checked = run.sortDone, bad = run.sortBad || [];
     let h = `<div class="narrow pop">${glHead(0)}<h2>Sort the sentences</h2><p class="note">Tap a group for each sentence. Use the scene to help you.</p>${glScene(m)}
-      <div class="glsort">${sp.sentences.map((x, k) => `<div class="glrow${checked || run.sortShown ? (run.sort[k] === x.bin ? " ok" : " bad") : bad.includes(k) ? " bad" : ""}"><p>${U.esc(x.t)}</p>
+      <div class="glsort">${order("spot", sp.sentences.length).map(k => [sp.sentences[k], k]).map(([x, k]) => `<div class="glrow${checked || run.sortShown ? (run.sort[k] === x.bin ? " ok" : " bad") : bad.includes(k) ? " bad" : ""}"><p>${U.esc(x.t)}</p>
         <div class="glbins">${sp.bins.map((b, j) => `<button class="glbin${run.sort[k] === j ? " on" : ""}${run.sortShown && x.bin === j ? " ans" : ""}" data-sk="${k}" data-sb="${j}" ${checked ? "disabled" : ""}>${U.esc(b)}</button>`).join("")}</div></div>`).join("")}</div>`;
     if (!checked && bad.length) h += `<div class="fb bad"><p><strong>${sp.sentences.length - bad.length} of ${sp.sentences.length} right.</strong> The red ones are in the wrong group. Look at the highlighted words in the scene again.</p></div>`;
     if (checked) h += run.sortShown ? `<div class="fb info"><p><strong>Here are the right groups.</strong> Look at what is the same in each group.</p></div>`
