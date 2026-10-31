@@ -426,7 +426,7 @@ function sheetView(r, what) {
       <p>Website: <b>${U.esc(site)}</b>. Students sign in with their username and 4-digit PIN.</p>
       <div class="tbl"><table><thead><tr><th>No</th><th>Name</th><th>Username</th><th>PIN</th></tr></thead><tbody>${
         list.map(x => `<tr><td>${x.no}</td><td>${U.esc(x.name)}${x.english_name ? ` (${U.esc(x.english_name)})` : ""}</td><td class="mono">${U.esc(x.username)}</td><td class="mono">${U.esc(x.pin)}</td></tr>`).join("")}</tbody></table></div>
-      <div class="slips">${list.map(x => `<div class="slip"><div class="sl-t">Checkpoint Reading · ${U.esc(r.class_code)}</div><div class="sl-n">${U.esc(x.name)}${x.english_name ? ` (${U.esc(x.english_name)})` : ""}</div>
+      <div class="slips">${list.map(x => `<div class="slip"><div class="sl-t">Checkpoint Quest · ${U.esc(r.class_code)}</div><div class="sl-n">${U.esc(x.name)}${x.english_name ? ` (${U.esc(x.english_name)})` : ""}</div>
         <div class="sl-l">Website</div><div class="sl-u">${U.esc(site)}</div>
         <div class="sl-g"><div><div class="sl-l">Username</div><b>${U.esc(x.username)}</b></div><div><div class="sl-l">PIN</div><b>${U.esc(x.pin)}</b></div></div>
         <div class="sl-l">Keep your PIN secret.</div></div>`).join("")}</div></div>`);
@@ -460,7 +460,7 @@ async function teachersView(added) {
   const site = new URL("teacher.html", location.href).href;
   const card = added ? `<div class="panel pass"><h3>${added.reset ? "New one-time password" : "Account made"} for ${U.esc(added.name)}</h3>
       <p>Send them this. They choose their own password when they first sign in.</p>
-      <pre id="msg">Checkpoint Reading teacher sign-in
+      <pre id="msg">Checkpoint Quest teacher sign-in
 ${U.esc(site)}
 Username: ${U.esc(added.username)}
 One-time password: ${U.esc(added.password)}</pre>

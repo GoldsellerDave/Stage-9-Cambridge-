@@ -33,7 +33,8 @@ import { STAGE, STAGES, useStage } from "./stage.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
-{ const b = document.querySelector(".brand small"); if (b) b.textContent = `Stage ${STAGE} · Checkpoint`; }
+// The stage shows only once a student is signed in: before that, this device's last stage could be the wrong one.
+const brand = signedIn => { const b = document.querySelector(".brand small"); if (b) b.textContent = signedIn ? `Stage ${STAGE} · Checkpoint English` : "Checkpoint English"; };
 const $meta = document.getElementById("meta");
 let session = getSession();
 let me = null, history = [];
@@ -108,9 +109,10 @@ function nav(view) {
 
 /* ---------------- sign in ---------------- */
 function loginView(msg) {
+  brand(false);
   header(); nav(null);
   $app.innerHTML = `<div class="narrow pop">
-    <div class="hero"><p class="eyebrow">Checkpoint English</p><h1>Read, learn words, practise grammar and level up</h1>
+    <div class="hero"><p class="eyebrow">Welcome to Checkpoint Quest</p><h1>Read, listen, learn words, practise grammar and level up</h1>
     <p class="lede">Sign in with the username and PIN your teacher gave you.</p></div>
     ${LIVE ? "" : `<div class="demo"><b>Demo mode.</b> Try username <b>demo</b> with PIN <b>1234</b>. The sample class and your progress are saved only in this browser.</div>`}
     <form class="panel" id="f" novalidate>
@@ -166,6 +168,7 @@ async function draw() {
     if (STAGES.includes(+me.stage) && +me.stage !== STAGE) { run = null; try { localStorage.removeItem(RUN_KEY()); } catch (x) {} }
     if (useStage(me.stage)) { $app.innerHTML = `<div class="narrow"><p class="note">Loading Stage ${me.stage}…</p></div>`; location.reload(); return; }
   }
+  brand(true);
   L.applyLook(L.getLook(), lookStats());
   if (!run) { const r = loadRun(); if (r && !r.pausedAt) run = r; }
   if (run) return runView();
