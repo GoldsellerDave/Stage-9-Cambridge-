@@ -51,3 +51,11 @@ test("points, stars and saving", () => {
   const a = gameAnswers("crossl", R, 3);
   assert.deepEqual(a.slice(1), [{ skill: "Word game", word: "arch", unit: 3, first_try: true }, { skill: "Word game", word: "eco", unit: 3, first_try: false }]);
 });
+test("the Big crossword adapts to the reader: Stretch words at B2, Stretch and Challenge at C1", () => {
+  const extras = (u, t) => { let n1 = 0, n2 = 0; for (let s = 1; s <= 10; s++) for (const p of makeCrossword(crossPool(u, "crossl", t, s), 14, 15, s).words) { if (p.tier === 1) n1++; if (p.tier === 2) n2++; } return [n1 / 10, n2 / 10]; };
+  assert.deepEqual(extras(3, 0), [0, 0]);
+  const [a1, a2] = extras(3, 1); assert.ok(a1 >= 4 && a2 === 0, `B2: ${a1} Stretch`);
+  const [b1, b2] = extras(3, 2); assert.ok(b1 >= 2 && b2 >= 2, `C1: ${b1} Stretch, ${b2} Challenge`);
+  assert.notDeepEqual(crossPool(3, "crossl", 1, 1).slice(-5).map(x => x.w), crossPool(3, "crossl", 1, 2).slice(-5).map(x => x.w), "a different set each game");
+  assert.ok(crossPool(3, "cross", 2).every(x => !x.tier), "the Quick crossword is unit words only");
+});

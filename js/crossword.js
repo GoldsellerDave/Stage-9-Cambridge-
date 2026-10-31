@@ -23,14 +23,17 @@ export function fairClue(x) {
   const def = x.def.toLowerCase();
   return x.w.toLowerCase().split(/[ -]/).filter(p => p.length >= 4).every(p => !def.includes(p.slice(0, Math.max(4, p.length - 2))));
 }
-export function crossPool(unit, size = "cross", tier = 0) {
+export function crossPool(unit, size = "cross", tier = 0, seed = Math.floor(Math.random() * 1e9)) {
   const ok = x => { const n = answerOf(x.w).length; return n >= MIN_LEN && n <= MAX_LEN && fairClue(x); };
   const core = unitWords(unit).filter(ok).map(x => ({ w: x.w, def: x.def, ex: x.ex, unit }));
   if (size !== "crossl") return core;
   // The Big crossword needs enough words; strong readers always get some harder ones.
-  const extra = extraWords(unit, Math.max(1, tier)).filter(ok).map(x => ({ w: x.w, def: x.def, ex: x.ex, unit, tier: x.tier }));
-  const take = tier > 0 ? 4 : Math.max(0, CROSS.crossl.words + 4 - core.length);
-  return [...core, ...extra.filter(x => tier >= 2 || x.tier === 1).slice(0, take)];
+  // B2 readers get 5 Stretch words; C1 readers 3 Stretch and 3 Challenge. They are a different random set each game, and
+  // makeCrossword tries them first. Units with few core words top up with Stretch words for everyone.
+  const extra = extraWords(unit, 2).filter(ok).map(x => ({ w: x.w, def: x.def, ex: x.ex, unit, tier: x.tier, must: tier > 0 }));
+  const r = rng(seed), of = t => shuffle(extra.filter(x => x.tier === t), r);
+  const take = tier >= 2 ? [...of(1).slice(0, 3), ...of(2).slice(0, 3)] : tier === 1 ? of(1).slice(0, 5) : of(1).slice(0, Math.max(0, CROSS.crossl.words + 4 - core.length));
+  return [...core, ...take];
 }
 
 /* ---------------- grid maker ---------------- */
@@ -66,7 +69,7 @@ function attempt(words, want, max, r) {
   };
   const list = words.map(w => ({ ...w, a: answerOf(w.w) })).filter(w => w.a.length <= max);
   // Start with a long word, then try the rest longest first (shuffled within similar lengths).
-  const order = shuffle(list, r).sort((p, q) => Math.round(q.a.length / 3) - Math.round(p.a.length / 3));
+  const order = shuffle(list, r).sort((p, q) => (q.must ? 1 : 0) - (p.must ? 1 : 0) || Math.round(q.a.length / 3) - Math.round(p.a.length / 3));
   put(order[0], 0, 0, 1, 0);
   let rest = order.slice(1), crosses = 0;
   for (let pass = 0; pass < 2 && placed.length < want; pass++) {
@@ -94,7 +97,7 @@ export function makeCrossword(words, want = 8, max = 11, seed) {
   const r = rng(seed ?? Math.floor(Math.random() * 1e9));
   let best = null;
   for (let t = 0; t < 150; t++) {
-    const pick = shuffle(words, r).slice(0, Math.min(words.length, want + 8));
+    const pick = [...shuffle(words.filter(x => x.must), r), ...shuffle(words.filter(x => !x.must), r)].slice(0, Math.min(words.length, want + 8));
     const g = attempt(pick, want, max, r), w = g.box.x1 - g.box.x0 + 1, h = g.box.y1 - g.box.y0 + 1;
     const score = g.placed.length * 1000 + g.cross * 40 - Math.abs(w - h) * 10 - w * h * 2;
     if (!best || score > best.score) best = { ...g, score, w, h };
