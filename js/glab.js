@@ -12,7 +12,7 @@
 // { skill: "Grammar Lab", step } and give XP but don't count in the area score. Don't rename mission or item ids.
 
 import { STAGE } from "./stage.js";
-import { GLAB as GLAB8 } from "./s8/glab.js";
+import { GLAB as GLAB8, BLOCKS as BLOCKS8, MISSION_BLOCKS as MISSION_BLOCKS8, VERBS as VERBS8 } from "./s8/glab.js";
 export const GLAB_LEN = 6;
 export const XP_GLAB = { step: 3, twin: 2, write: 10, frame: 5, block: 5, first: [10, 15, 20], hint: 4, finish: 10 };
 
@@ -327,7 +327,8 @@ export const termKey = w => TERM_KEY[w.toLowerCase()];
 // The verbs each mission uses, as base form → past participle, for the verb helper in Use it.
 export const VERBS = {
   "glab-2.4": [["pick up", "picked up"], ["take", "taken"], ["leave", "left"], ["fall", "fallen"], ["see", "seen"], ["forget", "forgotten"], ["put", "put"], ["drop", "dropped"]],
-  "glab-3.3": [["clean", "cleaned"], ["move", "moved"], ["repair", "repaired"], ["fix", "fixed"], ["paint", "painted"], ["steal", "stolen"], ["watch", "watched"], ["check", "checked"]]
+  "glab-3.3": [["clean", "cleaned"], ["move", "moved"], ["repair", "repaired"], ["fix", "fixed"], ["paint", "painted"], ["steal", "stolen"], ["watch", "watched"], ["check", "checked"]],
+  ...VERBS8
 };
 
 // Building blocks: what each grammar point is built from. When a student keeps making the same kind of mistake, the
@@ -441,11 +442,12 @@ export const BLOCKS = {
 // The blocks each mission is built from (top level). Their kids sit underneath.
 // Stage 8 has its own missions for its own grammar points (none yet: its points differ from Stage 9's).
 export const GLAB = STAGE === 8 ? GLAB8 : GLAB9;
-export const MISSION_BLOCKS = { "glab-2.4": ["certainty", "modal-have"], "glab-3.3": ["was-were", "pp", "active-passive", "progress"] };
+export const MISSION_BLOCKS = { "glab-2.4": ["certainty", "modal-have"], "glab-3.3": ["was-were", "pp", "active-passive", "progress"], ...MISSION_BLOCKS8 };
 export const BLOCK_DEPTH = 3;
 // Which block a wrong option shows, from its "why". An option can name it with b: instead.
 function tagBlock(m, why) {
   const w = why || "";
+  if (m.blockFor) return m.blockFor(w);     // Stage 8 missions name their own
   if (m.point === "2.4") {
     if (/need have|have, not|never ha[sd]|about now|or a rule|or the future|isn't a correct form|passive form/i.test(w)) return "modal-have";
     if (/past participle|past simple|irregular/i.test(w)) return "pp";
@@ -464,6 +466,7 @@ for (const m of [...GLAB9, ...GLAB8]) {
   [...m.get, ...m.use.items, ...m.prove, { opts: m.spot.rules }].forEach(tag);
   [...m.get, ...m.use.items].forEach(it => it.twin && tag(it.twin));
 }
+Object.assign(BLOCKS, BLOCKS8);
 for (const [id, b] of Object.entries(BLOCKS)) { b.id = id; b.checks.forEach((c, k) => { c.id = `${id}#${k}`; }); }
 const blockAnswers = h => (h.answers || []).filter(a => a.skill === "Grammar Block");
 // Each block's latest result: "ok" (passed) or "weak" (still a problem). Oldest attempts first, so the latest wins.
