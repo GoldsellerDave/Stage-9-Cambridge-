@@ -21,6 +21,7 @@ export const isEscape = id => /^escape-u\d$/.test(id || "");
 const ESCAPES9 = {
   3: {
     title: "Locked in the museum",
+    museum: "RIVERSIDE HERITAGE MUSEUM",
     story: "Your class visited the Riverside Heritage Museum. You stayed behind to finish your worksheet… and the guard locked up and went home! Find the codes to get out.",
     rooms: [
       { name: "The ticket hall", kind: "vocab", lock: "letters",

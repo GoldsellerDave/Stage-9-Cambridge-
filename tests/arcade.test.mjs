@@ -25,3 +25,14 @@ test("Escape Arcade counts as a game for the daily game XP and saves its words f
   assert.equal(ans[0].points, 900); assert.deepEqual(ans[0].skills, R.skills);
   assert.deepEqual(ans.slice(1).map(a => [a.word, a.first_try]), [["arch", true], ["fresco", false]]);
 });
+
+test("Stage 8 Unit 3 has an escape room whose leaflet answers fit the safe", async () => {
+  const { ESCAPES } = await import("../js/s8/escape.js");
+  const E = ESCAPES[3];
+  assert.ok(E && E.museum && E.doc.paras.length >= 4);
+  for (const r of E.reading) {
+    assert.ok(r.a >= 1 && r.a <= 9 && r.para >= 1 && r.para <= E.doc.paras.length);
+    assert.ok(E.doc.paras[r.para - 1].length > 0);
+  }
+  assert.deepEqual([...new Set(E.reading.map(r => r.tier))].sort(), [0, 1, 2]);
+});
