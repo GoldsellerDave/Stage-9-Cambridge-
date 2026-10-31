@@ -274,7 +274,7 @@ export function noticeTask(pointId, rnd = Math.random) {
 export function grammarMastery(id, history) {
   const r = [];
   byDate(history).forEach(h =>
-    (h.answers || []).forEach(a => { if (a.skill === "Grammar" && a.point === id) r.push(a.first_try ? 1 : 0); }));
+    (h.answers || []).forEach(a => { if (a.skill === "Grammar" && a.point === id && (a.stage || 9) === STAGE) r.push(a.first_try ? 1 : 0); }));
   const last = r.slice(-6);
   return last.length ? Math.round(100 * last.reduce((x, y) => x + y, 0) / last.length) : null;
 }

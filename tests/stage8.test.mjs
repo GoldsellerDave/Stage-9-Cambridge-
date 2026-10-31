@@ -92,3 +92,9 @@ test("unit words appear in the unit's texts", () => {
     assert.ok(found.length >= P.unitWords(u).length / 3, `unit ${u}: ${found.length} of ${P.unitWords(u).length} words used in texts`);
   }
 });
+
+test("grammar mastery only counts answers from this stage", () => {
+  const h = (answers) => ({ created_at: "2026-10-31T00:00:00Z", answers });
+  assert.equal(P.grammarMastery("1.1", [h([{ skill: "Grammar", point: "1.1", first_try: true }])]), null, "Stage 9 answers for 1.1 don't count in Stage 8");
+  assert.equal(P.grammarMastery("1.1", [h([{ skill: "Grammar", point: "1.1", first_try: true, stage: 8 }])]), 100);
+});

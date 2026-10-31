@@ -29,7 +29,7 @@ import * as SC from "./scenes.js";
 import * as Q from "./quests.js";
 import * as SP from "./speed.js";
 import * as X2 from "./crossword.js";
-import { STAGE, useStage } from "./stage.js";
+import { STAGE, STAGES, useStage } from "./stage.js";
 
 const $app = document.getElementById("app");
 L.applyLook();                 // the device's look, also on the sign-in page
@@ -161,6 +161,7 @@ async function draw() {
     $app.innerHTML = `<div class="narrow"><p class="note">Loading…</p></div>`;
     try { await refresh(); } catch (e) { setSession(null); session = null; return loginView(e.message); }
     // Each class follows one stage. A different stage from this device's last one reloads the page with that stage's content.
+    if (STAGES.includes(+me.stage) && +me.stage !== STAGE) { run = null; try { localStorage.removeItem(RUN_KEY()); } catch (x) {} }
     if (useStage(me.stage)) { $app.innerHTML = `<div class="narrow"><p class="note">Loading Stage ${me.stage}…</p></div>`; location.reload(); return; }
   }
   L.applyLook(L.getLook(), lookStats());
@@ -2740,7 +2741,9 @@ function levelCel(R) { R.levelUp ? Cel.big({ icon: "🚀", title: `Level up, ${f
 async function saveAttempt(payload) {
   const msg = document.getElementById("savemsg");
   try {
-    if (!run.saved) { await api.save(session.token, payload); run.saved = true; saveRun(); }
+    // Stage 8 answers carry stage: 8, so point ids shared with Stage 9 (1.1, 2.4…) don't count towards the other stage.
+    const tagged = STAGE === 9 ? payload : { ...payload, answers: (payload.answers || []).map(a => ({ ...a, stage: STAGE })) };
+    if (!run.saved) { await api.save(session.token, tagged); run.saved = true; saveRun(); }
     if (msg) msg.textContent = "Saved.";
     await refresh(); header();
   } catch (e) {
