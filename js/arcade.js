@@ -29,11 +29,12 @@ export const ARCADE_ROOMS = { vocab: 6, reading: 3, grammar: 5 };
 // The puzzles for one game: more words and grammar notes than one escape room has, so several rooms are merged.
 export function arcadeContent(unit, tier = 0, rnd = Math.random) {
   const E = ESCAPES[unit]; if (!E) return null;
-  const games = [0, 1, 2, 3].map(() => makeEscape(unit, tier, rnd));
+  // Four games at the student's tier, then two a tier lower in case the harder pool runs out of different items.
+  const games = [tier, tier, tier, tier, Math.max(0, tier - 1), Math.max(0, tier - 1)].map(t => makeEscape(unit, t, rnd));
   const uniq = (list, key) => list.filter((x, i) => list.findIndex(y => key(y) === key(x)) === i);
   const room = kind => games.flatMap(g => (g.rooms.find(r => r.kind === kind) || { puzzles: [] }).puzzles);
   return {
-    title: E.title, story: E.story, escaped: E.escaped, doc: E.doc,
+    title: E.title, museum: E.museum || "THE MUSEUM", story: E.story, escaped: E.escaped, doc: E.doc,
     vocab: uniq(room("vocab"), p => p.answer).slice(0, ARCADE_ROOMS.vocab),
     reading: room("reading").slice(0, ARCADE_ROOMS.reading),
     grammar: uniq(room("grammar"), p => p.text + p.answer).slice(0, ARCADE_ROOMS.grammar)
@@ -326,7 +327,7 @@ function startGame(Phaser, parent, D, opts, finish) {
       });
       for (let i = 0; i < 4; i++) { g.fillStyle([0xbdb19a, 0xcfc3a8, 0xbdb19a, 0xcfc3a8][i], 1); g.fillRect(cx - 320 - i * 14, base + i * 24, 640 + i * 28, 24); }   // steps
       g.fillStyle(0x15151f, 1); g.fillRect(0, base + 96, W, H - base - 96);
-      txt(this, cx, top + 32, "RIVERSIDE HERITAGE MUSEUM", 24, "#5a4a32", { head: true });
+      txt(this, cx, top + 32, D.museum, D.museum.length > 26 ? 21 : 24, "#5a4a32", { head: true });
       const glow = this.add.circle(cx, base - 110, 150, 0xffc96a, 0.14); this.tweens.add({ targets: glow, scale: 1.2, alpha: 0.05, duration: 1400, yoyo: true, repeat: -1 });
       [70, W - 70].forEach(x => { g.fillStyle(0x222, 1); g.fillRect(x - 4, base - 140, 8, 236); g.fillStyle(0xffd27a, 1); g.fillCircle(x, base - 150, 16);
         const l = this.add.circle(x, base - 150, 60, 0xffd27a, 0.12); this.tweens.add({ targets: l, alpha: 0.04, duration: 900 + x, yoyo: true, repeat: -1 }); });
@@ -569,7 +570,7 @@ function startGame(Phaser, parent, D, opts, finish) {
       const g = this.add.graphics(); gilt(g, 46, 60, W - 92, 980, 20); g.fillStyle(M.paper, 1); g.fillRect(46, 60, W - 92, 980);
       g.lineStyle(2, M.gold, 1); g.strokeRect(62, 76, W - 124, 948);
       txt(this, W / 2, 130, "CERTIFICATE OF ESCAPE", 22, "#8e2b35");
-      txt(this, W / 2, 176, opts.name ? `awarded to ${opts.name}` : "Riverside Heritage Museum", 30, M.ink, { head: true, wrap: 560 });
+      txt(this, W / 2, 176, opts.name ? `awarded to ${opts.name}` : D.title, 30, M.ink, { head: true, wrap: 560 });
       const sc = txt(this, W / 2, 268, "0", 100, "#7a2430", { head: true });
       this.tweens.addCounter({ from: 0, to: G.score, duration: 1400, ease: "Cubic.easeOut", onUpdate: t => sc.setText(Math.round(t.getValue())) });
       txt(this, W / 2, 340, "points", 24, M.inkSoft);
