@@ -1092,9 +1092,36 @@ button.qpwb:not(:disabled){cursor:pointer;animation:qpulse 1.4s ease-in-out infi
 .spdn .spdb{margin:0 2px}
 .dodge .spd{justify-content:center;margin:6px 0}
 
-/* Class reading test card on Home (student.js readTestCard) */
-.rtest{border-color:var(--teal)} .rtrow{margin:10px 0 0;padding:10px 12px;border-radius:12px;background:var(--surface)}
-.rtrow .row{margin-top:6px;gap:6px;flex-wrap:wrap}
+/* Class reading test card on Home (student.js readTestCard): night-blue card with a day countdown and, per unit,
+   three tappable progress rings (Reading Lab, Texts, Words); a full ring turns green and earns a star.
+   Fixed colours: the card looks the same in light and dark mode. */
+.rtcard{border-radius:18px;padding:16px;background:radial-gradient(120% 80% at 100% 0%,#2A3F6A 0%,#16212C 55%);border:1.5px solid #3B4F78;color:#E6EDF3;display:flex;flex-direction:column;gap:12px}
+.rttop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.rteb{font-size:.75rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#9FC3FF}
+.rtcard h3{font-size:1.25rem;color:#fff;margin:4px 0}
+.rtcard p{margin:0;color:#B9C6D6;font-size:.9rem}
+.rtdays{flex:0 0 auto;text-align:center;background:#E0743F;color:#fff;border-radius:14px;padding:8px 12px;box-shadow:0 0 0 4px rgba(224,116,63,.25);animation:rtpulse 2.4s ease-in-out infinite}
+.rtdays b{display:block;font:800 1.9rem/1 var(--f-head)}
+.rtdays small{font-size:.62rem;font-weight:800;letter-spacing:.1em}
+@keyframes rtpulse{50%{box-shadow:0 0 0 8px rgba(224,116,63,.08)}}
+.rtunits{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.rtunit{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:10px 6px;text-align:center}
+.rtunit>b{display:block;font-size:1rem}
+.rtname{display:block;color:#9AA8B5;font-size:.78rem;margin-bottom:8px}
+.rtrings{display:flex;justify-content:space-around;gap:2px}
+.rtring{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;text-decoration:none;color:#9AA8B5;font-size:.68rem;line-height:1.25;border-radius:12px;padding:4px 0;-webkit-tap-highlight-color:transparent}
+.rtdial{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#2BA59E 0 var(--p),#33445A var(--p) 100%);transition:transform .15s}
+.rtdial span{width:34px;height:34px;border-radius:50%;background:#1B2838;display:grid;place-items:center;font-size:1.05rem}
+.rtring.full .rtdial{background:#6FD39C}
+.rtring.full .rtlbl{color:#6FD39C}
+.rtring:active .rtdial,.rtring:hover .rtdial{transform:scale(1.1)}
+.rtring:focus-visible{outline:2px solid #9FC3FF}
+.rtstars{margin-top:6px;font-size:1.1rem;letter-spacing:3px;color:#F0B83C}
+.rtstars .off{color:#3A4A5E}
+.rtgo{display:block;text-align:center;background:#F0B83C;color:#1A1205;border-radius:12px;padding:11px;font-weight:800;text-decoration:none;font-size:1.05rem}
+.rtgo small{display:block;font-weight:600;font-size:.8rem;opacity:.8}
+.rtgo.done{background:#163326;color:#6FD39C}
+@media (prefers-reduced-motion: reduce){.rtdays{animation:none}}
 /* Word Crossword: letter tiles on a night-sky stage with drifting letters; the active word glows, solved words flash gold
    and lock in, and the finished grid ripples through the rainbow. Fixed colours: the stage is night in both themes. */
 .xstage{position:relative;overflow:hidden;border-radius:18px;padding:12px;background:radial-gradient(120% 90% at 20% 0%,#3B2F8F,#1A1446 55%,#0D0B26);
